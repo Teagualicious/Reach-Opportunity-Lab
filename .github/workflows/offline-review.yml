@@ -60,26 +60,38 @@ jobs:
         run: npm run offline:build
 
       - name: Validate all-offline review
-        run: npm run offline:validate
+        id: offline_validation
+        continue-on-error: true
+        run: npm run offline:validate 2>&1 | tee offline-validation.log
 
       - name: Package review ZIP
+        if: always()
         run: |
           cd offline-dist
           zip -r -9 ../Opportunity-Lab-All-Offline.zip Opportunity-Lab-All-Offline
 
-      - name: Upload workflow artifact
+      - name: Upload workflow artifact and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Opportunity-Lab-All-Offline
-          path: Opportunity-Lab-All-Offline.zip
+          path: |
+            Opportunity-Lab-All-Offline.zip
+            offline-validation.log
           if-no-files-found: error
           retention-days: 14
 
       - name: Attach to latest GitHub release
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.offline_validation.outcome == 'success' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           LATEST_TAG="$(gh release view --json tagName --jq .tagName)"
           echo "Uploading offline review asset to ${LATEST_TAG}"
           gh release upload "${LATEST_TAG}" "Opportunity-Lab-All-Offline.zip#All-offline visual review — no installation required" --clobber
+
+      - name: Enforce offline validation
+        if: steps.offline_validation.outcome != 'success'
+        run: |
+          cat offline-validation.log
+          exit 1
