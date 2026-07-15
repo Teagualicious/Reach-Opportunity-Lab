@@ -1,61 +1,54 @@
 # CLAUDE.md
 
-Instructions for Claude Code sessions in this repository. Read STATUS.md before starting any work.
+Instructions for coding sessions in this repository. Read `STATUS.md` before starting any work.
 
 ## Project overview
 
-**Spectrum Reach Opportunity Lab** — a geographic market-intelligence and scenario-planning tool. It combines a ZIP/ZCTA-based market map with opportunity scoring, deterministic strategy simulation, template-generated explanations, and a conceptual handoff into Spectrum Reach Architect (the campaign-activation destination — this product is the upstream intelligence layer, not a replacement for it). The workflow follows one arc: **Describe → Prioritize → Simulate → Activate**.
+**Spectrum Reach Opportunity Lab** is a geographic market-intelligence and deterministic scenario-planning product. One shared ZIP/ZCTA intelligence layer powers an external Client Growth Studio and an internal Market Growth Studio through the workflow **Describe → Prioritize → Simulate → Activate**.
 
-One intelligence layer powers two experiences:
-- **Client Growth Studio** (external) — helps an advertiser find geographic, audience, media, and conversion opportunities and simulate campaign changes. Never exposes internal-only metrics.
-- **Market Growth Studio** (internal) — helps Spectrum Reach sellers and leadership find new business, grow accounts, flag retention risk, and rank category opportunity.
+The current deliverable is a locally runnable executive prototype. It uses synthetic opportunity, advertiser, prospect, account, performance, reach-gap, and competitor-footprint data. It does not contain a production predictive model, live LLM calls, real Spectrum data, or a live Architect integration. Architect is the campaign-planning and activation destination, not a capability this product replaces.
 
-**Current deliverable:** a one-week executive prototype for a QR-code/presentation demo. It must look and behave like a credible product with a guided tour, but it does **not** contain a real predictive model, live LLM/agents, real Spectrum data, or a live Architect integration. All data is synthetic and must be labeled as such; keep client and internal data strictly separated. Preserve the existing HTML map unless an audit proves it can't be extended safely.
-
-**Done** = the acceptance criteria in the build spec are met: map + ZIP selection work, one full client scenario and at least two internal scenarios run, simulation is deterministic and reproducible, the guided tour has no dead ends, the Architect handoff is clear, and the QR/mobile experience works — all with synthetic data clearly labeled.
-
-The full product, architecture, data model, and 7-day implementation plan live in [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — read it before non-trivial product work. For the technical audit of the existing MapLibre map (data model, layers, interaction/filter/competitor logic, and what to preserve vs. extend when rebuilding it), read [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) — read it before touching the map itself.
+Read [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) for product scope, [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) for the current technical handoff, and [`ARCHITECTURE.md`](ARCHITECTURE.md) for dependency boundaries.
 
 ## Stack
 
-- Python 3.11+ (standard library preferred over new dependencies)
-- Tests: pytest, in `tests/`
-- Dependencies: `requirements.txt` — do not add a dependency without noting why in the commit message
+- Vite
+- React
+- strict TypeScript
+- MapLibre GL JS
+- Vitest
+- CSS variables and modular stylesheets
 
 ## Workflow rules
 
-1. **Start of session:** read STATUS.md to learn current phase, what's done, and what's next. Do not re-derive project state from scratch.
-2. **Scope:** work only on the task given. If you notice unrelated problems, list them in STATUS.md under "Noticed" — do not fix them unprompted.
-3. **Tests are the gate.** Run `pytest` before declaring any task complete. A task with failing tests is not done. New behavior gets a new test.
-4. **End of session (every time):**
-   - Update STATUS.md: what changed, what's next, any decisions made — record decisions in the decision-log format below
-   - Commit with a clear message
-   - Leave the repo in a state a fresh session can pick up with zero conversation context
+1. Read `STATUS.md` first and continue from its **Next up** list.
+2. Work only on the assigned task. Record unrelated issues under **Noticed**.
+3. Run `npm run typecheck`, `npm run test`, and `npm run build` before declaring product work complete.
+4. Work on a branch and deliver through a pull request. Never commit directly to `main`.
+5. End every session by updating `STATUS.md` and leaving a zero-context handoff.
 
-### Decision-log format (STATUS.md)
+### Decision-log format
 
-Every non-trivial choice gets logged so reasoning survives session handoffs:
-
-```
+```text
 - YYYY-MM-DD | DECISION: what was chosen
   Considered: alternatives evaluated
-  Rejected because: the actual reason, not a platitude
+  Rejected because: the actual reason
   Must preserve: constraints the next agent must not break
 ```
 
-## Code style
+## Architecture rules
 
-- Minimal code that solves the stated problem. Reuse existing functions before writing new ones. Stdlib before dependencies. One line if one line works.
-- Never cut: input validation at trust boundaries, error handling around I/O, anything security-relevant.
-- No speculative abstractions. No "manager" or "handler" classes for things that happen once.
-- Match the existing style of the file being edited.
+- Domain scoring, simulation, recommendations, and overlay validation are pure TypeScript.
+- React features consume typed repositories and domain services.
+- MapLibre renders geometry and domain-provided values; it does not own business truth.
+- Network and local-file access live behind repository or source interfaces.
+- Keep client-facing and internal-only data separated.
+- Do not add deployment-specific behavior to domain or feature modules.
+- Do not create monolithic HTML/JavaScript or business rules embedded in JSX event handlers.
+- Do not hide boundary problems with broad `any` types.
 
-## Data hygiene (non-negotiable)
+## Data hygiene
 
-- No real client data, campaign data, credentials, or company-internal exports in this repo. Ever.
-- Test fixtures use synthetic data only (see `tests/fixtures/`).
-- If a task requires realistic data shapes, generate fake data matching the schema.
-
-## Phase discipline
-
-Work is organized in phases (see STATUS.md). A phase ends with: tests passing, STATUS.md updated, changes committed. Prefer finishing a phase over starting the next one.
+- No real company data, credentials, internal exports, client identifiers, campaign data, or revenue data.
+- All demonstration fixtures are synthetic, deterministic, and visibly disclosed.
+- Geographic boundary and basemap providers must preserve attribution and provenance.
