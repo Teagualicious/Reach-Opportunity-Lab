@@ -42,7 +42,7 @@ jobs:
 
       - name: Commit reviewed fixture to the pull-request branch
         run: |
-          if git diff --quiet -- public/data/cleveland-akron-zcta-2020.geojson public/data/cleveland-akron-zcta-2020.provenance.json; then
+          if [ -z "$(git status --porcelain -- public/data/cleveland-akron-zcta-2020.geojson public/data/cleveland-akron-zcta-2020.provenance.json)" ]; then
             echo "ZCTA fixture is already current."
             exit 0
           fi
