@@ -1,0 +1,117 @@
+import type { FeatureCollection, Geometry } from 'geojson';
+import { assertZipOpportunity, getPriorityBand, type ZipOpportunity } from '../domain/opportunity';
+import { CensusZctaGeometrySource } from './CensusZctaGeometrySource';
+import type {
+  GeometryMetadata,
+  MarketDefinition,
+  OpportunityMarket,
+  OpportunityRepository,
+  ZipFeatureProperties,
+} from './OpportunityRepository';
+import type { RawZipGeometry, ZipGeometrySource } from './ZipGeometrySource';
+
+interface DemoMarketPayload {
+  market: MarketDefinition;
+  opportunities: ZipOpportunity[];
+}
+
+const OFFICIAL_GEOMETRY_METADATA: GeometryMetadata = {
+  kind: 'official-zcta',
+  label: 'Official 2020 Census ZCTA boundaries',
+  source: 'U.S. Census Bureau TIGERweb',
+  vintage: '2020 Census',
+};
+
+const FALLBACK_GEOMETRY_METADATA: GeometryMetadata = {
+  kind: 'synthetic-fallback',
+  label: 'Synthetic geometry fallback',
+  source: 'Opportunity Lab demonstration fixture',
+  vintage: 'Demo only',
+};
+
+export function buildOpportunityMarket(
+  payload: DemoMarketPayload,
+  geometry: RawZipGeometry,
+  geometryMetadata: GeometryMetadata = FALLBACK_GEOMETRY_METADATA,
+): OpportunityMarket {
+  const opportunitiesByZip = new Map<string, ZipOpportunity>();
+
+  for (const opportunity of payload.opportunities) {
+    assertZipOpportunity(opportunity);
+    if (opportunitiesByZip.has(opportunity.zip)) {
+      throw new Error(`Duplicate opportunity record for ZIP ${opportunity.zip}`);
+    }
+    opportunitiesByZip.set(opportunity.zip, opportunity);
+  }
+
+  const enrichedFeatures = geometry.features.map((feature, index) => {
+    const rawZip = feature.properties?.zip ?? feature.properties?.ZCTA5 ?? feature.properties?.GEOID;
+    const zip = typeof rawZip === 'string' ? rawZip : null;
+    if (!zip) {
+      throw new Error(`Geometry feature ${index} does not contain a ZIP identifier`);
+    }
+
+    const opportunity = opportunitiesByZip.get(zip);
+    if (!opportunity) {
+      throw new Error(`Geometry has no opportunity record for ZIP ${zip}`);
+    }
+
+    const properties: ZipFeatureProperties = {
+      zip,
+      name: opportunity.name,
+      score: opportunity.score,
+      priority: getPriorityBand(opportunity.score),
+      confidence: opportunity.confidence,
+    };
+
+    return {
+      ...feature,
+      id: zip,
+      properties,
+    };
+  });
+
+  if (enrichedFeatures.length !== opportunitiesByZip.size) {
+    throw new Error('Opportunity and geometry record counts do not match');
+  }
+
+  return {
+    market: payload.market,
+    opportunities: payload.opportunities,
+    geometry: {
+      type: 'FeatureCollection',
+      features: enrichedFeatures,
+    } as FeatureCollection<Geometry, ZipFeatureProperties>,
+    geometryMetadata,
+  };
+}
+
+async function readJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Unable to load ${url}: ${response.status} ${response.statusText}`);
+  }
+  return (await response.json()) as T;
+}
+
+export class DemoOpportunityRepository implements OpportunityRepository {
+  constructor(private readonly officialGeometrySource: ZipGeometrySource = new CensusZctaGeometrySource()) {}
+
+  async loadMarket(marketId: string): Promise<OpportunityMarket> {
+    if (marketId !== 'cleveland-akron') {
+      throw new Error(`Unknown demonstration market: ${marketId}`);
+    }
+
+    const payload = await readJson<DemoMarketPayload>('/data/zip-opportunities.json');
+    const zips = payload.opportunities.map((opportunity) => opportunity.zip);
+
+    try {
+      const officialGeometry = await this.officialGeometrySource.load(zips);
+      return buildOpportunityMarket(payload, officialGeometry, OFFICIAL_GEOMETRY_METADATA);
+    } catch (officialGeometryError) {
+      console.warn('Official Census geometry unavailable; using the synthetic fallback.', officialGeometryError);
+      const fallbackGeometry = await readJson<RawZipGeometry>('/data/cleveland-zips.geojson');
+      return buildOpportunityMarket(payload, fallbackGeometry, FALLBACK_GEOMETRY_METADATA);
+    }
+  }
+}
