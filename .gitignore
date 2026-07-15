@@ -1,22 +1,29 @@
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
+# Node / Vite
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
 
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*credentials*
+*secret*
 
-# Data files — never commit real data. Exception: synthetic test fixtures.
+# Local exports — never commit company or client data
 *.csv
 *.xlsx
 *.pptx
-!tests/fixtures/*.csv
 
-# Secrets
-.env
-*.env
-*credentials*
-*secret*
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python cache from local utility scripts
+__pycache__/
+*.py[cod]
+.venv/
