@@ -28,6 +28,11 @@ The repository contains a Vite + React + strict TypeScript application with thre
 
 All business, advertiser, account, prospect, campaign, reach-gap, competitor, score, recommendation, and simulation values are synthetic.
 
+Two presentation adapters render the same product:
+
+- **Standard application** — OpenStreetMap raster basemap, local development/static deployment.
+- **All-offline visual review** — bundled Census TIGER/Line context and one embedded HTML application with a hard network-request boundary.
+
 ## 2. Current stack
 
 | Concern | Implementation |
@@ -36,13 +41,15 @@ All business, advertiser, account, prospect, campaign, reach-gap, competitor, sc
 | UI | React 19 |
 | Language | strict TypeScript |
 | Map | MapLibre GL JS |
-| Basemap | OpenStreetMap raster tiles |
-| Geometry | checked-in simplified 2020 Census-derived ZCTA subset |
+| Standard basemap | OpenStreetMap raster tiles |
+| Offline map context | generated Census TIGER/Line roads, hydrography, counties, and local labels |
+| ZIP geometry | checked-in simplified 2020 Census-derived ZCTA subset |
 | Geometry refresh | Node fixture builder + GitHub Actions review workflow |
-| Tests | geometry validation script + Vitest |
+| Offline packaging | dedicated Vite entry + single-file Node packager |
+| Tests | geographic/offline validation scripts + Vitest |
 | Styles | CSS variables and modular stylesheets |
 | Backend | none for the prototype |
-| Deployment | local-first static build; GitHub release ZIPs after merge |
+| Deployment | local-first static build and GitHub release artifacts |
 
 ## 3. Dependency direction
 
@@ -56,6 +63,8 @@ pure domain scoring, simulation, and validation
 React feature orchestration
         ↓
 MapLibre rendering adapter
+        ↓
+standard basemap OR offline-review basemap adapter
 ```
 
 Rules:
@@ -65,6 +74,7 @@ Rules:
 - `src/map/` renders values and geometry supplied by domain/data layers; it does not calculate business scores.
 - `src/features/` owns product workflows and may consume domain services and repositories.
 - Business truth must not live only in the DOM or MapLibre feature state.
+- Offline packaging is a build/distribution concern, not a second business implementation.
 
 ## 4. Source map
 
@@ -94,15 +104,22 @@ src/
   map/
     OpportunityMap.tsx         MapLibre lifecycle, sources, layers, feature state
     mapExpressions.ts          opportunity heat and line expressions
+    offlineBasemapStyle.ts     bundled Census context style and labels
+  main.tsx                     standard application entry
+  offline-main.tsx             offline-review application entry
   styles/
     tokens.css
     base.css
     layout.css
     components.css
     layers.css
+offline.html                   offline Vite HTML entry
 scripts/
   build-zcta-fixture.mjs       filters and normalizes source Ohio ZCTA geometry
   validate-zcta-fixture.mjs    gates tests on fixture integrity
+  build-offline-map-context.mjs
+  build-offline-review.mjs
+  validate-offline-review.mjs
 public/data/
   zip-opportunities.json
   market-overlays.json
@@ -111,9 +128,11 @@ public/data/
   cleveland-zips.geojson       synthetic emergency fallback only
 ```
 
+`offline-map-context.geojson` and its provenance file are generated build outputs. They do not contain business data and do not need to be checked into the repository.
+
 ## 5. Geographic pipeline
 
-### Runtime
+### Runtime ZIP geometry
 
 `DemoOpportunityRepository` loads:
 
@@ -121,9 +140,9 @@ public/data/
 2. the checked-in 2020 Census-derived ZCTA subset through `StaticZctaGeometrySource`;
 3. the synthetic fallback only if the checked-in fixture cannot be loaded or validated.
 
-Runtime ZIP polygons no longer depend on a Census service request. OpenStreetMap basemap tiles still require internet access.
+Runtime ZIP polygons do not depend on a Census service request.
 
-### Refresh
+### ZIP refresh
 
 ```bash
 npm run geometry:refresh
@@ -141,7 +160,22 @@ The builder:
 
 The standard `npm run test` command validates geometry before running Vitest. It rejects missing, extra, duplicate, invalid, non-polygon, or geographically implausible features.
 
-Do not edit the generated GeoJSON by hand. Change the builder or source declaration and regenerate it.
+Do not edit the generated ZCTA GeoJSON by hand. Change the builder or source declaration and regenerate it.
+
+### Offline context generation
+
+```bash
+npm run offline:context
+```
+
+`build-offline-map-context.mjs` queries public U.S. Census Bureau TIGERweb services for the Cleveland–Akron market bounds and prepares:
+
+- primary and secondary roads;
+- linear and areal hydrography;
+- county boundaries;
+- deterministic local place/water labels.
+
+The generated context is simplified for browser delivery and bundled only into the all-offline review target.
 
 ## 6. Map implementation
 
@@ -172,7 +206,40 @@ Supporting overlays are loaded from `market-overlays.json` and validated against
 
 Do not hard-code business overlay definitions directly in `OpportunityMap` or JSX.
 
-## 7. Product ownership
+## 7. All-offline review target
+
+Build the full package with:
+
+```bash
+npm run offline:all
+```
+
+The target:
+
+1. generates local Census map context;
+2. runs strict TypeScript validation;
+3. builds `offline.html` through the `offline-review` Vite mode;
+4. inlines all JavaScript and CSS;
+5. embeds ZIP opportunities, overlays, ZCTA geometry, fallback geometry, and map context;
+6. adds Windows/macOS launchers;
+7. rejects all unapproved runtime fetches;
+8. validates that no external document tags or Vite split chunks remain.
+
+Output:
+
+```text
+offline-dist/Opportunity-Lab-All-Offline/
+  Opportunity-Lab-All-Offline.html
+  OPEN_DEMO.bat
+  OPEN_DEMO.command
+  README.txt
+```
+
+The package opens directly from `file://`; it requires no Node.js, install, local server, administrator rights, or internet connection.
+
+`.github/workflows/offline-review.yml` publishes a workflow artifact and attaches the validated ZIP to the latest GitHub release. Never upload the package if `offline:validate` fails.
+
+## 8. Product ownership
 
 ### Opportunity Explorer
 
@@ -186,9 +253,9 @@ Do not hard-code business overlay definitions directly in `OpportunityMap` or JS
 
 `marketMode.ts` owns objective-specific score transforms. Client-facing components must not receive internal account, revenue, retention, or seller fields.
 
-## 8. Validation and release
+## 9. Validation and release
 
-Required checks:
+Required standard checks:
 
 ```bash
 npm run typecheck
@@ -196,9 +263,15 @@ npm run test
 npm run build
 ```
 
-CI runs those checks on every push and pull request. A successful merge to `main` publishes static-build and source ZIPs under a `build-<run_number>` release tag.
+Required offline check:
 
-## 9. Preserve
+```bash
+npm run offline:all
+```
+
+CI runs standard checks on every push and pull request. The offline workflow separately generates, validates, packages, and uploads `Opportunity-Lab-All-Offline.zip`. A successful merge to `main` publishes standard static-build and source ZIPs under a `build-<run_number>` release tag.
+
+## 10. Preserve
 
 - strict TypeScript boundaries
 - typed repositories and geometry sources
@@ -211,13 +284,18 @@ CI runs those checks on every push and pull request. A successful merge to `main
 - synthetic-data disclosures
 - client/internal data separation
 - Architect positioned as the activation destination
-- OpenStreetMap and Census-derived attribution/provenance
+- geographic attribution and provenance
+- standard and offline basemaps as separate adapters over the same product features
+- the offline hard network boundary and single-file packaging validation
 
-## 10. Do not reintroduce
+## 11. Do not reintroduce
 
-- monolithic HTML/JavaScript
+- monolithic business/UI implementation
 - runtime dependence on remote ZCTA geometry
 - manually edited generated geometry
+- compiled-bundle patching as the source of the offline target
+- dynamic chunks or linked assets in the offline package
+- unguarded network fallback in the offline package
 - direct JSON imports scattered through components
 - score calculation in MapLibre expressions or JSX handlers
 - uncontrolled simulation randomness
@@ -226,10 +304,10 @@ CI runs those checks on every push and pull request. A successful merge to `main
 - fake live Architect or AI claims
 - deployment-specific domain logic
 
-## 11. Next implementation sequence
+## 12. Next implementation sequence
 
 1. Extend supporting overlays into Client Growth Studio with explicit current campaign, reach-gap, and recommended expansion controls.
 2. Add richer strategy tradeoffs and result transitions.
 3. Expand internal synthetic account/prospect datasets and retention-save comparisons.
 4. Add the guided executive tour and mobile bottom sheet.
-5. Add WebGL-capable browser visual regression coverage.
+5. Add WebGL-capable browser visual regression coverage for the standard and offline adapters.
