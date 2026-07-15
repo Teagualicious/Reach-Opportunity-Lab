@@ -11,7 +11,11 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "geometry:refresh": "node scripts/build-zcta-fixture.mjs",
-    "geometry:validate": "node scripts/validate-zcta-fixture.mjs"
+    "geometry:validate": "node scripts/validate-zcta-fixture.mjs",
+    "offline:context": "node scripts/build-offline-map-context.mjs",
+    "offline:build": "node scripts/build-offline-review.mjs",
+    "offline:validate": "node scripts/validate-offline-review.mjs",
+    "offline:all": "npm run offline:context && npm run typecheck && npm run offline:build && npm run offline:validate"
   },
   "dependencies": {
     "maplibre-gl": "^5.6.1",
