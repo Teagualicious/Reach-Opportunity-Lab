@@ -17,12 +17,24 @@ if (htmlStats.size < 500_000) {
   throw new Error(`Offline review HTML is unexpectedly small: ${htmlStats.size} bytes`);
 }
 
+const documentShell = html
+  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
+  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
+
+if (/<script\b[^>]*\bsrc\s*=/i.test(documentShell)) {
+  throw new Error('Offline review contains an external script document dependency');
+}
+if (/<link\b[^>]*\bhref\s*=/i.test(documentShell)) {
+  throw new Error('Offline review contains an external linked document dependency');
+}
+
 for (const forbidden of [
-  '<script type="module" crossorigin src=',
-  '<link rel="stylesheet" crossorigin href=',
+  '__vite__mapDeps',
+  'assets/main-',
+  'return nativeFetch(input',
 ]) {
   if (html.includes(forbidden)) {
-    throw new Error(`Offline review still contains an external document dependency: ${forbidden}`);
+    throw new Error(`Offline review still contains a split or unguarded runtime dependency: ${forbidden}`);
   }
 }
 
@@ -37,10 +49,6 @@ for (const required of [
   if (!html.includes(required)) {
     throw new Error(`Offline review is missing required embedded content: ${required}`);
   }
-}
-
-if (html.includes('return nativeFetch(input')) {
-  throw new Error('Offline review fetch shim still permits unapproved runtime network requests');
 }
 
 if (context.type !== 'FeatureCollection' || !Array.isArray(context.features)) {
