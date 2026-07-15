@@ -12,6 +12,7 @@ Phase 0 — Project setup
 - CI `release` job: on pushes to `main` after tests pass, zips source (excludes `.git`, `tests`, `__pycache__`) as `{repo}_{date}_r{run_number}.zip` and publishes a GitHub Release tagged `build-{run_number}` via `softprops/action-gh-release` using the built-in `GITHUB_TOKEN` (`contents: write`, no new secrets).
 - Added `AGENTS.md` (house rules for any AI agent, mirrors CLAUDE.md). Adopted a structured decision-log format across `AGENTS.md`, `CLAUDE.md`, and this file's Decisions log; CLAUDE.md's end-of-session rule now references it.
 - Filled in CLAUDE.md's Project overview (Spectrum Reach Opportunity Lab: two studios, Describe→Prioritize→Simulate→Activate, one-week synthetic-data prototype) and renamed the handoff doc `Opportunity_Lab.md` → `PRODUCT_BUILD_SPEC.md` (the name the doc references), linked from the overview.
+- Added `BUILD_HANDOFF.md` (root): technical audit of the existing MapLibre choropleth map — data model (`GEO.sr`/`GEO.comp`/metric config), layers, color-ramp pipeline, feature-state interaction, filter/competitor logic, preserve-vs-extend list, target-product/build-sequence recap, and the map-extraction first task. Linked from CLAUDE.md's overview so a future model can rebuild and expand the mapper.
 
 ## Next up
 
@@ -50,6 +51,11 @@ Phase 0 — Project setup
   Considered: pasting the whole ~1,700-line handoff doc into CLAUDE.md; a longer multi-paragraph overview
   Rejected because: every session loads CLAUDE.md first — inlining 44KB bloats that context; the spec itself says to keep the full handoff as a standalone PRODUCT_BUILD_SPEC.md
   Must preserve: keep the overview in sync with PRODUCT_BUILD_SPEC.md if the product scope changes; the spec file is the canonical source of product/architecture detail
+
+- 2026-07-15 | DECISION: keep the existing-map technical audit as a separate BUILD_HANDOFF.md rather than folding it into PRODUCT_BUILD_SPEC.md
+  Considered: merging it into PRODUCT_BUILD_SPEC.md; inlining it into CLAUDE.md
+  Rejected because: it's a distinct concern (how the current MapLibre code works, for rebuilding it) vs. the product/architecture vision; the doc references itself as BUILD_HANDOFF.md at repo root, and one giant merged file is harder to hand off
+  Must preserve: keep the `demo_`+metricKey property naming, `sr`/`comp` sources + layer IDs, and feature-state model described in BUILD_HANDOFF.md §1 intact when rebuilding the map
 
 ## Noticed (not yet acted on)
 
