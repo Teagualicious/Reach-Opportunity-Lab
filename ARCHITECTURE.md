@@ -46,16 +46,24 @@ The application reads market information through typed repository and source int
 
 Current implementations:
 
-- `DemoOpportunityRepository` reads deterministic synthetic JSON fixtures.
-- `CensusZctaGeometrySource` requests official 2020 Census ZCTA geometry.
-- A clearly labeled local GeoJSON fallback keeps the product usable if the Census request fails.
+- `DemoOpportunityRepository` reads deterministic synthetic opportunity and overlay fixtures.
+- `StaticZctaGeometrySource` loads the checked-in 2020 Census-derived Cleveland–Akron ZCTA subset.
+- `CensusZctaGeometrySource` remains an optional network adapter but is not part of default runtime composition.
+- A clearly labeled synthetic geometry fixture is retained only as an emergency fallback.
 - Synthetic reach-gap and competitor definitions are validated before they enter product state.
+
+The checked-in ZCTA fixture is built and validated through:
+
+- `scripts/build-zcta-fixture.mjs`
+- `scripts/validate-zcta-fixture.mjs`
+- `.github/workflows/generate-zcta-fixture.yml`
+- `public/data/cleveland-akron-zcta-2020.provenance.json`
 
 Future implementations may include:
 
 - `ApiOpportunityRepository` for governed production APIs
-- a build-time or server-side official geometry source
 - authenticated account, campaign, CRM, and Architect adapters
+- server-side or tile-based geometry delivery for larger markets
 
 UI and domain modules must not know which repository implementation is active. Replacing demonstration data with production APIs should be a composition-root change, not a feature rewrite.
 
@@ -91,6 +99,8 @@ Features may consume domain services and repositories, but must not reach into a
 ## Primary geographic model
 
 The primary selectable and scored unit is a five-digit ZIP identifier rendered using ZCTA polygon geometry. Each map cell receives its own synthetic opportunity values and explainable score breakdown.
+
+The checked-in fixture contains exactly the ZIP identifiers declared in `public/data/zip-opportunities.json`. The standard test command rejects missing, extra, duplicate, invalid, or geographically implausible features.
 
 Spectrum Reach sales zones may be added later as groupings or overlays, but they are not the primary scoring geometry.
 
@@ -143,6 +153,15 @@ npm run build
 npm run preview
 ```
 
+Geometry refresh and validation:
+
+```bash
+npm run geometry:refresh
+npm run geometry:validate
+```
+
+The checked-in ZCTA fixture removes browser-time geometry network dependency. OpenStreetMap basemap tiles still require internet access. Offline basemap packaging is a separate licensing, size, and distribution decision.
+
 Vercel or other hosting is intentionally deferred. Deployment configuration must not shape or block domain, data, map, or feature architecture.
 
 ## Source structure
@@ -156,8 +175,11 @@ src/
   map/                 MapLibre lifecycle, sources, layers, interactions
   components/          reusable presentation components
   styles/              design tokens, layout, components, layers
+scripts/
+  build-zcta-fixture.mjs
+  validate-zcta-fixture.mjs
 public/
-  data/                 synthetic JSON and local geometry fallback
+  data/                 public geographic fixtures and synthetic demo fixtures
 ```
 
 ## Prohibited shortcuts
@@ -173,6 +195,7 @@ public/
 - broad `any` typing to bypass contract problems
 - deployment-specific code in domain or feature modules
 - real company or client data in fixtures
+- undocumented or manually edited geographic fixtures
 
 ## Scaling path
 
@@ -187,6 +210,6 @@ The production evolution should be able to add these capabilities without replac
 - observability, audit trails, and feature flags
 - additional markets beyond Cleveland–Akron
 - vector tiles or a governed basemap provider
-- build-time or server-side geometry preparation
+- server-side geometry preparation for larger datasets
 
 Production work will add infrastructure and stronger controls, but the product's domain contracts, repository boundaries, feature ownership, and map adapter should remain recognizable.
