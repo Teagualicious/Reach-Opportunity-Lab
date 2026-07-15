@@ -9,30 +9,31 @@ Phase 2 — Shared map and first product journeys
 ## Done
 
 - Established repository governance and production-shaped boundaries in `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `PRODUCT_BUILD_SPEC.md`, and `BUILD_HANDOFF.md`.
-- Migrated the repository from the Python template to Vite + React + strict TypeScript with MapLibre and Vitest; removed the obsolete Python requirements, smoke tests, and fixture.
+- Migrated the repository to Vite + React + strict TypeScript with MapLibre and Vitest; removed the obsolete Python scaffold.
 - Added Node-based CI that installs dependencies, typechecks, tests, and builds on every push and pull request.
-- Added a main-branch release job that publishes static-build and source ZIP files; the first merged application release is available under `build-106`.
+- Added a main-branch release job that publishes static-build and source ZIP files.
 - Added typed opportunity-domain contracts, score validation, confidence, priority bands, and synthetic ZIP opportunity fixtures.
 - Added a typed `DemoOpportunityRepository` and replaceable ZIP geometry-source boundary.
-- Added a Census TIGERweb source that requests official 2020 Census ZCTA boundaries for the exact demonstration ZIPs; the app clearly labels and falls back to local geometry if the service is unavailable.
+- Added a reproducible geometry pipeline that filters a documented 2020 Census-derived Ohio ZCTA source to the 26 demonstration ZIPs.
+- Checked in `cleveland-akron-zcta-2020.geojson` plus explicit provenance; runtime geometry no longer depends on a browser-time Census request.
+- Added `StaticZctaGeometrySource` as the runtime default and retained the synthetic geometry only as an emergency fallback.
+- Added fixture validation for exact ZIP membership/order, duplicate detection, polygon geometry, coordinate sanity, feature count, and provenance.
 - Added an OpenStreetMap basemap through the isolated MapLibre adapter.
 - Added a cool-to-hot opportunity palette, ZIP hover/selection, filter dimming, campaign highlighting, score overrides, reset behavior, and attribution.
 - Added typed `MarketOverlayData` and `CompetitorFootprint` contracts with validation against the active market ZIP set.
 - Added synthetic reach-gap and competitor footprint fixtures, reusable layer controls, and config-driven MapLibre overlay sources/layers.
-- Built Opportunity Explorer filters for minimum score and category strength, supporting-layer toggles, ranked ZIPs, explainable score breakdowns, and data-source disclosure.
-- Built the first Client Growth Studio journey for fictional Lakefront Automotive: campaign footprint, four strategies, deterministic simulation theater, current-versus-simulated metrics, explanation, and conceptual Architect handoff.
-- Built the first Market Growth Studio journey with New Business, Account Growth, Retention Risk, and Category Opportunity modes, objective-specific score weighting, map recoloring, fictional examples, and recommended actions.
-- Synchronized README, agent instructions, architecture, and build handoff with the actual React/TypeScript application.
-- Current branch validation: CI run 122 passed install, strict typecheck, Vitest, and production build.
+- Built Opportunity Explorer filters, supporting-layer toggles, ranked ZIPs, explainable score breakdowns, and source disclosure.
+- Built the first Client Growth Studio journey for fictional Lakefront Automotive with deterministic simulation and conceptual Architect handoff.
+- Built the first Market Growth Studio journey with four objective modes, map recoloring, fictional examples, and recommended actions.
+- Synchronized README, agent instructions, architecture, and build handoff with the current application and geography pipeline.
 
 ## Next up
 
-1. Add a reproducible build-time Census data-preparation script and check in a simplified official Cleveland–Akron ZCTA fixture so geometry does not depend on a browser-time request.
-2. Extend supporting overlays into Client Growth Studio with explicit current campaign, reach-gap, and recommended expansion controls.
-3. Expand Client Growth Studio result transitions, strategy trade-off explanations, and accessible simulation timing.
-4. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
-5. Add the nine-step guided executive tour and mobile bottom-sheet interaction.
-6. Add visual regression/browser testing once a WebGL-capable CI environment is available.
+1. Extend supporting overlays into Client Growth Studio with explicit current campaign, reach-gap, and recommended expansion controls.
+2. Expand Client Growth Studio result transitions, strategy trade-off explanations, and accessible simulation timing.
+3. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
+4. Add the nine-step guided executive tour and mobile bottom-sheet interaction.
+5. Add visual regression/browser testing once a WebGL-capable CI environment is available.
 
 ## Decisions log
 
@@ -50,11 +51,6 @@ Phase 2 — Shared map and first product journeys
   Considered: large sales zones or a non-geographic dashboard
   Rejected because: the intended product gives each ZIP its own opportunity score
   Must preserve: sales zones remain optional groupings or overlays
-
-- 2026-07-15 | DECISION: use official Census ZCTA geometry through a replaceable source, with an explicit fallback
-  Considered: synthetic polygons, one-off downloaded files, and fetching directly inside the map component
-  Rejected because: those choices either miss product intent, lose provenance, or violate module boundaries
-  Must preserve: geometry access remains behind `ZipGeometrySource`; the UI discloses official versus fallback geometry
 
 - 2026-07-15 | DECISION: use an OpenStreetMap raster basemap for the local prototype
   Considered: blank background, credentialed commercial maps, and custom vector tiles
@@ -78,15 +74,25 @@ Phase 2 — Shared map and first product journeys
 
 - 2026-07-15 | DECISION: remove the obsolete Python project scaffold
   Considered: keeping pytest and Node workflows side by side for historical reasons
-  Rejected because: the repository is now a TypeScript product and duplicate toolchains create false instructions and maintenance debt
-  Must preserve: Vitest and Node CI are the only active application test/build system unless a real Python service is intentionally introduced later
+  Rejected because: duplicate toolchains create false instructions and maintenance debt
+  Must preserve: Vitest and Node CI remain the active application test/build system unless a real Python service is intentionally introduced
+
+- 2026-07-15 | DECISION: use a generated checked-in 2020 Census-derived ZCTA subset at runtime
+  Considered: browser-time TIGERweb requests, synthetic polygons, manually copied geometry, and a generated local fixture
+  Rejected because: runtime requests are unreliable on restricted networks, synthetic polygons do not meet product intent, and manual copies lose reproducibility
+  Must preserve: geometry remains behind `ZipGeometrySource`; the generated file retains provenance, is never edited by hand, and is validated before Vitest runs
+
+- 2026-07-15 | DECISION: retain the network Census source as an optional adapter, not default runtime composition
+  Considered: deleting it completely or continuing to use it as the primary source
+  Rejected because: deletion removes a useful adapter and reference implementation, while primary network use reintroduces the reliability problem
+  Must preserve: `StaticZctaGeometrySource` is the demo default; the synthetic fallback is used only on local fixture failure
 
 ## Noticed
 
-- Browser-time official geometry and basemap rendering require internet access. The next geometry task should pin a reproducible official fixture; offline basemap packaging requires a separate licensing and size decision.
+- OpenStreetMap basemap rendering still requires internet access. Offline basemap packaging requires a separate licensing, storage-size, and distribution decision.
 - The Vite build reports a large initial JavaScript chunk because MapLibre is bundled up front. Code splitting can be considered after product journeys stabilize.
 - Automated visual testing is blocked in the current container because Chromium cannot initialize WebGL.
-- Synthetic competitor footprints currently use deterministic ZIP membership, not exact provider service-area polygons. This is appropriate for the prototype but must be replaced by governed coverage data in production.
+- Synthetic competitor footprints use deterministic ZIP membership, not exact provider service-area polygons. This is appropriate for the prototype but must be replaced by governed coverage data in production.
 
 ## How to run
 
@@ -102,4 +108,11 @@ npm run typecheck
 npm run test
 npm run build
 npm run preview
+```
+
+Geometry refresh and validation:
+
+```bash
+npm run geometry:refresh
+npm run geometry:validate
 ```

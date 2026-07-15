@@ -10,7 +10,7 @@ The repository contains a Vite + React + strict TypeScript application with thre
    - Cleveland–Akron ZIP/ZCTA opportunity heat map
    - cool-to-hot score coloring
    - ZIP hover, selection, filter dimming, ranked opportunities, score explanations, and market context
-   - synthetic reach-gap and competitor footprint layer controls
+   - synthetic reach-gap and competitor footprint controls
 
 2. **Client Growth Studio**
    - fictional Lakefront Automotive baseline and campaign footprint
@@ -24,7 +24,7 @@ The repository contains a Vite + React + strict TypeScript application with thre
    - Account Growth
    - Retention Risk
    - Category Opportunity
-   - objective-specific score weighting, map recoloring, fictional account/prospect examples, and recommended actions
+   - objective-specific score weighting, map recoloring, fictional examples, and recommended actions
 
 All business, advertiser, account, prospect, campaign, reach-gap, competitor, score, recommendation, and simulation values are synthetic.
 
@@ -37,16 +37,17 @@ All business, advertiser, account, prospect, campaign, reach-gap, competitor, sc
 | Language | strict TypeScript |
 | Map | MapLibre GL JS |
 | Basemap | OpenStreetMap raster tiles |
-| Geometry | Census TIGERweb ZCTA source with labeled local fallback |
-| Tests | Vitest |
+| Geometry | checked-in simplified 2020 Census-derived ZCTA subset |
+| Geometry refresh | Node fixture builder + GitHub Actions review workflow |
+| Tests | geometry validation script + Vitest |
 | Styles | CSS variables and modular stylesheets |
-| Backend | None for the prototype |
-| Deployment | Local-first static build; GitHub release ZIPs after merge |
+| Backend | none for the prototype |
+| Deployment | local-first static build; GitHub release ZIPs after merge |
 
 ## 3. Dependency direction
 
 ```text
-public/data synthetic fixtures
+public geographic + synthetic fixtures
         ↓
 repository / geometry-source adapters
         ↓
@@ -61,7 +62,7 @@ Rules:
 
 - `src/domain/` does not import React, MapLibre, browser storage, or network libraries.
 - `src/data/` owns fetch and fixture boundaries.
-- `src/map/` renders values and geometry supplied by the domain/data layers; it does not calculate business scores.
+- `src/map/` renders values and geometry supplied by domain/data layers; it does not calculate business scores.
 - `src/features/` owns product workflows and may consume domain services and repositories.
 - Business truth must not live only in the DOM or MapLibre feature state.
 
@@ -78,8 +79,9 @@ src/
   data/
     OpportunityRepository.ts  market and repository contracts
     DemoOpportunityRepository.ts
-    ZipGeometrySource.ts
-    CensusZctaGeometrySource.ts
+    ZipGeometrySource.ts      shared geometry validation/normalization
+    StaticZctaGeometrySource.ts
+    CensusZctaGeometrySource.ts optional network adapter, not runtime default
   domain/
     opportunity.ts             ZIP scoring contracts and validation
     clientScenario.ts          deterministic client strategies and simulation
@@ -98,17 +100,52 @@ src/
     layout.css
     components.css
     layers.css
+scripts/
+  build-zcta-fixture.mjs       filters and normalizes source Ohio ZCTA geometry
+  validate-zcta-fixture.mjs    gates tests on fixture integrity
 public/data/
-  zip-opportunities.json       synthetic opportunity records
-  cleveland-zips.geojson       clearly labeled geometry fallback
-  market-overlays.json         synthetic reach-gap and competitor definitions
+  zip-opportunities.json
+  market-overlays.json
+  cleveland-akron-zcta-2020.geojson
+  cleveland-akron-zcta-2020.provenance.json
+  cleveland-zips.geojson       synthetic emergency fallback only
 ```
 
-## 5. Map implementation
+## 5. Geographic pipeline
 
-### Primary ZIP source
+### Runtime
 
-`OpportunityMap` creates the `zip-opportunities` GeoJSON source and promotes the `zip` property as the feature ID.
+`DemoOpportunityRepository` loads:
+
+1. synthetic opportunity and overlay fixtures;
+2. the checked-in 2020 Census-derived ZCTA subset through `StaticZctaGeometrySource`;
+3. the synthetic fallback only if the checked-in fixture cannot be loaded or validated.
+
+Runtime ZIP polygons no longer depend on a Census service request. OpenStreetMap basemap tiles still require internet access.
+
+### Refresh
+
+```bash
+npm run geometry:refresh
+npm run geometry:validate
+```
+
+The builder:
+
+- downloads a documented 2020 Census-derived Ohio ZCTA source;
+- filters exactly the ZIP identifiers in `zip-opportunities.json`;
+- normalizes ZIP properties;
+- rounds coordinates to five decimals;
+- preserves Polygon and MultiPolygon topology;
+- writes a provenance record.
+
+The standard `npm run test` command validates geometry before running Vitest. It rejects missing, extra, duplicate, invalid, non-polygon, or geographically implausible features.
+
+Do not edit the generated GeoJSON by hand. Change the builder or source declaration and regenerate it.
+
+## 6. Map implementation
+
+`OpportunityMap` creates the `zip-opportunities` GeoJSON source and promotes `zip` as the feature ID.
 
 Primary layers:
 
@@ -124,73 +161,34 @@ Feature state:
 | `dim` | fades ZIPs outside active filters |
 | `campaign` | highlights active or recommended client campaign ZIPs |
 
-### Opportunity color
+The map consumes scores already attached to ZIP features. The color expression progresses from cool blue through cyan/yellow/orange to red. Selection remains gold.
 
-The map consumes the score already attached to each ZIP feature. The color expression progresses from cool blue through cyan/yellow/orange to red. Selection remains gold and must stay visually distinct from opportunity heat.
+Supporting overlays are loaded from `market-overlays.json` and validated against the active market ZIP set:
 
-### Supporting layers
-
-Typed supporting overlays are loaded from `public/data/market-overlays.json` and validated against the market ZIP set before the UI receives them.
-
-- Reach gaps use a magenta dashed overlay.
-- Competitor footprints are config-driven and receive their own GeoJSON source, fill layer, and line layer.
-- DMA-wide competitors use lower-opacity fill and dashed lines.
-- Overlay controls live in `MapLayerControls`; map rendering only consumes selected IDs and booleans.
+- reach gaps use a magenta dashed overlay;
+- competitors receive config-driven sources, fill layers, and line layers;
+- DMA-wide competitors use lower-opacity fills and dashed lines;
+- visibility state lives in `MapLayerControls` and product features.
 
 Do not hard-code business overlay definitions directly in `OpportunityMap` or JSX.
 
-### Basemap and geometry
+## 7. Product ownership
 
-- The basemap currently uses OpenStreetMap raster tiles and preserves attribution.
-- `CensusZctaGeometrySource` requests official ZCTA geometry through TIGERweb.
-- `DemoOpportunityRepository` falls back to `cleveland-zips.geojson` when the browser-time Census request fails.
-- The next geometry milestone is a reproducible build-time preparation script and checked-in simplified official fixture. Geometry access must remain behind `ZipGeometrySource`.
+### Opportunity Explorer
 
-## 6. Opportunity Explorer
+`ZipExplorer` owns filters, ranked ZIPs, selected ZIP details, layer visibility, and disclosures. Filtered ZIPs remain visible but dimmed.
 
-`ZipExplorer` owns:
+### Client Growth Studio
 
-- minimum score filter
-- category filter
-- ranked ZIP list
-- selected ZIP details
-- supporting layer visibility state
-- geometry and synthetic-data disclosures
+`clientScenario.ts` owns baseline metrics, campaign ZIPs, strategies, deterministic effects, ranges, confidence, explanation, and expansion ZIPs. `ClientGrowthStudio` owns UI theater only. Identical inputs must produce identical outputs.
 
-The map never removes filtered ZIPs; filtered ZIPs remain visible but dimmed.
+### Market Growth Studio
 
-## 7. Client Growth Studio
+`marketMode.ts` owns objective-specific score transforms. Client-facing components must not receive internal account, revenue, retention, or seller fields.
 
-Canonical fictional advertiser: **Lakefront Automotive Group**.
+## 8. Validation and release
 
-`clientScenario.ts` owns:
-
-- baseline metrics
-- campaign ZIPs
-- strategy definitions
-- deterministic effect calculations
-- strategy combination behavior
-- result ranges, confidence, explanation, and recommended expansion ZIPs
-
-`ClientGrowthStudio` owns UI theater only:
-
-- selecting strategies
-- staged simulation status
-- current/projected map state
-- result comparison
-- Architect handoff modal
-
-Identical strategy inputs must always produce identical results.
-
-## 8. Market Growth Studio
-
-`marketMode.ts` owns objective-specific score transformations. The UI supports four modes and uses synthetic examples only.
-
-Client-facing components must not receive internal-only account, revenue, retention, or seller fields.
-
-## 9. Validation and release
-
-Required local checks:
+Required checks:
 
 ```bash
 npm run typecheck
@@ -198,26 +196,28 @@ npm run test
 npm run build
 ```
 
-CI runs those checks on every push and pull request. A successful merge to `main` publishes static-build and source ZIP files under a `build-<run_number>` release tag.
+CI runs those checks on every push and pull request. A successful merge to `main` publishes static-build and source ZIPs under a `build-<run_number>` release tag.
 
-## 10. Preserve
+## 9. Preserve
 
 - strict TypeScript boundaries
 - typed repositories and geometry sources
 - pure deterministic domain logic
 - ZIP/ZCTA as the primary selectable and scored geography
+- generated-geometry provenance and validation
 - MapLibre feature-state interaction
 - dimming instead of removing filtered ZIPs
 - cool-to-hot opportunity scale and gold selection
 - synthetic-data disclosures
 - client/internal data separation
 - Architect positioned as the activation destination
-- OpenStreetMap and Census attribution/provenance
+- OpenStreetMap and Census-derived attribution/provenance
 
-## 11. Do not reintroduce
+## 10. Do not reintroduce
 
 - monolithic HTML/JavaScript
-- Python-template test or CI instructions
+- runtime dependence on remote ZCTA geometry
+- manually edited generated geometry
 - direct JSON imports scattered through components
 - score calculation in MapLibre expressions or JSX handlers
 - uncontrolled simulation randomness
@@ -226,11 +226,10 @@ CI runs those checks on every push and pull request. A successful merge to `main
 - fake live Architect or AI claims
 - deployment-specific domain logic
 
-## 12. Next implementation sequence
+## 11. Next implementation sequence
 
-1. Prepare and check in simplified official Cleveland–Akron ZCTA geometry at build time.
-2. Extend supporting overlays into Client Growth Studio, including explicit reach-gap and current/recommended campaign controls.
-3. Add richer strategy tradeoffs and result transitions.
-4. Expand internal synthetic account/prospect datasets and retention-save comparisons.
-5. Add the guided executive tour and mobile bottom sheet.
-6. Add WebGL-capable browser visual regression coverage.
+1. Extend supporting overlays into Client Growth Studio with explicit current campaign, reach-gap, and recommended expansion controls.
+2. Add richer strategy tradeoffs and result transitions.
+3. Expand internal synthetic account/prospect datasets and retention-save comparisons.
+4. Add the guided executive tour and mobile bottom sheet.
+5. Add WebGL-capable browser visual regression coverage.

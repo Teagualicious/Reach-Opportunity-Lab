@@ -1,0 +1,16 @@
+{
+  "title": "Cleveland–Akron Opportunity Lab ZCTA subset",
+  "geometryType": "ZIP Code Tabulation Area (ZCTA)",
+  "censusVintage": "2020 Census",
+  "sourceDataset": "2020 Census Simplified ZCTA geometry",
+  "sourceRepository": "aha1994/ZCTA2020",
+  "sourceUrl": "https://raw.githubusercontent.com/aha1994/ZCTA2020/refs/heads/main/2020%20Census%20Simplified/Ohio_ZCTAs_simplified_2020.json",
+  "transformation": [
+    "Filtered to the 26 ZIP identifiers in public/data/zip-opportunities.json",
+    "Normalized ZIP properties to zip, ZCTA5, and GEOID",
+    "Rounded coordinates to five decimal places for browser delivery",
+    "Preserved Polygon and MultiPolygon topology from the source fixture"
+  ],
+  "refreshCommand": "node scripts/build-zcta-fixture.mjs",
+  "businessDataNotice": "This file contains public geographic boundaries only. Opportunity, campaign, account, and competitor data remain synthetic."
+}

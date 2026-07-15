@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "node scripts/validate-zcta-fixture.mjs && vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "geometry:refresh": "node scripts/build-zcta-fixture.mjs",
+    "geometry:validate": "node scripts/validate-zcta-fixture.mjs"
   },
   "dependencies": {
     "maplibre-gl": "^5.6.1",

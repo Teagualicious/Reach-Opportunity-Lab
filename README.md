@@ -16,9 +16,15 @@ All advertiser, account, prospect, performance, coverage, recommendation, and op
 
 ## Geography and map data
 
-The demo requests official **2020 Census ZIP Code Tabulation Area (ZCTA)** boundaries from the U.S. Census Bureau TIGERweb service through a typed `ZipGeometrySource` adapter. If that request is unavailable, the application uses a clearly labeled local fallback instead of failing.
+The repository checks in a compact **2020 Census-derived ZIP Code Tabulation Area (ZCTA)** fixture containing exactly the 26 Cleveland–Akron demonstration ZIPs. Runtime geometry is loaded through `StaticZctaGeometrySource`, so polygon rendering does not depend on a browser-time Census service request.
 
-The visual basemap uses OpenStreetMap raster tiles through the isolated MapLibre adapter. This requires internet access but no API key. The next geometry milestone is a reproducible checked-in official Cleveland–Akron ZCTA fixture so polygon rendering no longer depends on a browser-time Census request.
+Geometry provenance and transformations are documented in:
+
+- `public/data/cleveland-akron-zcta-2020.provenance.json`
+- `scripts/build-zcta-fixture.mjs`
+- `scripts/validate-zcta-fixture.mjs`
+
+The visual basemap uses OpenStreetMap raster tiles through the isolated MapLibre adapter. Basemap rendering still requires internet access but no API key. If the checked-in ZCTA fixture cannot be loaded, the application uses a clearly labeled synthetic geometry fallback rather than failing.
 
 ## Run locally
 
@@ -43,12 +49,21 @@ npm run build
 npm run preview
 ```
 
+`npm run test` first validates the checked-in ZCTA fixture, then runs the Vitest suite.
+
+To regenerate and validate the geographic fixture:
+
+```bash
+npm run geometry:refresh
+npm run geometry:validate
+```
+
 CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag.
 
 ## Architecture
 
 ```text
-public/data synthetic fixtures
+public geographic + synthetic demonstration fixtures
         ↓
 DemoOpportunityRepository / ZipGeometrySource
         ↓
@@ -66,7 +81,7 @@ Primary boundaries:
 - `src/map/` — MapLibre sources, layers, feature state, and interaction
 - `src/features/` — product-owned UI and orchestration
 - `src/components/` — reusable presentation components
-- `public/data/` — deterministic synthetic demonstration fixtures
+- `public/data/` — public geographic fixtures plus deterministic synthetic demonstration fixtures
 
 ## Documentation
 
@@ -83,4 +98,5 @@ Read these in order before non-trivial work:
 - No real Spectrum Reach, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
 - Client-facing and internal-only data must remain separate at model and feature boundaries.
 - Simulation results are illustrative and deterministic, not production forecasts.
+- Geographic boundaries preserve source provenance; business overlays remain synthetic.
 - Opportunity Lab is the upstream intelligence and scenario-planning layer; Architect remains the activation destination.
