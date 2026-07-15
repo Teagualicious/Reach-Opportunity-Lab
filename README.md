@@ -24,7 +24,34 @@ Geometry provenance and transformations are documented in:
 - `scripts/build-zcta-fixture.mjs`
 - `scripts/validate-zcta-fixture.mjs`
 
-The visual basemap uses OpenStreetMap raster tiles through the isolated MapLibre adapter. Basemap rendering still requires internet access but no API key. If the checked-in ZCTA fixture cannot be loaded, the application uses a clearly labeled synthetic geometry fallback rather than failing.
+The standard visual basemap uses OpenStreetMap raster tiles through the isolated MapLibre adapter. It requires internet access but no API key. If the checked-in ZCTA fixture cannot be loaded, the application uses a clearly labeled synthetic geometry fallback rather than failing.
+
+## All-offline visual review
+
+A separate distribution target provides the same product journeys with no runtime network access. It bundles:
+
+- the checked-in Cleveland–Akron ZCTA geometry;
+- Census TIGER/Line primary and secondary roads;
+- Census hydrography and county context;
+- local place labels;
+- all synthetic product fixtures;
+- application JavaScript and CSS in one HTML file.
+
+Build and validate it with:
+
+```bash
+npm run offline:all
+```
+
+The resulting folder is:
+
+```text
+offline-dist/Opportunity-Lab-All-Offline/
+```
+
+`Opportunity-Lab-All-Offline.html` opens directly from disk. Windows and macOS launchers are included. No Node.js, installation, local server, administrator access, or internet connection is required for the packaged review build.
+
+The offline target has a hard request boundary: it serves only explicitly embedded fixture paths and rejects every other runtime request. It is a review/distribution adapter; the normal application retains its online OpenStreetMap basemap.
 
 ## Run locally
 
@@ -58,7 +85,15 @@ npm run geometry:refresh
 npm run geometry:validate
 ```
 
-CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag.
+To generate the offline map context and package independently:
+
+```bash
+npm run offline:context
+npm run offline:build
+npm run offline:validate
+```
+
+CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag. The all-offline workflow publishes `Opportunity-Lab-All-Offline.zip` as a workflow artifact and attaches the validated package to the latest release.
 
 ## Architecture
 
@@ -72,16 +107,19 @@ pure TypeScript domain scoring and simulation
 React product features
         ↓
 MapLibre rendering adapter
+        ↓
+standard online basemap OR dedicated offline-review adapter
 ```
 
 Primary boundaries:
 
 - `src/domain/` — pure scoring, simulation, recommendation, and overlay contracts
 - `src/data/` — repository and geometry-source adapters
-- `src/map/` — MapLibre sources, layers, feature state, and interaction
+- `src/map/` — MapLibre sources, layers, feature state, and basemap adapters
 - `src/features/` — product-owned UI and orchestration
 - `src/components/` — reusable presentation components
 - `public/data/` — public geographic fixtures plus deterministic synthetic demonstration fixtures
+- `scripts/` — reproducible geometry, offline-context, packaging, and validation utilities
 
 ## Documentation
 
@@ -98,5 +136,5 @@ Read these in order before non-trivial work:
 - No real Spectrum Reach, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
 - Client-facing and internal-only data must remain separate at model and feature boundaries.
 - Simulation results are illustrative and deterministic, not production forecasts.
-- Geographic boundaries preserve source provenance; business overlays remain synthetic.
+- Geographic boundaries and offline context preserve source provenance; business overlays remain synthetic.
 - Opportunity Lab is the upstream intelligence and scenario-planning layer; Architect remains the activation destination.
