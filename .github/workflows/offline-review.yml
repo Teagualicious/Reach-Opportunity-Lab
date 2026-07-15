@@ -62,7 +62,9 @@ jobs:
       - name: Validate all-offline review
         id: offline_validation
         continue-on-error: true
-        run: npm run offline:validate 2>&1 | tee offline-validation.log
+        run: |
+          set -o pipefail
+          npm run offline:validate 2>&1 | tee offline-validation.log
 
       - name: Package review ZIP
         if: always()
