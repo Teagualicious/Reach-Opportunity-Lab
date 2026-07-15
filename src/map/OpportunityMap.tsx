@@ -21,11 +21,39 @@ interface OpportunityMapProps {
   activeZips?: readonly string[];
   campaignZips?: readonly string[];
   displayScores?: Readonly<Record<string, number>>;
+  showReachGap?: boolean;
+  visibleCompetitorIds?: readonly string[];
 }
 
 const SOURCE_ID = 'zip-opportunities';
 const FILL_LAYER_ID = 'zip-opportunity-fill';
 const LINE_LAYER_ID = 'zip-opportunity-line';
+const REACH_GAP_SOURCE_ID = 'reach-gap-zips';
+const REACH_GAP_FILL_LAYER_ID = 'reach-gap-fill';
+const REACH_GAP_LINE_LAYER_ID = 'reach-gap-line';
+
+function competitorSourceId(competitorId: string): string {
+  return `competitor-${competitorId}`;
+}
+
+function competitorFillLayerId(competitorId: string): string {
+  return `${competitorSourceId(competitorId)}-fill`;
+}
+
+function competitorLineLayerId(competitorId: string): string {
+  return `${competitorSourceId(competitorId)}-line`;
+}
+
+function selectGeometryByZip(
+  geometry: OpportunityMarket['geometry'],
+  zips: readonly string[],
+): OpportunityMarket['geometry'] {
+  const selectedZips = new Set(zips);
+  return {
+    ...geometry,
+    features: geometry.features.filter((feature) => selectedZips.has(feature.properties.zip)),
+  };
+}
 
 function buildPopupContent(properties: Record<string, unknown>): HTMLElement {
   const wrapper = document.createElement('div');
@@ -59,6 +87,14 @@ function setBooleanFeatureState(
   }
 }
 
+function setLayerVisibility(map: MapLibreMap, layerIds: readonly string[], visible: boolean) {
+  for (const layerId of layerIds) {
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+    }
+  }
+}
+
 export function OpportunityMap({
   data,
   selectedZip,
@@ -67,6 +103,8 @@ export function OpportunityMap({
   activeZips,
   campaignZips = [],
   displayScores,
+  showReachGap = false,
+  visibleCompetitorIds = [],
 }: OpportunityMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -75,6 +113,8 @@ export function OpportunityMap({
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const activeZipsRef = useRef<readonly string[]>(activeZips ?? data.opportunities.map(({ zip }) => zip));
   const campaignZipsRef = useRef<readonly string[]>(campaignZips);
+  const showReachGapRef = useRef(showReachGap);
+  const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
   const allZips = useMemo(() => data.opportunities.map(({ zip }) => zip), [data.opportunities]);
 
   const renderedGeometry = useMemo(() => {
@@ -157,6 +197,63 @@ export function OpportunityMap({
         },
       });
 
+      map.addSource(REACH_GAP_SOURCE_ID, {
+        type: 'geojson',
+        data: selectGeometryByZip(data.geometry, data.overlays.reachGapZips),
+      });
+      map.addLayer({
+        id: REACH_GAP_FILL_LAYER_ID,
+        type: 'fill',
+        source: REACH_GAP_SOURCE_ID,
+        layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
+        paint: {
+          'fill-color': '#d946ef',
+          'fill-opacity': 0.12,
+        },
+      });
+      map.addLayer({
+        id: REACH_GAP_LINE_LAYER_ID,
+        type: 'line',
+        source: REACH_GAP_SOURCE_ID,
+        layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
+        paint: {
+          'line-color': '#c026d3',
+          'line-width': 2.4,
+          'line-dasharray': [2, 1.5],
+        },
+      });
+
+      const visibleCompetitors = new Set(visibleCompetitorIdsRef.current);
+      for (const competitor of data.overlays.competitors) {
+        const sourceId = competitorSourceId(competitor.id);
+        const visible = visibleCompetitors.has(competitor.id);
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: selectGeometryByZip(data.geometry, competitor.zips),
+        });
+        map.addLayer({
+          id: competitorFillLayerId(competitor.id),
+          type: 'fill',
+          source: sourceId,
+          layout: { visibility: visible ? 'visible' : 'none' },
+          paint: {
+            'fill-color': competitor.color,
+            'fill-opacity': competitor.wide ? 0.035 : 0.09,
+          },
+        });
+        map.addLayer({
+          id: competitorLineLayerId(competitor.id),
+          type: 'line',
+          source: sourceId,
+          layout: { visibility: visible ? 'visible' : 'none' },
+          paint: {
+            'line-color': competitor.color,
+            'line-width': competitor.wide ? 1.2 : 2,
+            ...(competitor.wide ? { 'line-dasharray': [4, 3] as [number, number] } : {}),
+          },
+        });
+      }
+
       map.addLayer({
         id: LINE_LAYER_ID,
         type: 'line',
@@ -221,7 +318,7 @@ export function OpportunityMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [allZips, data.geometry, data.market.bounds, data.market.center, onSelectZip]);
+  }, [allZips, data, onSelectZip]);
 
   useEffect(() => {
     selectedZipRef.current = selectedZip;
@@ -247,6 +344,32 @@ export function OpportunityMap({
     if (!map?.getSource(SOURCE_ID)) return;
     setBooleanFeatureState(map, allZips, new Set(campaignZips), 'campaign');
   }, [allZips, campaignZips]);
+
+  useEffect(() => {
+    showReachGapRef.current = showReachGap;
+    const map = mapRef.current;
+    if (!map) return;
+    setLayerVisibility(
+      map,
+      [REACH_GAP_FILL_LAYER_ID, REACH_GAP_LINE_LAYER_ID],
+      showReachGap,
+    );
+  }, [showReachGap]);
+
+  useEffect(() => {
+    visibleCompetitorIdsRef.current = visibleCompetitorIds;
+    const map = mapRef.current;
+    if (!map) return;
+
+    const visible = new Set(visibleCompetitorIds);
+    for (const competitor of data.overlays.competitors) {
+      setLayerVisibility(
+        map,
+        [competitorFillLayerId(competitor.id), competitorLineLayerId(competitor.id)],
+        visible.has(competitor.id),
+      );
+    }
+  }, [data.overlays.competitors, visibleCompetitorIds]);
 
   useEffect(() => {
     const map = mapRef.current;

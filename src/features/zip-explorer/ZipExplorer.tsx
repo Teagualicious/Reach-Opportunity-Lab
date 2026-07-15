@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { COMPONENT_LABELS, COMPONENT_MAXIMUMS, getPriorityBand, type ZipOpportunity } from '../../domain/opportunity';
+import { MapLayerControls } from '../../components/MapLayerControls';
+import { ScoreRing } from '../../components/ScoreRing';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
+import { COMPONENT_LABELS, COMPONENT_MAXIMUMS, getPriorityBand, type ZipOpportunity } from '../../domain/opportunity';
 import { OpportunityMap } from '../../map/OpportunityMap';
 import { opportunityLegendGradient } from '../../map/mapExpressions';
-import { ScoreRing } from '../../components/ScoreRing';
 
 interface ZipExplorerProps {
   data: OpportunityMarket;
@@ -26,6 +27,8 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [minScore, setMinScore] = useState(35);
   const [category, setCategory] = useState('All categories');
+  const [showReachGap, setShowReachGap] = useState(false);
+  const [visibleCompetitorIds, setVisibleCompetitorIds] = useState<string[]>([]);
   const [mapResetVersion, setMapResetVersion] = useState(0);
 
   const categories = useMemo(
@@ -53,6 +56,8 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
     setSelectedZip(null);
     setMinScore(35);
     setCategory('All categories');
+    setShowReachGap(false);
+    setVisibleCompetitorIds([]);
     setMapResetVersion((version) => version + 1);
   }, [resetVersion]);
 
@@ -63,6 +68,19 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
   const handleSelectZip = useCallback((zip: string | null) => {
     setSelectedZip(zip);
   }, []);
+
+  const handleCompetitorVisibilityChange = useCallback(
+    (competitorId: string, visible: boolean) => {
+      setVisibleCompetitorIds((current) =>
+        visible
+          ? current.includes(competitorId)
+            ? current
+            : [...current, competitorId]
+          : current.filter((id) => id !== competitorId),
+      );
+    },
+    [],
+  );
 
   return (
     <main className="explorer-grid">
@@ -102,6 +120,14 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
           </label>
         </section>
 
+        <MapLayerControls
+          overlays={data.overlays}
+          showReachGap={showReachGap}
+          visibleCompetitorIds={visibleCompetitorIds}
+          onShowReachGapChange={setShowReachGap}
+          onCompetitorVisibilityChange={handleCompetitorVisibilityChange}
+        />
+
         <section className="panel-section panel-section--grow">
           <div className="section-heading">
             <span>Highest opportunity</span>
@@ -132,7 +158,7 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
         </div>
         <div className="synthetic-notice">
           <span className="synthetic-notice__dot" />
-          Synthetic opportunity metrics · illustrative scoring only
+          Synthetic opportunity and coverage metrics · illustrative scoring only
         </div>
       </aside>
 
@@ -143,6 +169,8 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
           resetVersion={mapResetVersion}
           onSelectZip={handleSelectZip}
           activeZips={activeZips}
+          showReachGap={showReachGap}
+          visibleCompetitorIds={visibleCompetitorIds}
         />
         <div className="map-stage__caption">
           <span>Opportunity heat map</span>

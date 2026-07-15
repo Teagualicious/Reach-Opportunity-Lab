@@ -1,0 +1,17 @@
+.layer-controls { display: grid; gap: 8px; }
+.layer-toggle { display: grid; grid-template-columns: 16px 18px 1fr; align-items: center; gap: 9px; min-width: 0; padding: 8px 9px; border: 1px solid rgba(255,255,255,0.07); border-radius: 9px; background: rgba(255,255,255,0.03); cursor: pointer; transition: 150ms ease; }
+.layer-toggle:hover { border-color: rgba(47,209,232,0.26); background: rgba(47,209,232,0.055); }
+.layer-toggle:has(input:checked) { border-color: rgba(47,209,232,0.34); background: rgba(47,209,232,0.08); }
+.layer-toggle input { width: 14px; height: 14px; margin: 0; accent-color: var(--cyan-400); }
+.layer-toggle > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.layer-toggle strong { overflow: hidden; color: rgba(255,255,255,0.84); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.layer-toggle small { overflow: hidden; color: rgba(255,255,255,0.4); font-size: 8px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.layer-swatch { --layer-color: #7c3aed; width: 16px; height: 10px; border: 2px solid var(--layer-color); border-radius: 4px; background: color-mix(in srgb, var(--layer-color) 20%, transparent); }
+.layer-swatch.is-wide { border-style: dashed; background: color-mix(in srgb, var(--layer-color) 8%, transparent); }
+.layer-swatch--reach-gap { --layer-color: #d946ef; border-style: dashed; }
+.layer-controls__divider { height: 1px; margin: 2px 0; background: rgba(255,255,255,0.07); }
+
+@supports not (background: color-mix(in srgb, white 10%, transparent)) {
+  .layer-swatch { background: rgba(124,58,237,0.18); }
+  .layer-swatch--reach-gap { background: rgba(217,70,239,0.16); }
+}
