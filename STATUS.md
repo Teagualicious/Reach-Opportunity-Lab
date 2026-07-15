@@ -11,6 +11,7 @@ Phase 0 — Project setup
 - Repo cleanup: removed committed `tests/__pycache__`, added root `.gitignore` (Python cache/venv, data files csv/xlsx/pptx except `tests/fixtures/*.csv`, secrets), added `.github/workflows/ci.yml` (pytest on push/PR, Python 3.12).
 - CI `release` job: on pushes to `main` after tests pass, zips source (excludes `.git`, `tests`, `__pycache__`) as `{repo}_{date}_r{run_number}.zip` and publishes a GitHub Release tagged `build-{run_number}` via `softprops/action-gh-release` using the built-in `GITHUB_TOKEN` (`contents: write`, no new secrets).
 - Added `AGENTS.md` (house rules for any AI agent, mirrors CLAUDE.md). Adopted a structured decision-log format across `AGENTS.md`, `CLAUDE.md`, and this file's Decisions log; CLAUDE.md's end-of-session rule now references it.
+- Filled in CLAUDE.md's Project overview (Spectrum Reach Opportunity Lab: two studios, Describe→Prioritize→Simulate→Activate, one-week synthetic-data prototype) and renamed the handoff doc `Opportunity_Lab.md` → `PRODUCT_BUILD_SPEC.md` (the name the doc references), linked from the overview.
 
 ## Next up
 
@@ -44,6 +45,11 @@ Phase 0 — Project setup
   Considered: keeping the one-line "Date — decision — why" format
   Rejected because: one line loses the alternatives and constraints that keep the next agent from re-litigating a settled choice
   Must preserve: keep AGENTS.md, CLAUDE.md, and this log's format in sync — CLAUDE.md is the authority they mirror
+
+- 2026-07-15 | DECISION: CLAUDE.md Project overview is a concise summary that points to PRODUCT_BUILD_SPEC.md, not the full spec inlined
+  Considered: pasting the whole ~1,700-line handoff doc into CLAUDE.md; a longer multi-paragraph overview
+  Rejected because: every session loads CLAUDE.md first — inlining 44KB bloats that context; the spec itself says to keep the full handoff as a standalone PRODUCT_BUILD_SPEC.md
+  Must preserve: keep the overview in sync with PRODUCT_BUILD_SPEC.md if the product scope changes; the spec file is the canonical source of product/architecture detail
 
 ## Noticed (not yet acted on)
 
