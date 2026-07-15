@@ -4,8 +4,17 @@ Instructions for Claude Code sessions in this repository. Read STATUS.md before 
 
 ## Project overview
 
-<!-- EDIT PER PROJECT: one paragraph. What this is, who uses it, what "done" looks like. -->
-(Describe the project here.)
+**Spectrum Reach Opportunity Lab** — a geographic market-intelligence and scenario-planning tool. It combines a ZIP/ZCTA-based market map with opportunity scoring, deterministic strategy simulation, template-generated explanations, and a conceptual handoff into Spectrum Reach Architect (the campaign-activation destination — this product is the upstream intelligence layer, not a replacement for it). The workflow follows one arc: **Describe → Prioritize → Simulate → Activate**.
+
+One intelligence layer powers two experiences:
+- **Client Growth Studio** (external) — helps an advertiser find geographic, audience, media, and conversion opportunities and simulate campaign changes. Never exposes internal-only metrics.
+- **Market Growth Studio** (internal) — helps Spectrum Reach sellers and leadership find new business, grow accounts, flag retention risk, and rank category opportunity.
+
+**Current deliverable:** a one-week executive prototype for a QR-code/presentation demo. It must look and behave like a credible product with a guided tour, but it does **not** contain a real predictive model, live LLM/agents, real Spectrum data, or a live Architect integration. All data is synthetic and must be labeled as such; keep client and internal data strictly separated. Preserve the existing HTML map unless an audit proves it can't be extended safely.
+
+**Done** = the acceptance criteria in the build spec are met: map + ZIP selection work, one full client scenario and at least two internal scenarios run, simulation is deterministic and reproducible, the guided tour has no dead ends, the Architect handoff is clear, and the QR/mobile experience works — all with synthetic data clearly labeled.
+
+The full product, architecture, data model, and 7-day implementation plan live in [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — read it before non-trivial product work.
 
 ## Stack
 
@@ -19,9 +28,20 @@ Instructions for Claude Code sessions in this repository. Read STATUS.md before 
 2. **Scope:** work only on the task given. If you notice unrelated problems, list them in STATUS.md under "Noticed" — do not fix them unprompted.
 3. **Tests are the gate.** Run `pytest` before declaring any task complete. A task with failing tests is not done. New behavior gets a new test.
 4. **End of session (every time):**
-   - Update STATUS.md: what changed, what's next, any decisions made
+   - Update STATUS.md: what changed, what's next, any decisions made — record decisions in the decision-log format below
    - Commit with a clear message
    - Leave the repo in a state a fresh session can pick up with zero conversation context
+
+### Decision-log format (STATUS.md)
+
+Every non-trivial choice gets logged so reasoning survives session handoffs:
+
+```
+- YYYY-MM-DD | DECISION: what was chosen
+  Considered: alternatives evaluated
+  Rejected because: the actual reason, not a platitude
+  Must preserve: constraints the next agent must not break
+```
 
 ## Code style
 
