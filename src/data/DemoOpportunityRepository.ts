@@ -12,6 +12,7 @@ import type {
   OpportunityRepository,
   ZipFeatureProperties,
 } from './OpportunityRepository';
+import { publicAssetUrl } from './publicAssetUrl';
 import { StaticZctaGeometrySource } from './StaticZctaGeometrySource';
 import type { RawZipGeometry, ZipGeometrySource } from './ZipGeometrySource';
 
@@ -95,7 +96,8 @@ export function buildOpportunityMarket(
   };
 }
 
-async function readJson<T>(url: string): Promise<T> {
+async function readJson<T>(path: string): Promise<T> {
+  const url = publicAssetUrl(path);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Unable to load ${url}: ${response.status} ${response.statusText}`);
@@ -112,8 +114,8 @@ export class DemoOpportunityRepository implements OpportunityRepository {
     }
 
     const [payload, rawOverlays] = await Promise.all([
-      readJson<DemoMarketPayload>('/data/zip-opportunities.json'),
-      readJson<unknown>('/data/market-overlays.json'),
+      readJson<DemoMarketPayload>('data/zip-opportunities.json'),
+      readJson<unknown>('data/market-overlays.json'),
     ]);
     const zips = payload.opportunities.map((opportunity) => opportunity.zip);
     assertMarketOverlayData(rawOverlays, zips);
@@ -131,7 +133,7 @@ export class DemoOpportunityRepository implements OpportunityRepository {
         'Checked-in Census-derived geometry unavailable; using the synthetic fallback.',
         checkedInGeometryError,
       );
-      const fallbackGeometry = await readJson<RawZipGeometry>('/data/cleveland-zips.geojson');
+      const fallbackGeometry = await readJson<RawZipGeometry>('data/cleveland-zips.geojson');
       return buildOpportunityMarket(payload, fallbackGeometry, FALLBACK_GEOMETRY_METADATA, rawOverlays);
     }
   }
