@@ -19,9 +19,20 @@ Instructions for Claude Code sessions in this repository. Read STATUS.md before 
 2. **Scope:** work only on the task given. If you notice unrelated problems, list them in STATUS.md under "Noticed" — do not fix them unprompted.
 3. **Tests are the gate.** Run `pytest` before declaring any task complete. A task with failing tests is not done. New behavior gets a new test.
 4. **End of session (every time):**
-   - Update STATUS.md: what changed, what's next, any decisions made
+   - Update STATUS.md: what changed, what's next, any decisions made — record decisions in the decision-log format below
    - Commit with a clear message
    - Leave the repo in a state a fresh session can pick up with zero conversation context
+
+### Decision-log format (STATUS.md)
+
+Every non-trivial choice gets logged so reasoning survives session handoffs:
+
+```
+- YYYY-MM-DD | DECISION: what was chosen
+  Considered: alternatives evaluated
+  Rejected because: the actual reason, not a platitude
+  Must preserve: constraints the next agent must not break
+```
 
 ## Code style
 
