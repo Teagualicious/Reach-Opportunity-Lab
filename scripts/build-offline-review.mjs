@@ -84,7 +84,6 @@ function offlineFetchShim(embeddedData) {
   return `<script>
 (() => {
   const embedded = ${serialized};
-  const nativeFetch = window.fetch.bind(window);
 
   function normalizePath(raw) {
     if (Object.prototype.hasOwnProperty.call(embedded, raw)) return raw;
@@ -99,7 +98,7 @@ function offlineFetchShim(embeddedData) {
     }
   }
 
-  window.fetch = (input, init) => {
+  window.fetch = (input) => {
     const raw = typeof input === 'string'
       ? input
       : input instanceof URL
@@ -118,7 +117,7 @@ function offlineFetchShim(embeddedData) {
       }));
     }
 
-    return nativeFetch(input, init);
+    return Promise.reject(new TypeError('Offline review blocked external request: ' + String(raw)));
   };
 })();
 </script>`;
