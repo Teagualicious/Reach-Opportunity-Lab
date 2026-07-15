@@ -1,5 +1,9 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import maplibregl, { type MapOptions } from 'maplibre-gl';
+import { App } from './app/App';
 import { createOfflineBasemapStyle, loadOfflinePlaceLabels } from './map/offlineBasemapStyle';
+import './styles/index.css';
 
 const OriginalMap = maplibregl.Map;
 
@@ -60,4 +64,12 @@ class OfflineReviewMap extends OriginalMap {
 (maplibregl as unknown as { Map: typeof OriginalMap }).Map = OfflineReviewMap as typeof OriginalMap;
 
 document.documentElement.dataset.reviewMode = 'offline';
-void import('./main');
+
+const root = document.getElementById('root');
+if (!root) throw new Error('Application root element is missing');
+
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
