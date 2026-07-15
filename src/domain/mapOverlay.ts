@@ -25,9 +25,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assertZipList(value: unknown, field: string, validZips: ReadonlySet<string>): asserts value is string[] {
-  if (!Array.isArray(value) || value.length === 0) {
-    throw new Error(`${field} must contain at least one ZIP`);
+function assertZipList(
+  value: unknown,
+  field: string,
+  validZips: ReadonlySet<string>,
+  allowEmpty = false,
+): asserts value is string[] {
+  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
+    throw new Error(`${field} must contain${allowEmpty ? '' : ' at least'} one ZIP`);
   }
 
   const seen = new Set<string>();
@@ -54,7 +59,7 @@ export function assertMarketOverlayData(
   }
 
   const validZips = new Set(validZipValues);
-  assertZipList(value.reachGapZips, 'reachGapZips', validZips);
+  assertZipList(value.reachGapZips, 'reachGapZips', validZips, true);
 
   if (!Array.isArray(value.competitors)) {
     throw new Error('competitors must be an array');
