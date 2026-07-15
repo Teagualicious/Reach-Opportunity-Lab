@@ -5,7 +5,6 @@ import {
   type MarketOverlayData,
 } from '../domain/mapOverlay';
 import { assertZipOpportunity, getPriorityBand, type ZipOpportunity } from '../domain/opportunity';
-import { CensusZctaGeometrySource } from './CensusZctaGeometrySource';
 import type {
   GeometryMetadata,
   MarketDefinition,
@@ -13,6 +12,7 @@ import type {
   OpportunityRepository,
   ZipFeatureProperties,
 } from './OpportunityRepository';
+import { StaticZctaGeometrySource } from './StaticZctaGeometrySource';
 import type { RawZipGeometry, ZipGeometrySource } from './ZipGeometrySource';
 
 interface DemoMarketPayload {
@@ -20,10 +20,10 @@ interface DemoMarketPayload {
   opportunities: ZipOpportunity[];
 }
 
-const OFFICIAL_GEOMETRY_METADATA: GeometryMetadata = {
+const CHECKED_IN_GEOMETRY_METADATA: GeometryMetadata = {
   kind: 'official-zcta',
-  label: 'Official 2020 Census ZCTA boundaries',
-  source: 'U.S. Census Bureau TIGERweb',
+  label: 'Checked-in 2020 Census-derived ZCTA boundaries',
+  source: 'Simplified 2020 Census ZCTA fixture · see provenance file',
   vintage: '2020 Census',
 };
 
@@ -104,7 +104,7 @@ async function readJson<T>(url: string): Promise<T> {
 }
 
 export class DemoOpportunityRepository implements OpportunityRepository {
-  constructor(private readonly officialGeometrySource: ZipGeometrySource = new CensusZctaGeometrySource()) {}
+  constructor(private readonly geometrySource: ZipGeometrySource = new StaticZctaGeometrySource()) {}
 
   async loadMarket(marketId: string): Promise<OpportunityMarket> {
     if (marketId !== 'cleveland-akron') {
@@ -119,10 +119,18 @@ export class DemoOpportunityRepository implements OpportunityRepository {
     assertMarketOverlayData(rawOverlays, zips);
 
     try {
-      const officialGeometry = await this.officialGeometrySource.load(zips);
-      return buildOpportunityMarket(payload, officialGeometry, OFFICIAL_GEOMETRY_METADATA, rawOverlays);
-    } catch (officialGeometryError) {
-      console.warn('Official Census geometry unavailable; using the synthetic fallback.', officialGeometryError);
+      const checkedInGeometry = await this.geometrySource.load(zips);
+      return buildOpportunityMarket(
+        payload,
+        checkedInGeometry,
+        CHECKED_IN_GEOMETRY_METADATA,
+        rawOverlays,
+      );
+    } catch (checkedInGeometryError) {
+      console.warn(
+        'Checked-in Census-derived geometry unavailable; using the synthetic fallback.',
+        checkedInGeometryError,
+      );
       const fallbackGeometry = await readJson<RawZipGeometry>('/data/cleveland-zips.geojson');
       return buildOpportunityMarket(payload, fallbackGeometry, FALLBACK_GEOMETRY_METADATA, rawOverlays);
     }
