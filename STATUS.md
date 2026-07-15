@@ -18,7 +18,11 @@ Phase 2 — Shared map and first product journeys
 - Checked in `cleveland-akron-zcta-2020.geojson` plus explicit provenance; runtime geometry no longer depends on a browser-time Census request.
 - Added `StaticZctaGeometrySource` as the runtime default and retained the synthetic geometry only as an emergency fallback.
 - Added fixture validation for exact ZIP membership/order, duplicate detection, polygon geometry, coordinate sanity, feature count, and provenance.
-- Added an OpenStreetMap basemap through the isolated MapLibre adapter.
+- Added an OpenStreetMap basemap through the isolated standard MapLibre adapter.
+- Added a dedicated all-offline MapLibre review adapter using bundled Census TIGER/Line roads, hydrography, county context, and local place labels.
+- Added a reproducible all-offline context generator, single-file packager, Windows/macOS launchers, and hard runtime request boundary.
+- Added all-offline validation for embedded assets, geographic context, external document dependencies, Vite split chunks, and the network guard.
+- Published `Opportunity-Lab-All-Offline.zip` as a validated workflow artifact and attached it to the latest GitHub release.
 - Added a cool-to-hot opportunity palette, ZIP hover/selection, filter dimming, campaign highlighting, score overrides, reset behavior, and attribution.
 - Added typed `MarketOverlayData` and `CompetitorFootprint` contracts with validation against the active market ZIP set.
 - Added synthetic reach-gap and competitor footprint fixtures, reusable layer controls, and config-driven MapLibre overlay sources/layers.
@@ -33,7 +37,7 @@ Phase 2 — Shared map and first product journeys
 2. Expand Client Growth Studio result transitions, strategy trade-off explanations, and accessible simulation timing.
 3. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
 4. Add the nine-step guided executive tour and mobile bottom-sheet interaction.
-5. Add visual regression/browser testing once a WebGL-capable CI environment is available.
+5. Add WebGL-capable browser visual regression coverage for both standard and offline adapters.
 
 ## Decisions log
 
@@ -52,10 +56,10 @@ Phase 2 — Shared map and first product journeys
   Rejected because: the intended product gives each ZIP its own opportunity score
   Must preserve: sales zones remain optional groupings or overlays
 
-- 2026-07-15 | DECISION: use an OpenStreetMap raster basemap for the local prototype
+- 2026-07-15 | DECISION: use an OpenStreetMap raster basemap for the standard local prototype
   Considered: blank background, credentialed commercial maps, and custom vector tiles
   Rejected because: blank space is not a real map, commercial tiles add credentials, and custom tiles are premature
-  Must preserve: attribution remains visible and the provider stays isolated in the map adapter
+  Must preserve: attribution remains visible and the provider stays isolated in the standard map adapter
 
 - 2026-07-15 | DECISION: opportunity scores use a cool-to-hot palette
   Considered: preserving a single blue ramp
@@ -87,12 +91,17 @@ Phase 2 — Shared map and first product journeys
   Rejected because: deletion removes a useful adapter and reference implementation, while primary network use reintroduces the reliability problem
   Must preserve: `StaticZctaGeometrySource` is the demo default; the synthetic fallback is used only on local fixture failure
 
+- 2026-07-15 | DECISION: provide offline review as a separate build adapter rather than changing the standard product basemap
+  Considered: bundling raster tiles into the standard app, replacing OpenStreetMap everywhere, or maintaining a dedicated offline target
+  Rejected because: tile packaging creates licensing and size concerns, while replacing the standard map sacrifices visual detail and couples review constraints to product behavior
+  Must preserve: the standard app keeps its isolated online basemap; the offline entry bundles Census context, embeds all fixtures and assets, and rejects unapproved runtime requests
+
 ## Noticed
 
-- OpenStreetMap basemap rendering still requires internet access. Offline basemap packaging requires a separate licensing, storage-size, and distribution decision.
-- The Vite build reports a large initial JavaScript chunk because MapLibre is bundled up front. Code splitting can be considered after product journeys stabilize.
-- Automated visual testing is blocked in the current container because Chromium cannot initialize WebGL.
+- The Vite standard build reports a large initial JavaScript chunk because MapLibre is bundled up front. Code splitting can be considered after product journeys stabilize.
+- Automated screenshot testing is blocked in the current container because Chromium cannot initialize WebGL.
 - Synthetic competitor footprints use deterministic ZIP membership, not exact provider service-area polygons. This is appropriate for the prototype but must be replaced by governed coverage data in production.
+- The all-offline context is intentionally lighter than a commercial street basemap; it prioritizes dependable geographic orientation and ZIP-level review without network, licensing, or tile-storage dependencies.
 
 ## How to run
 
@@ -115,4 +124,10 @@ Geometry refresh and validation:
 ```bash
 npm run geometry:refresh
 npm run geometry:validate
+```
+
+All-offline context, package, and validation:
+
+```bash
+npm run offline:all
 ```
