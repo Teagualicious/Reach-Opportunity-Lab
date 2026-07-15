@@ -1,0 +1,57 @@
+{
+  "reachGapZips": [
+    "44022",
+    "44106",
+    "44114",
+    "44122",
+    "44145",
+    "44236",
+    "44308"
+  ],
+  "competitors": [
+    {
+      "id": "cox",
+      "label": "Cox",
+      "subtitle": "Central and western Cleveland clusters",
+      "color": "#7c3aed",
+      "zips": ["44102", "44109", "44111", "44113", "44114", "44115", "44129", "44130"]
+    },
+    {
+      "id": "armstrong",
+      "label": "Armstrong",
+      "subtitle": "Outer southwest market clusters",
+      "color": "#f97316",
+      "zips": ["44070", "44212", "44221", "44256", "44313"]
+    },
+    {
+      "id": "breezeline",
+      "label": "Breezeline",
+      "subtitle": "Eastern suburban clusters",
+      "color": "#06b6d4",
+      "zips": ["44022", "44060", "44106", "44118", "44122", "44124", "44202", "44236"]
+    },
+    {
+      "id": "att-uverse",
+      "label": "AT&T U-verse",
+      "subtitle": "Broad urban and suburban footprint",
+      "color": "#ec4899",
+      "zips": ["44102", "44106", "44109", "44111", "44113", "44114", "44115", "44118", "44122", "44124", "44128", "44129", "44130", "44140", "44145", "44308"]
+    },
+    {
+      "id": "directv-stream",
+      "label": "DirecTV Stream",
+      "subtitle": "DMA-wide streaming availability",
+      "color": "#94a3b8",
+      "wide": true,
+      "zips": ["44022", "44060", "44070", "44102", "44106", "44109", "44111", "44113", "44114", "44115", "44118", "44122", "44124", "44128", "44129", "44130", "44140", "44145", "44202", "44212", "44221", "44224", "44236", "44256", "44308", "44313"]
+    },
+    {
+      "id": "dish-network",
+      "label": "Dish Network",
+      "subtitle": "DMA-wide satellite availability",
+      "color": "#f43f5e",
+      "wide": true,
+      "zips": ["44022", "44060", "44070", "44102", "44106", "44109", "44111", "44113", "44114", "44115", "44118", "44122", "44124", "44128", "44129", "44130", "44140", "44145", "44202", "44212", "44221", "44224", "44236", "44256", "44308", "44313"]
+    }
+  ]
+}
