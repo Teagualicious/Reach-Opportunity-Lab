@@ -2,42 +2,36 @@ name: Generate ZCTA fixture
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
-      - agent/checked-in-zcta-geometry
+      - main
     paths:
       - scripts/build-zcta-fixture.mjs
       - .github/workflows/generate-zcta-fixture.yml
       - public/data/zip-opportunities.json
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   generate:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: agent/checked-in-zcta-geometry
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Build checked-in Cleveland–Akron ZCTA fixture
+      - name: Build Cleveland–Akron ZCTA fixture
         run: node scripts/build-zcta-fixture.mjs
 
-      - name: Commit generated fixture
-        run: |
-          if git diff --quiet -- public/data/cleveland-akron-zcta-2020.geojson public/data/cleveland-akron-zcta-2020.provenance.json; then
-            echo "ZCTA fixture is already current."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data/cleveland-akron-zcta-2020.geojson public/data/cleveland-akron-zcta-2020.provenance.json
-          git commit -m "Generate checked-in Cleveland ZCTA fixture"
-          git push origin HEAD:agent/checked-in-zcta-geometry
+      - name: Upload generated fixture for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleveland-akron-zcta-2020
+          path: |
+            public/data/cleveland-akron-zcta-2020.geojson
+            public/data/cleveland-akron-zcta-2020.provenance.json
+          if-no-files-found: error
+          retention-days: 7
