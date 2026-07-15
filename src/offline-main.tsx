@@ -52,7 +52,8 @@ class OfflineReviewMap extends OriginalMap {
   override remove(): this {
     for (const marker of this.offlineLabels) marker.remove();
     this.offlineLabels = [];
-    return super.remove();
+    super.remove();
+    return this;
   }
 }
 
