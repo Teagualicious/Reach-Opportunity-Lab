@@ -56,10 +56,11 @@ jobs:
           npm run test
           npm run build
 
-      - name: Build and validate all-offline review
-        run: |
-          npm run offline:build
-          npm run offline:validate
+      - name: Build all-offline review
+        run: npm run offline:build
+
+      - name: Validate all-offline review
+        run: npm run offline:validate
 
       - name: Package review ZIP
         run: |
