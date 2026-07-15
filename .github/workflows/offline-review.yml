@@ -1,0 +1,99 @@
+name: All-offline visual review
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/all-offline-review-build
+    paths:
+      - offline.html
+      - src/offline-main.tsx
+      - src/map/offlineBasemapStyle.ts
+      - scripts/build-offline-map-context.mjs
+      - scripts/build-offline-review.mjs
+      - scripts/validate-offline-review.mjs
+      - package.json
+      - package-lock.json
+      - public/data/**
+      - .github/workflows/offline-review.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - offline.html
+      - src/offline-main.tsx
+      - src/map/offlineBasemapStyle.ts
+      - scripts/build-offline-map-context.mjs
+      - scripts/build-offline-review.mjs
+      - scripts/validate-offline-review.mjs
+      - package.json
+      - package-lock.json
+      - public/data/**
+      - .github/workflows/offline-review.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build-offline-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate bundled Census map context
+        run: npm run offline:context
+
+      - name: Validate application source
+        run: |
+          npm run typecheck
+          npm run test
+          npm run build
+
+      - name: Build all-offline review
+        run: npm run offline:build
+
+      - name: Validate all-offline review
+        id: offline_validation
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run offline:validate 2>&1 | tee offline-validation.log
+
+      - name: Package review ZIP
+        if: always()
+        run: |
+          cd offline-dist
+          zip -r -9 ../Opportunity-Lab-All-Offline.zip Opportunity-Lab-All-Offline
+
+      - name: Upload workflow artifact and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Opportunity-Lab-All-Offline
+          path: |
+            Opportunity-Lab-All-Offline.zip
+            offline-validation.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach to latest GitHub release
+        if: steps.offline_validation.outcome == 'success' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST_TAG="$(gh release view --json tagName --jq .tagName)"
+          echo "Uploading offline review asset to ${LATEST_TAG}"
+          gh release upload "${LATEST_TAG}" "Opportunity-Lab-All-Offline.zip#All-offline visual review — no installation required" --clobber
+
+      - name: Enforce offline validation
+        if: steps.offline_validation.outcome != 'success'
+        run: |
+          cat offline-validation.log
+          exit 1
