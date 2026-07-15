@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { MarketOverlayData } from '../domain/mapOverlay';
 
 interface MapLayerControlsProps {
@@ -50,7 +51,7 @@ export function MapLayerControls({
             />
             <span
               className={`layer-swatch ${competitor.wide ? 'is-wide' : ''}`}
-              style={{ '--layer-color': competitor.color } as React.CSSProperties}
+              style={{ '--layer-color': competitor.color } as CSSProperties}
               aria-hidden="true"
             />
             <span>
