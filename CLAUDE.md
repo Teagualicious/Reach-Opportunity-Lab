@@ -14,7 +14,7 @@ One intelligence layer powers two experiences:
 
 **Done** = the acceptance criteria in the build spec are met: map + ZIP selection work, one full client scenario and at least two internal scenarios run, simulation is deterministic and reproducible, the guided tour has no dead ends, the Architect handoff is clear, and the QR/mobile experience works — all with synthetic data clearly labeled.
 
-The full product, architecture, data model, and 7-day implementation plan live in [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — read it before non-trivial product work.
+The full product, architecture, data model, and 7-day implementation plan live in [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — read it before non-trivial product work. For the technical audit of the existing MapLibre map (data model, layers, interaction/filter/competitor logic, and what to preserve vs. extend when rebuilding it), read [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) — read it before touching the map itself.
 
 ## Stack
 
