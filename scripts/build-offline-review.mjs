@@ -24,10 +24,11 @@ function buildOfflineEntry() {
     npmCommand,
     [
       'exec',
-      'vite',
       '--',
+      'vite',
       'build',
-      'offline.html',
+      '--mode',
+      'offline-review',
       '--outDir',
       BUILD_DIR,
       '--emptyOutDir',
@@ -35,10 +36,6 @@ function buildOfflineEntry() {
     {
       cwd: ROOT,
       stdio: 'inherit',
-      env: {
-        ...process.env,
-        VITE_OFFLINE_REVIEW: 'true',
-      },
     },
   );
 }
@@ -74,7 +71,8 @@ async function inlineApplication(html) {
 async function readEmbeddedData() {
   const entries = await Promise.all(
     EMBEDDED_DATA_PATHS.map(async (urlPath) => {
-      const data = JSON.parse(await readFile(path.join(ROOT, 'public', urlPath), 'utf8'));
+      const filePath = path.join(ROOT, 'public', urlPath.replace(/^\//, ''));
+      const data = JSON.parse(await readFile(filePath, 'utf8'));
       return [urlPath, data];
     }),
   );
