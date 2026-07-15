@@ -18,13 +18,11 @@ if (htmlStats.size < 500_000) {
 }
 
 for (const forbidden of [
-  'tile.openstreetmap.org',
-  'tigerweb.geo.census.gov',
   '<script type="module" crossorigin src=',
   '<link rel="stylesheet" crossorigin href=',
 ]) {
   if (html.includes(forbidden)) {
-    throw new Error(`Offline review still contains runtime dependency: ${forbidden}`);
+    throw new Error(`Offline review still contains an external document dependency: ${forbidden}`);
   }
 }
 
@@ -33,11 +31,16 @@ for (const required of [
   '/data/market-overlays.json',
   '/data/cleveland-akron-zcta-2020.geojson',
   '/data/offline-map-context.geojson',
+  'Offline review blocked external request:',
   'Opportunity Lab',
 ]) {
   if (!html.includes(required)) {
     throw new Error(`Offline review is missing required embedded content: ${required}`);
   }
+}
+
+if (html.includes('return nativeFetch(input')) {
+  throw new Error('Offline review fetch shim still permits unapproved runtime network requests');
 }
 
 if (context.type !== 'FeatureCollection' || !Array.isArray(context.features)) {
