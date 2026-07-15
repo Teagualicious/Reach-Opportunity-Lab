@@ -16,6 +16,20 @@ on:
       - package-lock.json
       - public/data/**
       - .github/workflows/offline-review.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - offline.html
+      - src/offline-main.tsx
+      - src/map/offlineBasemapStyle.ts
+      - scripts/build-offline-map-context.mjs
+      - scripts/build-offline-review.mjs
+      - scripts/validate-offline-review.mjs
+      - package.json
+      - package-lock.json
+      - public/data/**
+      - .github/workflows/offline-review.yml
 
 permissions:
   contents: write
@@ -62,7 +76,7 @@ jobs:
           retention-days: 14
 
       - name: Attach to latest GitHub release
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
