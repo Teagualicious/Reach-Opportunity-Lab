@@ -1,0 +1,115 @@
+name: Apply experience clarity patch
+
+on:
+  push:
+    branches:
+      - agent/exposure-focus-experience-guide
+    paths:
+      - .github/workflows/apply-experience-clarity-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/exposure-focus-experience-guide
+
+      - name: Patch guides and overlay focus
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str, count: int = 1):
+              file = Path(path)
+              text = file.read_text()
+              if old not in text:
+                  raise SystemExit(f'Anchor not found in {path}: {old[:80]!r}')
+              file.write_text(text.replace(old, new, count))
+
+          replace(
+              'src/features/zip-explorer/ZipExplorer.tsx',
+              "import { MapLayerControls } from '../../components/MapLayerControls';",
+              "import { ExperienceGuide } from '../../components/ExperienceGuide';\nimport { MapLayerControls } from '../../components/MapLayerControls';",
+          )
+          replace(
+              'src/features/zip-explorer/ZipExplorer.tsx',
+              '      <aside className="panel panel--right">\n',
+              '''      <aside className="panel panel--right">\n        <ExperienceGuide\n          tone="market"\n          title="Market Opportunity Map"\n          audience="Market strategists, sellers, and sales leaders"\n          purpose="Find the strongest ZIP-level opportunities and understand the audience, coverage, and competitive signals behind them."\n          nextStep="Select a territory, then choose a ZIP to inspect its drivers and modeled competitive landscape."\n        />\n''',
+          )
+
+          replace(
+              'src/features/market-growth/MarketGrowthStudio.tsx',
+              "import type { ProductViewContext } from '../../app/ProductViewContext';",
+              "import type { ProductViewContext } from '../../app/ProductViewContext';\nimport { ExperienceGuide } from '../../components/ExperienceGuide';",
+          )
+          replace(
+              'src/features/market-growth/MarketGrowthStudio.tsx',
+              '<span className="eyebrow">Seller Growth Studio</span>',
+              '<span className="eyebrow">Seller Action Center</span>',
+          )
+          replace(
+              'src/features/market-growth/MarketGrowthStudio.tsx',
+              '      <aside className="panel panel--right seller-action-detail">\n',
+              '''      <aside className="panel panel--right seller-action-detail">\n        <ExperienceGuide\n          tone="seller"\n          title="Seller Action Center"\n          audience="Local sellers and sales managers"\n          purpose="Turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save."\n          nextStep="Choose an objective, open a seller action brief, then model the recommended move."\n        />\n''',
+          )
+
+          replace(
+              'src/features/client-growth/ClientGrowthStudio.tsx',
+              "import type { ProductViewContext } from '../../app/ProductViewContext';",
+              "import type { ProductViewContext } from '../../app/ProductViewContext';\nimport { ExperienceGuide } from '../../components/ExperienceGuide';",
+          )
+          replace(
+              'src/features/client-growth/ClientGrowthStudio.tsx',
+              '<span className="eyebrow">Client Growth Studio</span>',
+              '<span className="eyebrow">Client Campaign Planner</span>',
+          )
+          replace(
+              'src/features/client-growth/ClientGrowthStudio.tsx',
+              '      <aside className="panel panel--right client-results">\n',
+              '''      <aside className="panel panel--right client-results">\n        <ExperienceGuide\n          tone="client"\n          title="Client Campaign Planner"\n          audience="Account executives and advertiser teams"\n          purpose="Diagnose a current campaign footprint, test growth strategies, and build an explained ZIP expansion plan."\n          nextStep="Review Current plan, open Diagnose gaps, select strategies, then run the simulation."\n        />\n''',
+          )
+
+          replace(
+              'src/map/OpportunityMap.tsx',
+              '  zipFillOpacityExpression,\n',
+              '  zipFillOpacityEvidenceExpression,\n  zipFillOpacityExpression,\n',
+          )
+          replace(
+              'src/map/OpportunityMap.tsx',
+              '  const effectiveReachGapZips = useMemo(\n',
+              '  const evidenceFocusActive = showReachGap || visibleCompetitorIds.length > 0;\n  const effectiveReachGapZips = useMemo(\n',
+          )
+          replace(
+              'src/map/OpportunityMap.tsx',
+              '  const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);\n',
+              '  const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);\n  const evidenceFocusActiveRef = useRef(evidenceFocusActive);\n',
+          )
+          replace(
+              'src/map/OpportunityMap.tsx',
+              "          'fill-opacity': zipFillOpacityExpression,",
+              "          'fill-opacity': evidenceFocusActiveRef.current\n            ? zipFillOpacityEvidenceExpression\n            : zipFillOpacityExpression,",
+          )
+          replace(
+              'src/map/OpportunityMap.tsx',
+              '        filter: zipMembershipFilter(data.overlays.reachGapZips),\n',
+              '        filter: zipMembershipFilter(reachGapZipsRef.current),\n',
+          )
+          replace(
+              'src/map/OpportunityMap.tsx',
+              "  }, [data.overlays.competitors, visibleCompetitorIds]);\n\n  useEffect(() => {\n    viewportBoundsRef.current",
+              "  }, [data.overlays.competitors, visibleCompetitorIds]);\n\n  useEffect(() => {\n    evidenceFocusActiveRef.current = evidenceFocusActive;\n    const map = mapRef.current;\n    if (!map?.getLayer(FILL_LAYER_ID)) return;\n    map.setPaintProperty(\n      FILL_LAYER_ID,\n      'fill-opacity',\n      evidenceFocusActive ? zipFillOpacityEvidenceExpression : zipFillOpacityExpression,\n    );\n  }, [evidenceFocusActive]);\n\n  useEffect(() => {\n    viewportBoundsRef.current",
+          )
+          PY
+
+      - name: Remove workflow and commit
+        run: |
+          rm .github/workflows/apply-experience-clarity-patch.yml
+          git config user.name "Opportunity Lab Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src .github/workflows/apply-experience-clarity-patch.yml
+          git commit -m "Add workspace guides and overlay focus"
+          git push origin HEAD:agent/exposure-focus-experience-guide
