@@ -1,11 +1,11 @@
-# Spectrum Reach Opportunity Lab
+# Reach Opportunity Lab
 ## Product, Architecture, Prototype, and Implementation Handoff
 
 **Document purpose:** This file is the primary build handoff for Sol or any other coding model taking over the project. It describes the product vision, user experiences, data model, simulation behavior, technical architecture, prototype scope, production path, deployment approach, security boundaries, acceptance criteria, and immediate implementation steps.
 
 **Current state:** An existing browser-based HTML prototype displays ZIP/ZCTA-based market zones, competitor footprints, demographic filters, opportunity coloring, and a clickable ZIP detail panel. The existing map is valuable and should be preserved unless a technical audit proves it cannot be extended safely.
 
-**Primary constraint for the current internship deliverable:** The presentation version has approximately one week of development time. It needs to look and behave like a credible product, tell a clear executive story, and support controlled interaction. It does not need to contain a real predictive model, real AI agents, live Spectrum data, or a working Architect integration.
+**Primary constraint for the current internship deliverable:** The presentation version has approximately one week of development time. It needs to look and behave like a credible product, tell a clear executive story, and support controlled interaction. It does not need to contain a real predictive model, real AI agents, live company data, or a working Architect integration.
 
 **Long-term intent:** The prototype should be designed as the visible front end of a real market-intelligence and scenario-planning product, not as a disposable slide animation.
 
@@ -15,7 +15,7 @@
 
 ## Product working name
 
-**Spectrum Reach Opportunity Lab**
+**Reach Opportunity Lab**
 
 Alternative descriptive names:
 
@@ -30,7 +30,7 @@ The working name can remain temporary. The central value proposition matters mor
 
 > **Find the opportunity. Simulate the strategy. Activate through Architect. Measure the outcome.**
 
-The product combines geographic market intelligence, opportunity scoring, scenario planning, recommendations, and a handoff into Spectrum Reach Architect.
+The product combines geographic market intelligence, opportunity scoring, scenario planning, recommendations, and a handoff into Architect.
 
 It provides two experiences powered by one shared intelligence layer:
 
@@ -41,7 +41,7 @@ It provides two experiences powered by one shared intelligence layer:
    - Prepares a recommended plan for execution through Architect.
 
 2. **Market Growth Studio — internal**
-   - Helps Spectrum Reach research, sales, and leadership find new-business opportunities.
+   - Helps internal research, sales, and leadership find new-business opportunities.
    - Identifies existing accounts with growth potential.
    - Flags declining or at-risk business.
    - Simulates strategies to win, protect, recover, or expand revenue.
@@ -49,7 +49,7 @@ It provides two experiences powered by one shared intelligence layer:
 
 ## Strategic positioning relative to Architect
 
-This product is **not a replacement for Spectrum Reach Architect**.
+This product is **not a replacement for Architect**.
 
 Use this positioning consistently:
 
@@ -135,7 +135,7 @@ The QR code and primary URL should open a shared landing page.
 
 ### Header
 
-**Spectrum Reach Opportunity Lab**
+**Reach Opportunity Lab**
 
 ### Subheading
 
@@ -338,7 +338,7 @@ Suggested signals:
 - Business concentration
 - Category growth
 - Local consumer spending potential
-- Low Spectrum Reach advertiser penetration
+- Low advertiser penetration
 - Audience-category fit
 - Competitive media pressure
 - Similar-business campaign success
@@ -1040,7 +1040,7 @@ The product story matters more than framework purity.
 - Modern
 - Analytical
 - Approachable
-- Spectrum-aligned
+- brand-aligned
 - Not overly futuristic
 - Not visually dense
 
@@ -1048,7 +1048,7 @@ The product story matters more than framework purity.
 
 - White and soft-gray application background
 - Dark navy side drawers
-- Spectrum-inspired blue as the primary action color
+- brand-primary blue as the primary action color
 - Cyan for opportunities
 - Gold for selected zones
 - Magenta or red used sparingly for risk
@@ -1326,7 +1326,7 @@ The production system should eventually include:
 
 ## Deployment
 
-- Approved Spectrum environment
+- Approved company environment
 - Approved model providers
 - Approved data stores
 - Encryption
@@ -1394,7 +1394,7 @@ The production system should eventually include:
 - Real MiroFish integration
 - Live LLM calls
 - Live agent simulation
-- Real Spectrum data
+- Real company data
 - Authentication
 - Database
 - CRM integration
@@ -1541,7 +1541,7 @@ Do not add new major features on Day 7.
 - Opportunity score is immediately visible.
 - Panels do not feel crowded.
 - Typography is readable from presentation distance.
-- The product looks intentionally Spectrum-aligned.
+- The product looks intentionally brand-aligned.
 - Risk and opportunity are clearly differentiated.
 - Current and simulated states are easy to compare.
 - The mobile layout uses a drawer or bottom sheet.
@@ -1647,7 +1647,7 @@ Do not invent unsupported revenue estimates.
 
 Use this prompt:
 
-> Inspect the existing Spectrum Reach heat-map project before editing anything. Run it locally and identify the current technology stack, map library, file structure, data sources, ZIP polygon loading, click handlers, filters, styling, and any console errors. Do not modify the project yet. Produce an audit report that explains which parts should be preserved, which parts can be extended, whether a React migration would create unnecessary risk, and the lowest-risk architecture for adding a landing page, Client Growth Studio, Market Growth Studio, deterministic simulation flow, guided tour, responsive mobile layout, and static deployment. Include a proposed file-by-file implementation sequence for a one-week executive prototype.
+> Inspect the existing heat-map project before editing anything. Run it locally and identify the current technology stack, map library, file structure, data sources, ZIP polygon loading, click handlers, filters, styling, and any console errors. Do not modify the project yet. Produce an audit report that explains which parts should be preserved, which parts can be extended, whether a React migration would create unnecessary risk, and the lowest-risk architecture for adding a landing page, Client Growth Studio, Market Growth Studio, deterministic simulation flow, guided tour, responsive mobile layout, and static deployment. Include a proposed file-by-file implementation sequence for a one-week executive prototype.
 
 ## Second Sol task
 

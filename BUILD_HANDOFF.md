@@ -1,4 +1,4 @@
-# Spectrum Reach Opportunity Lab — Current Build Handoff
+# Reach Opportunity Lab — Current Build Handoff
 
 **Purpose:** Explain the application that exists now, the boundaries that must be preserved, and the next implementation tasks. Product vision remains in [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md); architectural laws remain in [`ARCHITECTURE.md`](ARCHITECTURE.md); current state remains in [`STATUS.md`](STATUS.md).
 
@@ -320,6 +320,25 @@ https://teagualicious.github.io/Reach-Opportunity-Lab/
 ```
 
 Vite `pages` mode and `publicAssetUrl` handle the repository subpath. Feature code must not hard-code deployment URLs.
+
+### Releases
+
+Every merge to `main` publishes a GitHub release with a standardized name and tag:
+
+```text
+Name: <Phase> Release <MAJOR.MINOR>.<build>     e.g. Alpha Release 0.1.312
+Tag:  v<MAJOR.MINOR>.<build>                    e.g. v0.1.312
+```
+
+- `<Phase>` comes from the single `RELEASE_PHASE` env value in `.github/workflows/ci.yml`
+  (`Alpha` today); change it in that one place when the product graduates.
+- `<MAJOR.MINOR>` comes from `package.json` `version`; bump it for milestones.
+- `<build>` is the monotonic CI run number, so every release is unique and ordered
+  with no manual tagging.
+- Release ZIPs follow the same version: `<repo>_build-v<version>.zip` and
+  `<repo>_source-v<version>.zip`.
+
+Do not hand-create releases or tags; the workflow is the single source of the format.
 
 ### All-offline review
 

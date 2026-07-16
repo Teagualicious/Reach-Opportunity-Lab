@@ -4,9 +4,9 @@ Instructions for coding sessions in this repository. Read `STATUS.md` before sta
 
 ## Project overview
 
-**Spectrum Reach Opportunity Lab** is a geographic market-intelligence and deterministic scenario-planning product. One shared ZIP/ZCTA intelligence layer powers an external Client Growth Studio and an internal Market Growth Studio through the workflow **Describe → Prioritize → Simulate → Activate**.
+**Reach Opportunity Lab** is a geographic market-intelligence and deterministic scenario-planning product. One shared ZIP/ZCTA intelligence layer powers an external Client Growth Studio and an internal Market Growth Studio through the workflow **Describe → Prioritize → Simulate → Activate**.
 
-The current deliverable is a locally runnable executive prototype. It uses synthetic opportunity, advertiser, prospect, account, performance, reach-gap, and competitor-footprint data. It does not contain a production predictive model, live LLM calls, real Spectrum data, or a live Architect integration. Architect is the campaign-planning and activation destination, not a capability this product replaces.
+The current deliverable is a locally runnable executive prototype. It uses synthetic opportunity, advertiser, prospect, account, performance, reach-gap, and competitor-footprint data. It does not contain a production predictive model, live LLM calls, real company data, or a live Architect integration. Architect is the campaign-planning and activation destination, not a capability this product replaces.
 
 Read [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) for product scope, [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) for the current technical handoff, and [`ARCHITECTURE.md`](ARCHITECTURE.md) for dependency boundaries.
 

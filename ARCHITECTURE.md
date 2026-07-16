@@ -1,6 +1,6 @@
 # Opportunity Lab Architecture
 
-This document defines the technical boundaries for the Spectrum Reach Opportunity Lab. The current deliverable is an executive prototype, but the codebase must remain capable of evolving into a governed production product and adding markets beyond Ohio.
+This document defines the technical boundaries for the Reach Opportunity Lab. The current deliverable is an executive prototype, but the codebase must remain capable of evolving into a governed production product and adding markets beyond Ohio.
 
 ## Architectural goals
 

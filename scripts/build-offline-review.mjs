@@ -152,7 +152,7 @@ async function packageOfflineReview() {
   await writeFile(
     path.join(PACKAGE_DIR, 'README.txt'),
     [
-      'SPECTRUM REACH OPPORTUNITY LAB — ALL-OFFLINE VISUAL REVIEW',
+      'REACH OPPORTUNITY LAB — ALL-OFFLINE VISUAL REVIEW',
       '',
       'Windows: double-click OPEN_DEMO.bat.',
       'macOS: double-click OPEN_DEMO.command or open Opportunity-Lab-All-Offline.html.',

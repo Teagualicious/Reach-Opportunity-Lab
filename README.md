@@ -1,4 +1,4 @@
-# Spectrum Reach Opportunity Lab
+# Reach Opportunity Lab
 
 A production-shaped executive prototype for statewide ZIP-level opportunity intelligence and deterministic strategy simulation.
 
@@ -149,7 +149,7 @@ Read these before non-trivial work:
 
 ## Trust and data boundaries
 
-- No real Spectrum Reach, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
+- No real company, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
 - All opportunity, territory, coverage, prospect, recommendation, and simulation values are synthetic demonstration data.
 - Client-facing and internal-only fields remain separated at model and feature boundaries.
 - Geographic source provenance is preserved.
