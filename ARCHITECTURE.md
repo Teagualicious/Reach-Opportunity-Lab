@@ -1,26 +1,27 @@
 # Opportunity Lab Architecture
 
-This document defines the technical boundaries for the Spectrum Reach Opportunity Lab. The current deliverable is a local executive prototype, but the codebase must remain capable of evolving into a governed production product.
+This document defines the technical boundaries for the Spectrum Reach Opportunity Lab. The current deliverable is an executive prototype, but the codebase must remain capable of evolving into a governed production product and adding markets beyond Ohio.
 
 ## Architectural goals
 
-1. Build the demo through production-shaped interfaces rather than one-off UI wiring.
-2. Keep domain logic independent from React, MapLibre, storage, and network access.
-3. Make synthetic demonstration data replaceable without rewriting product features.
-4. Keep client-facing and internal-only data separated at model and feature boundaries.
+1. Build through production-shaped interfaces rather than one-off UI wiring.
+2. Keep domain logic independent from React, MapLibre, storage, network access, and deployment.
+3. Make synthetic data replaceable without rewriting product features.
+4. Keep client-facing and internal-only models separated.
 5. Preserve deterministic, explainable scoring and simulation behavior.
-6. Prefer explicit typed modules over global state, monolithic files, or hidden side effects.
-7. Keep local development and static builds first-class; hosting must not shape domain code.
+6. Represent geography and operating territories through explicit typed contracts.
+7. Keep local development, GitHub Pages, static releases, and offline review as presentation/deployment adapters over one product.
 
 ## Frontend stack
 
-- Vite for development and production builds
-- React for composable product views and workflow state
-- strict TypeScript for domain contracts and trust boundaries
-- MapLibre GL JS for map rendering and feature interaction
-- OpenStreetMap raster tiles for the current basemap
-- Vitest for domain and adapter tests
-- CSS variables and modular stylesheets for the design system
+- Vite
+- React
+- strict TypeScript
+- MapLibre GL JS
+- OpenStreetMap raster tiles for the standard basemap
+- generated Census TIGER/Line context for the all-offline basemap
+- Vitest
+- CSS variables and modular stylesheets
 
 Dependencies remain intentionally small. A new dependency requires a concrete capability that is not reasonably provided by the platform or current stack.
 
@@ -28,188 +29,253 @@ Dependencies remain intentionally small. A new dependency requires a concrete ca
 
 ### Domain
 
-Pure TypeScript types and functions. Domain modules do not import React, MapLibre, browser storage, or network libraries.
+Pure TypeScript modules under `src/domain/` do not import React, MapLibre, browser storage, or network libraries.
 
 Responsibilities:
 
 - ZIP opportunity and risk models
-- score components and confidence
-- advertiser/account scenarios
-- deterministic strategy definitions and simulation calculations
-- internal objective score transformations
-- recommendation and explanation generation
-- market overlay contracts and validation
+- component scores, confidence, and priority bands
+- territory definitions and exact ZIP coverage validation
+- deterministic client strategies and simulations
+- internal objective score transforms
+- recommendations and explanations
+- reach-gap and competitor overlay contracts
 
 ### Data access
 
-The application reads market information through typed repository and source interfaces.
+The application reads market information through typed repository and geometry-source interfaces.
 
-Current implementations:
+Current runtime composition:
 
-- `DemoOpportunityRepository` reads deterministic synthetic opportunity and overlay fixtures.
-- `StaticZctaGeometrySource` loads the checked-in 2020 Census-derived Cleveland–Akron ZCTA subset.
-- `CensusZctaGeometrySource` remains an optional network adapter but is not part of default runtime composition.
-- A clearly labeled synthetic geometry fixture is retained only as an emergency fallback.
-- Synthetic reach-gap and competitor definitions are validated before they enter product state.
+- `DemoOpportunityRepository` reads the generated statewide Ohio opportunity payload and synthetic overlay fixture.
+- `StaticZctaGeometrySource` loads the checked-in statewide Ohio 2020 Census-derived ZCTA fixture.
+- `publicAssetUrl` resolves data correctly for local development, release builds, offline packaging, and the GitHub Pages project subpath.
+- `CensusZctaGeometrySource` remains an optional network adapter/reference implementation, not the runtime default.
 
-The checked-in ZCTA fixture is built and validated through:
+Statewide fixtures are produced and validated through:
 
-- `scripts/build-zcta-fixture.mjs`
-- `scripts/validate-zcta-fixture.mjs`
-- `.github/workflows/generate-zcta-fixture.yml`
-- `public/data/cleveland-akron-zcta-2020.provenance.json`
+- `scripts/build-ohio-market.mjs`
+- `scripts/validate-ohio-market.mjs`
+- `.github/workflows/generate-ohio-market.yml`
+- `public/data/ohio-zcta-2020.geojson`
+- `public/data/ohio-opportunities.json`
+- `public/data/ohio-market.provenance.json`
 
-Future implementations may include:
+The generator preserves curated Cleveland–Akron records and creates deterministic synthetic baseline records for remaining Ohio ZCTAs. Generated files are not edited manually.
 
-- `ApiOpportunityRepository` for governed production APIs
-- authenticated account, campaign, CRM, and Architect adapters
-- server-side or tile-based geometry delivery for larger markets
+Future adapters may include governed APIs, authenticated campaign/account/CRM sources, Architect integration, additional statewide market packages, and vector-tile delivery.
 
-UI and domain modules must not know which repository implementation is active. Replacing demonstration data with production APIs should be a composition-root change, not a feature rewrite.
+### Application state
+
+`ProductShell` owns shared presentation state that must remain consistent across all product modes:
+
+- selected Ohio territory or All Ohio
+- left sidebar collapsed state
+- right sidebar collapsed state
+- global reset version
+- product mode
+
+`ProductViewContext` supplies selected territory ZIPs, viewport bounds, and panel-layout version to all three features.
+
+Feature modules own only their workflow state: ZIP selection, filters, strategies, simulations, market objective, and result theater.
 
 ### Map
 
-MapLibre integration is isolated under `src/map/`.
+MapLibre integration remains isolated under `src/map/`.
 
 Responsibilities:
 
-- rendering ZIP/ZCTA geometry
-- adding and updating opportunity, campaign, reach-gap, and competitor layers
-- coloring ZIPs from domain-provided metrics
-- hover, selection, dimming, campaign emphasis, and reset interaction
-- fitting the viewport
-- preserving basemap and geographic-source attribution
+- rendering statewide ZCTA geometry
+- applying domain-provided scores
+- keeping inactive territories visible in neutral gray
+- hover, selection, filter dimming, campaign emphasis, and territory dimming through feature state
+- rendering typed reach-gap and competitor overlays
+- fitting territory/statewide bounds
+- resizing/refitting after sidebar collapse
+- preserving geographic attribution
 
-The map does not calculate business scores or own product truth. It consumes enriched features and typed overlay selections.
+The map does not calculate business scores, assign territories, or own product truth.
+
+MapLibre feature state is limited to visual interaction:
+
+| State | Purpose |
+|---|---|
+| `hover` | transient hover emphasis |
+| `selected` | gold selected ZIP outline |
+| `dim` | filter-based fading |
+| `campaign` | current/recommended campaign emphasis |
+| `territoryDim` | neutral gray inactive territory context |
 
 ### Product features
 
-Feature folders own UI and workflow orchestration:
+Feature folders own UI and orchestration:
 
 - Opportunity Explorer
 - Client Growth Studio
 - Market Growth Studio
 - simulation theater
-- Architect handoff
+- conceptual Architect handoff
 - future guided executive tour
-- future mobile bottom sheet
+- future responsive/mobile interaction
 
-Features may consume domain services and repositories, but must not reach into another feature's private implementation.
+All three current features consume the same territory selection and statewide market data.
 
-## Primary geographic model
+## Geographic model
 
-The primary selectable and scored unit is a five-digit ZIP identifier rendered using ZCTA polygon geometry. Each map cell receives its own synthetic opportunity values and explainable score breakdown.
+The primary selectable and scored unit is a five-digit ZIP identifier rendered with ZCTA polygon geometry.
 
-The checked-in fixture contains exactly the ZIP identifiers declared in `public/data/zip-opportunities.json`. The standard test command rejects missing, extra, duplicate, invalid, or geographically implausible features.
+The statewide Ohio fixture contains every source Ohio ZCTA. Each ZIP belongs to exactly one operating territory. Territories are groupings for focus and viewport behavior; they do not replace ZIP-level opportunity truth.
 
-Spectrum Reach sales zones may be added later as groupings or overlays, but they are not the primary scoring geometry.
+Current synthetic territories:
 
-## State ownership
+- Northeast Ohio · Cleveland–Akron
+- Eastern Ohio · Youngstown
+- Northwest Ohio · Toledo
+- Central Ohio · Columbus
+- West Central Ohio · Dayton
+- Southwest Ohio · Cincinnati
+- Southeast Ohio · Athens–Marietta
 
-- The composition root owns loaded market data.
-- Product features own workflow and selection state.
-- Transient component state remains local.
-- MapLibre feature state is limited to visual interaction: hover, selection, dimming, and campaign emphasis.
-- Business truth never lives only in MapLibre state or the DOM.
+All Ohio is a view state, not a territory assignment.
 
-Do not add an external state-management dependency until React's built-in state and reducer patterns become insufficient in measured use.
+Territory assignment currently uses deterministic nearest multi-city anchor sets suitable for the executive prototype. Production territory membership must be replaced by governed business definitions without changing feature or map contracts.
+
+## Viewport and scrolling laws
+
+The executive application is a fixed one-viewport dashboard:
+
+- `html`, `body`, and `#root` do not scroll.
+- The header occupies a fixed row.
+- Each sidebar scrolls independently.
+- Sidebars can collapse without unmounting feature workflows.
+- The map fills the remaining grid cell.
+- MapLibre must call `resize()` and refit after panel-layout changes.
+
+Do not reintroduce document-level scrolling for desktop product views.
+
+## Visual map rules
+
+- Standard basemap: light, fully desaturated OpenStreetMap raster context.
+- Active opportunity scale: restrained light-to-deep blue.
+- Inactive territories: neutral gray.
+- ZIP boundaries: strong white lines for active territories, muted gray outside them.
+- Selection: gold.
+- Campaign emphasis: cyan.
+- Business overlay colors remain typed fixture values.
+
+Scores are attached to features before rendering; paint expressions never calculate opportunity logic.
 
 ## Supporting overlays
 
-Supporting layers use production-shaped typed definitions:
+Supporting layers use typed definitions:
 
 - `MarketOverlayData`
 - `CompetitorFootprint`
 - validated ZIP membership
-- unique stable overlay IDs
-- explicit color, label, subtitle, and DMA-wide behavior
+- stable IDs
+- explicit color, label, subtitle, and wide-coverage behavior
 
-The fixture currently contains synthetic reach gaps and competitor footprints. Future real coverage data should replace the repository payload without changing map-control or layer contracts.
+Current reach-gap and competitor fixtures are Northeast Ohio demonstrations. Future statewide coverage data should replace the payload without changing controls or MapLibre contracts.
 
 ## Demonstration data rules
 
-- All advertiser, account, prospect, campaign, coverage, performance, score, recommendation, and simulation data is synthetic.
-- Synthetic data matches explicit production-oriented schemas.
-- Demonstration fixtures are deterministic and version-controlled.
+- All opportunity, territory, advertiser, account, prospect, campaign, coverage, performance, recommendation, and simulation values are synthetic.
+- Synthetic records are deterministic and version-controlled.
+- Curated Cleveland–Akron records and generated statewide baseline records remain distinguishable through `detailLevel`.
 - No company exports, credentials, internal reports, or real client data enter the repository.
-- Every screen presenting modeled values includes an appropriate disclosure.
-- Geographic boundary and basemap data preserve source attribution and provenance.
+- Every modeled screen includes an appropriate disclosure.
+- Geographic source provenance is preserved.
 
-## Local-first delivery
+## Delivery adapters
 
-Development:
+### Standard build
 
 ```bash
 npm install
 npm run dev
-```
-
-Validation and static build:
-
-```bash
 npm run typecheck
 npm run test
 npm run build
 npm run preview
 ```
 
-Geometry refresh and validation:
+The standard application uses online OpenStreetMap raster tiles and checked-in statewide ZIP geometry.
+
+### GitHub Pages
+
+Vite `pages` mode uses the `/Reach-Opportunity-Lab/` base path. The Pages workflow publishes `main` to the stable executive-review URL after merges.
+
+### All-offline review
 
 ```bash
-npm run geometry:refresh
-npm run geometry:validate
+npm run offline:all
 ```
 
-The checked-in ZCTA fixture removes browser-time geometry network dependency. OpenStreetMap basemap tiles still require internet access. Offline basemap packaging is a separate licensing, size, and distribution decision.
+The offline target:
 
-Vercel or other hosting is intentionally deferred. Deployment configuration must not shape or block domain, data, map, or feature architecture.
+1. generates tiled statewide Census context;
+2. builds a dedicated Vite entry;
+3. inlines JavaScript and CSS;
+4. embeds statewide opportunities, territory definitions, geometry, overlays, and map context;
+5. includes Windows/macOS launchers;
+6. rejects all unapproved runtime fetches;
+7. validates that no external tags or split chunks remain.
+
+Offline packaging is a distribution adapter, not a duplicate business implementation.
 
 ## Source structure
 
 ```text
 src/
-  app/                 composition root, product navigation, shared reset
-  domain/              pure types, scoring, simulation, overlays, recommendations
-  data/                repository and geometry-source contracts/adapters
-  features/            product experiences and feature-owned UI
-  map/                 MapLibre lifecycle, sources, layers, interactions
-  components/          reusable presentation components
-  styles/              design tokens, layout, components, layers
+  app/                 composition root, product mode, shared territory/panel state
+  domain/              opportunities, territories, scoring, simulation, overlays
+  data/                repositories, public-asset and geometry adapters
+  features/            product-owned UI/workflows
+  map/                 MapLibre lifecycle, layers, expressions, basemap adapters
+  components/          reusable presentation controls
+  styles/              tokens, fixed viewport layout, components, overlays
 scripts/
-  build-zcta-fixture.mjs
-  validate-zcta-fixture.mjs
-public/
-  data/                 public geographic fixtures and synthetic demo fixtures
+  build-ohio-market.mjs
+  validate-ohio-market.mjs
+  build-offline-map-context.mjs
+  build-offline-review.mjs
+  validate-offline-review.mjs
+public/data/
+  ohio-zcta-2020.geojson
+  ohio-opportunities.json
+  ohio-market.provenance.json
+  market-overlays.json
 ```
 
 ## Prohibited shortcuts
 
-- monolithic HTML/JavaScript application
-- business rules embedded in JSX event handlers
-- direct JSON imports scattered throughout UI components
-- score computation inside map paint expressions
-- business overlay data hard-coded into map rendering code
-- uncontrolled randomness in simulations
-- client/internal data mixing in a shared unfiltered object
-- hidden production claims or fake live integrations
+- monolithic HTML/JavaScript business implementation
+- business rules in JSX handlers
+- direct fixture imports scattered throughout components
+- score calculation inside map paint expressions
+- map-owned territory assignment
+- hard-coded business overlays in MapLibre code
+- document-level scrolling on desktop product views
+- uncontrolled simulation randomness
+- mixing client/internal data in one unfiltered model
 - broad `any` typing to bypass contract problems
-- deployment-specific code in domain or feature modules
-- real company or client data in fixtures
-- undocumented or manually edited geographic fixtures
+- real company/client data in fixtures
+- undocumented or manually edited generated geography
+- compiled-bundle patching as the offline source
+- deployment-specific logic in domain or feature modules
 
 ## Scaling path
 
-The production evolution should be able to add these capabilities without replacing the frontend foundation:
+The production evolution should add the following without replacing the frontend foundation:
 
+- additional state and major-city market packages
+- governed territory definitions
 - authenticated API adapters
-- governed real datasets
 - server-side scoring and model versioning
-- role-based access and strict client/internal authorization
+- role-based client/internal authorization
 - persisted scenarios
 - Architect and CRM integrations
 - observability, audit trails, and feature flags
-- additional markets beyond Cleveland–Akron
-- vector tiles or a governed basemap provider
-- server-side geometry preparation for larger datasets
+- vector tiles or governed commercial basemap providers
 
-Production work will add infrastructure and stronger controls, but the product's domain contracts, repository boundaries, feature ownership, and map adapter should remain recognizable.
+Production work will add infrastructure and stronger controls, but the domain contracts, territory model, repository boundaries, feature ownership, and map adapter should remain recognizable.
