@@ -19,17 +19,21 @@ Phase 2 — Statewide map foundation and differentiated product journeys
 - Added one shared territory selector across Opportunity Explorer, Client Growth Studio, and Seller Growth Studio.
 - Built a fixed one-viewport expanded layout with independently scrollable/collapsible sidebars.
 - Built a responsive compact mode at 900px and below: full-bleed map, one-at-a-time bottom sheets, fixed bottom product navigation, safe-area support, and no device detection.
-- Restored a pastel cool-to-hot opportunity palette with neutral gray inactive territories, gold selection, and cyan campaign emphasis.
+- Restored a pastel cool-to-hot opportunity palette with neutral gray inactive territories, gold selection, cyan current-campaign emphasis, and green recommended-expansion emphasis.
 - Added ZIP geometry camera focus: map/list selection zooms to official geometry; clearing selection returns to territory bounds; panel changes preserve current focus.
 - Added stronger reach-gap and competitor fills/outlines plus more prominent layer controls.
 - Added ZIP-level competitive intelligence to Opportunity Explorer: modeled competitor intersections, reach-gap status, and competitor detail cards that toggle typed map footprint layers.
-- Built Client Growth Studio with a fictional advertiser, selectable deterministic strategies, territory-aware campaign/expansion ZIPs, modeled results, and conceptual Architect handoff.
+- Expanded Client Growth Studio into a three-step geographic planning workflow: Current plan, Diagnose gaps, and Recommended plan.
+- Added pure deterministic `clientGeography.ts` planning and tests for current footprint, reach-gap detection, competitor-pressure intersections, ranked expansion candidates, recommendation counts, and explanation generation.
+- Added typed `recommended` MapLibre feature state so current campaign ZIPs remain cyan while recommended expansion ZIPs render independently in green without statewide geometry re-upload.
+- Added dynamic reach-gap filters, plan-view controls, selected-ZIP campaign context, recommended ZIP explanations, diagnostic summary, and explicit strategy trade-offs.
+- Built Client Growth Studio with a fictional advertiser, selectable deterministic strategies, current-versus-modeled results, and conceptual Architect handoff.
 - Differentiated the internal workflow as Seller Growth Studio rather than a second Explorer.
 - Added `sellerOpportunity.ts`, which deterministically converts ZIP/objective signals into synthetic prospects/accounts, urgency, evidence, and recommended seller actions.
 - Replaced Seller Growth Studio's duplicate ZIP ranking with a prospect/account action queue and seller action brief; the map is now supporting geographic evidence.
 - Optimized statewide map hot paths:
   - objective/simulation recolors use `displayScore` feature state instead of re-uploading the 2.7 MB GeoJSON source;
-  - `dim`, `campaign`, and `territoryDim` writes are diffed against applied state;
+  - `dim`, `campaign`, `recommended`, and `territoryDim` writes are diffed against applied state;
   - hover/click territory checks use Sets;
   - selection touches only previous/current features;
   - overlays are filtered layers over one shared statewide source.
@@ -41,17 +45,17 @@ Phase 2 — Statewide map foundation and differentiated product journeys
 ## Product boundaries
 
 - **Opportunity Explorer:** neutral market diagnosis — where opportunity exists, why a ZIP scores as it does, and which modeled coverage/competitor signals intersect it.
-- **Client Growth Studio:** advertiser strategy — how a specific fictional campaign could improve through selected deterministic strategies.
+- **Client Growth Studio:** advertiser geographic planning — how a fictional campaign moves from current footprint through diagnosed gaps to a recommended plan.
 - **Seller Growth Studio:** internal seller action — who to pursue, grow, or save next and what action to take.
 
 Shared geography and score signals do not make these the same product. Each feature owns a different question and workflow.
 
 ## Next up
 
-1. Merge this map-clarity and Seller Growth Studio differentiation pass, then review the stable Pages build on the target laptop.
-2. Tune panel widths and typography only if the real-browser review still feels crowded.
-3. Extend current-campaign, reach-gap, competitor, and recommended-expansion comparison controls through Client Growth Studio.
-4. Expand Seller Growth Studio with richer deterministic synthetic account histories, prospect lists, and retention-save comparisons.
+1. Merge and visually review the Client Growth geographic-planning workflow through the stable Pages URL.
+2. Refine Client Growth recommended-ZIP ordering, legend, or compact presentation only if real-browser review exposes ambiguity.
+3. Add richer synthetic advertiser profiles and allow switching among multiple client scenarios.
+4. Expand Seller Growth Studio with deterministic account histories, prospect lists, and retention-save comparisons.
 5. Add additional state/major-city market packages behind the same market/territory contracts.
 6. Add the guided executive tour and remaining compact-mode polish.
 7. Add automated WebGL visual-regression coverage for standard and offline adapters.
@@ -91,17 +95,22 @@ Shared geography and score signals do not make these the same product. Each feat
 - 2026-07-16 | DECISION: active opportunity values use a pastel heat-map progression
   Considered: monochromatic blue and a highly saturated hot scale
   Rejected because: monochromatic blue weakens heat storytelling while saturated colors overpower the neutral basemap
-  Must preserve: inactive territories remain gray; selection gold; campaign cyan; supporting overlays remain visibly distinct
+  Must preserve: inactive territories remain gray; selection gold; current campaign cyan; recommended expansion green; supporting overlays remain visibly distinct
 
 - 2026-07-16 | DECISION: map presentation changes flow through diffed MapLibre feature state over one statewide source
   Considered: full GeoJSON `setData` recolors, full-state rewrites, and duplicate overlay sources
   Rejected because: those approaches reparse geometry, issue unnecessary state writes, and duplicate polygons in memory
-  Must preserve: `displayScore` is presentation-only; domain owns score truth; overlay layers filter the shared source
+  Must preserve: `displayScore` is presentation-only; domain owns score truth; overlay layers filter the shared source; new visual states use diffed feature-state sets
 
 - 2026-07-16 | DECISION: Opportunity Explorer is the diagnostic experience and Seller Growth Studio is the internal action workflow
   Considered: keeping both as ZIP-ranking views with different transforms and combining them into one screen
   Rejected because: duplicate map experiences confuse executives and fail to tell an internal-sales story; one combined screen mixes diagnosis with account/prospect action
   Must preserve: Explorer answers where/why/competitive context; Seller Growth answers who to pursue, grow, or save and what to do next
+
+- 2026-07-16 | DECISION: Client Growth tells a three-step geographic planning story
+  Considered: keeping one campaign layer throughout simulation, showing all diagnostic overlays simultaneously, and separating current, diagnostic, and recommended views
+  Rejected because: one undifferentiated map cannot explain what changed, while always-on overlays create visual noise and weaken the executive narrative
+  Must preserve: current ZIPs, reach gaps/competitor evidence, and recommended ZIPs remain distinct typed states; the simulation advances to the recommended view; geographic recommendations remain deterministic domain output
 
 - 2026-07-16 | DECISION: releases are named `<Phase> Release <MAJOR.MINOR>.<build>` and tagged `v<MAJOR.MINOR>.<build>`
   Considered: generic build tags and manual semver releases
@@ -110,13 +119,13 @@ Shared geography and score signals do not make these the same product. Each feat
 
 ## Noticed
 
-- Reach-gap and competitor fixtures currently describe Northeast Ohio only; ZIP details correctly show no intersection elsewhere.
+- Reach-gap and competitor fixtures currently describe Northeast Ohio only; Client Growth generates deterministic territory-specific diagnostic gap sets while competitor pressure remains based on available typed footprints.
 - Competitor footprints are synthetic ZIP memberships, not provider service-area claims.
 - Generated statewide metrics are baseline-quality synthetic records; curated Cleveland–Akron records contain richer narratives.
 - MapLibre remains the largest standard-build dependency but is isolated in a cache-stable vendor chunk.
 - Software WebGL can render the map in headless Chromium when SwiftShader flags are enabled, but raster basemap tiles may be blocked in automation.
-- Product/objective tabs still need full keyboard arrow navigation and roving tabindex.
-- The temporary implementation branch `agent/map-clarity-sales-studio` was abandoned because it predated Fable's optimization and branding merges; all current work is based on commit `5080a237…` or later.
+- Product and plan tabs still need full keyboard arrow navigation and roving tabindex.
+- The temporary implementation branch `agent/map-clarity-sales-studio` was abandoned because it predated Fable's optimization and branding merges; current work is based on commit `c4e0904…` or later.
 
 ## How to run
 
