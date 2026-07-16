@@ -53,6 +53,18 @@ offline-dist/Opportunity-Lab-All-Offline/
 
 The offline target has a hard request boundary: it serves only explicitly embedded fixture paths and rejects every other runtime request. It is a review/distribution adapter; the normal application retains its online OpenStreetMap basemap.
 
+## Stable GitHub Pages preview
+
+The `Deploy GitHub Pages preview` workflow publishes the current `main` branch to one stable review URL after every merge. The Pages build uses Vite's `/Reach-Opportunity-Lab/` base path and the repository's public-data loaders resolve through `import.meta.env.BASE_URL`, so the same source works locally, in release builds, and under the GitHub Pages project subpath.
+
+Expected project URL:
+
+```text
+https://teagualicious.github.io/Reach-Opportunity-Lab/
+```
+
+The first deployment may require selecting **GitHub Actions** as the Pages source under the repository's Pages settings. Subsequent merges deploy automatically.
+
 ## Run locally
 
 Requirements:
@@ -93,7 +105,7 @@ npm run offline:build
 npm run offline:validate
 ```
 
-CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag. The all-offline workflow publishes `Opportunity-Lab-All-Offline.zip` as a workflow artifact and attaches the validated package to the latest release.
+CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag, the all-offline workflow attaches `Opportunity-Lab-All-Offline.zip` to the latest release, and the Pages workflow updates the stable browser preview.
 
 ## Architecture
 
