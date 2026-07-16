@@ -13,11 +13,17 @@ interface MarketGrowthStudioProps {
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
 
 export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStudioProps) {
   const [mode, setMode] = useState<MarketModeId>('new-business');
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [simulated, setSimulated] = useState(false);
+  const [showOutreach, setShowOutreach] = useState(false);
 
   const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
   const territoryOpportunities = useMemo(
@@ -28,9 +34,13 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   useEffect(() => {
     setMode('new-business');
     setSimulated(false);
+    setShowOutreach(false);
   }, [resetVersion]);
 
-  useEffect(() => setSimulated(false), [mode, selectedZip]);
+  useEffect(() => {
+    setSimulated(false);
+    setShowOutreach(false);
+  }, [mode, selectedZip]);
 
   const definition = MARKET_MODES.find((candidate) => candidate.id === mode) ?? MARKET_MODES[0];
   const scores = useMemo(
@@ -150,6 +160,13 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
                 <span>Seller priority / 100</span>
               </div>
               {simulated && <small>+{projectedScore - selectedScore} modeled action lift</small>}
+              <div className="seller-opportunity-range">
+                <span>Modeled opportunity</span>
+                <strong>
+                  {currencyFormatter.format(selectedItem.opportunityRange.minimum)}–
+                  {currencyFormatter.format(selectedItem.opportunityRange.maximum)}
+                </strong>
+              </div>
             </div>
 
             <section className="detail-section">
@@ -158,6 +175,11 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               <ul className="seller-evidence-list">
                 {selectedItem.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}
               </ul>
+            </section>
+
+            <section className="lead-with-card">
+              <span>Lead with</span>
+              <strong>{selectedItem.leadWith}</strong>
             </section>
 
             <section className="detail-section">
@@ -175,13 +197,51 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               <p>{simulated ? `The illustrative action improves the seller priority within ${territoryName}.` : 'Model the recommended action to compare the current and potential seller state.'}</p>
             </section>
 
-            <button className="primary-action" type="button" onClick={() => setSimulated((value) => !value)}>
+            <button className="primary-action" type="button" onClick={() => setShowOutreach(true)}>
+              Build outreach plan
+            </button>
+            <button className="secondary-action" type="button" onClick={() => setSimulated((value) => !value)}>
               {simulated ? 'Return to current state' : 'Model seller action'}
             </button>
             <p className="model-disclosure">Illustrative synthetic results. No real account, prospect, seller, or revenue data is shown.</p>
           </>
         )}
       </aside>
+
+      {showOutreach && selected && selectedItem && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowOutreach(false)}>
+          <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="outreach-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" aria-label="Close outreach plan" onClick={() => setShowOutreach(false)}>×</button>
+            <span className="eyebrow">Seller outreach plan</span>
+            <h2 id="outreach-title">{selectedItem.entityName}</h2>
+            <p>{definition.label} play for {selected.name} · ZIP {selected.zip} within {territoryName}.</p>
+            <dl className="handoff-grid">
+              <div><dt>Who to contact</dt><dd>{selectedItem.entityName} · {selectedItem.entityKind}</dd></div>
+              <div><dt>Objective</dt><dd>{definition.label}</dd></div>
+              <div><dt>Lead with</dt><dd>{selectedItem.leadWith}</dd></div>
+              <div>
+                <dt>Modeled opportunity</dt>
+                <dd>
+                  {currencyFormatter.format(selectedItem.opportunityRange.minimum)}–
+                  {currencyFormatter.format(selectedItem.opportunityRange.maximum)}
+                </dd>
+              </div>
+            </dl>
+            <section className="brief-highlights">
+              <span>Why now</span>
+              <div><strong>{selectedItem.headline}</strong><small>{selectedItem.urgencyLabel}</small></div>
+              {selectedItem.evidence.map((evidence) => (
+                <div key={evidence}><small>{evidence}</small></div>
+              ))}
+            </section>
+            <section className="brief-recommendation">
+              <span>Next step</span>
+              <p>{selectedItem.recommendedAction}</p>
+            </section>
+            <small>Deterministic synthetic outreach plan. No real account, prospect, seller, or revenue data.</small>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
