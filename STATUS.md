@@ -45,7 +45,11 @@ Phase 3 — Spectrum Reach experience redesign (Codex proposal, July 2026)
   - Rebuilt Market Opportunity Map: color-ZIPs-by market lens with adaptive legend and lens-aware hover/ranked list, collapsible dual-thumb demographic range filters with N-of-M count, full ZIP market profile (demographics, modeled internal signals, competitive landscape, score breakdown), and the Create-territory-brief primary output.
   - Refreshed Seller Action Center: lead-with product story, modeled annual opportunity range, and Build-outreach-plan primary output; action modeling kept as a secondary control.
   - Rebuilt Client Campaign Planner as a light guided client-safe story: Your-campaign-today tiles, plain-language growth ideas, Today/With-growth map views, modeled-result hero with explained new high-fit ZIPs, and Talk-to-your-account-executive CTA (Architect activation folded into the contact summary). Competitor overlays, penetration, and seller signals no longer render in the client view.
-  - Renamed competitor overlay fixtures to fictional providers (Northline Cable, Ridgeway Broadband, Lakelight Fiber, MetroLink TV, SkyCast Stream, OrbitView Satellite).
+  - Renamed competitor overlay fixtures to fictional providers, then restored the original real provider labels (Cox, Armstrong, Breezeline, AT&T U-verse, DirecTV Stream, Dish Network) on explicit product direction; footprints remain illustrative synthetic ZIP memberships.
+- Round 2 of the redesign (user review feedback):
+  - Replaced the abstract header mark with the supplied official Spectrum Reach logo asset (`src/assets/spectrum-reach-logo.jpg`).
+  - Added region-first navigation everywhere: the statewide view renders the seven operating territories as solid soft-colored regions with HTML-marker name labels (`regionSummary.ts`, map `regionMode`, `RegionPicker`, `MapBreadcrumb`); clicking a region drills into its ZIP areas and the Ohio breadcrumb returns to regions. The region surface switches with one paint-property pass over the shared statewide source.
+  - Simplified the interface for non-technical users: plain-language section labels, evidence layers and technical detail (demographics, internal signals, competitor cards, score build-up) behind collapsible disclosures, one calm data footnote, larger small-type sizes.
 
 ## Workspace boundaries
 
@@ -126,6 +130,21 @@ Shared geography does not make these the same product. Each workspace owns a dis
   Considered: neutral Reach-only branding, real provider names from the original prototype screenshots, and a foundation-only first PR
   Rejected because: the proposal's brand direction was approved for the full refresh, real provider names violate the no-real-company-data rule, and the user chose a full single-branch refresh
   Must preserve: fixtures stay fictional; the header lockup reads Spectrum Reach · Opportunity Lab; workspace names and order are unchanged
+
+- 2026-07-16 | DECISION: (supersedes competitor-name portion above) real competitor brand labels return as a user-approved exception
+  Considered: keeping the fictional provider names
+  Rejected because: the product owner explicitly directed keeping the real competitor names for review realism
+  Must preserve: footprint ZIP memberships stay synthetic and illustrative with visible not-service-area-claims disclosure; no real competitor performance or spend data is represented as factual
+
+- 2026-07-16 | DECISION: region-first navigation renders territories as solid categorical-colored regions over the existing ZIP source
+  Considered: dissolved region polygons in a second source, projecting region averages onto the opportunity heat ramp, and keeping the statewide ZIP fabric as the default view
+  Rejected because: duplicate geometry violates the performance laws, statewide averages cluster within one ramp step so regions became indistinguishable, and the ZIP-first statewide view read as too technical for the audience
+  Must preserve: region mode is a paint-property swap on the shared source (no re-upload); the seven-color REGION_PALETTE stays soft and distinguishable; clicking a region routes through `ProductViewContext.selectTerritory`; the territory dropdown remains synchronized
+
+- 2026-07-16 | DECISION: technical depth is disclosed progressively, not removed
+  Considered: deleting score breakdowns and internal metric grids outright, and leaving all detail always visible
+  Rejected because: analysts still need the evidence, but the default view must stay simple for non-technical executives
+  Must preserve: demographics, internal signals, competitor cards, and score build-up live behind native details/summary disclosures; headline content stays plain-language
 
 - 2026-07-16 | DECISION: synthetic demographics and internal business metrics are pure deterministic functions, not stored fixtures
   Considered: extending the generated statewide fixture files and a new fixture JSON
