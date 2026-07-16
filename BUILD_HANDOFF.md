@@ -27,10 +27,18 @@ Answers: **How could a specific fictional advertiser improve its campaign plan?*
 
 Current behavior:
 
+1. **Current plan** — displays the current campaign footprint with cyan ZIP emphasis.
+2. **Diagnose gaps** — displays deterministic territory-specific reach gaps and available typed competitor footprints.
+3. **Recommended plan** — preserves current ZIPs in cyan and displays deterministic expansion ZIPs in green.
+
+Additional behavior:
+
 - fictional Lakefront Automotive baseline;
 - four deterministic strategies;
-- territory-aware current footprint and recommended expansion ZIPs;
-- staged simulation theater;
+- staged simulation theater that advances to Recommended plan when complete;
+- selected-ZIP campaign role, reach-gap state, and competitor count;
+- explained recommended expansion ZIPs;
+- explicit strategy benefits and trade-offs;
 - current-versus-modeled metrics and ranges;
 - conceptual Architect handoff.
 
@@ -91,7 +99,7 @@ All business, opportunity, territory, advertiser, campaign, account, prospect, s
 - product navigation is a fixed bottom bar;
 - safe-area insets and 16px selects are preserved.
 
-Every new feature must work in both modes.
+Every new feature and every Client Growth plan view must work in both modes.
 
 ## 3. Statewide data and geography
 
@@ -158,6 +166,7 @@ src/
   components/
     TerritorySelector.tsx
     MapLayerControls.tsx
+    ClientPlanControls.tsx
     ScoreRing.tsx
   data/
     OpportunityRepository.ts
@@ -169,6 +178,7 @@ src/
     opportunity.ts
     territory.ts
     clientScenario.ts
+    clientGeography.ts
     marketMode.ts
     sellerOpportunity.ts
     mapOverlay.ts
@@ -188,6 +198,7 @@ src/
     components.css
     layers.css
     polish.css
+    client-growth-v2.css
 scripts/
   build-ohio-market.mjs
   validate-ohio-market.mjs
@@ -203,7 +214,7 @@ fixtures
   ↓
 repository / geometry adapters
   ↓
-pure domain modules
+pure opportunity, client-planning, seller-action, and simulation domain
   ↓
 shared app view state
   ↓
@@ -223,20 +234,22 @@ Feature state:
 | `hover` | transient emphasis |
 | `selected` | gold selected ZIP outline |
 | `dim` | score/category filter fade |
-| `campaign` | current/recommended campaign or seller-action emphasis |
+| `campaign` | cyan current campaign or seller-action emphasis |
+| `recommended` | green proposed Client Growth expansion emphasis |
 | `territoryDim` | neutral gray inactive context |
 | `displayScore` | presentation score for objectives/simulations |
 
 Map rules:
 
-- scores arrive already calculated;
-- paint expressions do not calculate business logic;
+- scores and ZIP recommendations arrive already calculated;
+- paint expressions do not calculate business or recommendation logic;
 - base statewide geometry is uploaded once per map instance;
 - objective/simulation recolors use `displayScore` feature state;
-- `dim`, `campaign`, and `territoryDim` updates are diffed;
+- `dim`, `campaign`, `recommended`, and `territoryDim` updates are diffed;
 - selection updates touch only previous/current ZIPs;
 - territory hit tests use Sets;
 - reach-gap and competitors are filtered layers over the shared source;
+- Client Growth can replace the reach-gap filter with a dynamic domain-provided ZIP set;
 - selected territory ZIPs alone are interactive;
 - selection zooms to official geometry;
 - clearing selection returns to territory bounds;
@@ -248,7 +261,8 @@ Visual rules:
 - pastel cool-to-hot active opportunity surface;
 - inactive territories use low-opacity gray and very subtle boundaries;
 - selection uses a strong gold outline;
-- campaign/action emphasis uses a strong cyan outline;
+- current campaign/action emphasis uses a strong cyan outline;
+- recommended client expansion uses a strong green outline;
 - enabled reach-gap and competitor layers use high-contrast fills and outlines;
 - layer colors remain fixture-owned where applicable.
 
@@ -261,6 +275,8 @@ Preserve the Fable optimization pass:
 - do not rewrite all 1,233 feature states for a one-ZIP change;
 - do not replace Set membership checks with array scans;
 - keep `opportunitiesByZip` for O(1) feature lookup;
+- keep current and recommended sets diffed independently;
+- update reach-gap filters instead of rebuilding sources;
 - keep standard MapLibre code in the vendor chunk;
 - keep offline-review output as one inlinable script.
 
@@ -286,13 +302,53 @@ Footprints are illustrative ZIP memberships, not service-area claims.
 
 ## 7. Client Growth ownership
 
-`clientScenario.ts` remains the canonical deterministic simulation engine.
+### Simulation domain
 
-- Northeast Ohio uses the curated Lakefront campaign ZIPs.
-- Other territories use deterministic synthetic footprints.
-- Recommended expansions stay within the selected territory.
-- Identical strategy inputs produce identical output.
-- React owns simulation theater, not calculation truth.
+`clientScenario.ts` owns:
+
+- baseline campaign metrics;
+- four strategy definitions;
+- deterministic strategy effects;
+- synergy behavior;
+- result ranges and confidence;
+- modeled explanation text.
+
+### Geographic-planning domain
+
+`clientGeography.ts` owns:
+
+- current campaign ZIP set intake;
+- territory reach-gap detection;
+- competitor intersection lookup;
+- deterministic expansion-candidate scoring;
+- recommendation count;
+- candidate reasons;
+- diagnostic summary counts.
+
+React does not choose expansion ZIPs. MapLibre does not choose expansion ZIPs.
+
+### Feature workflow
+
+`ClientGrowthStudio.tsx` owns UI state and theater:
+
+1. Current plan;
+2. Diagnose gaps;
+3. Recommended plan.
+
+Rules:
+
+- Northeast Ohio uses the curated Lakefront campaign ZIPs;
+- other territories use deterministic synthetic current footprints;
+- recommendations stay inside the selected territory;
+- current ZIPs remain cyan in Recommended plan;
+- recommended ZIPs use green `recommended` state;
+- diagnostic mode displays the domain-provided gap set and available competitor layers;
+- simulation completion advances to Recommended plan;
+- changing strategies invalidates prior result state;
+- identical strategy/territory inputs produce identical geography and metric outputs;
+- selected recommended ZIPs can be clicked to zoom and inspect their reason/context;
+- strategy benefits and trade-offs remain visible in result state;
+- React owns plan-view state and animation timing, not calculation truth.
 
 ## 8. Seller Growth ownership
 
@@ -316,14 +372,14 @@ Do not put seller entity/action generation in JSX or MapLibre.
 
 `MarketOverlayData` and `CompetitorFootprint` remain typed and validated.
 
-Current fixtures cover Northeast Ohio only. Elsewhere, Explorer correctly reports no modeled intersection. Future statewide definitions should replace fixture data without changing controls, detail cards, or layer contracts.
+Current competitor fixtures cover Northeast Ohio only. Elsewhere, Explorer and Client Growth correctly report no modeled competitor intersection. Client Growth reach-gap diagnostics are deterministic territory-specific outputs and do not imply governed coverage truth.
 
 Layer visibility requirements:
 
 - checked controls must be visually prominent;
 - reach-gap and competitor fills must remain visible over the heat surface;
 - lines must remain distinguishable at territory and selected-ZIP zoom levels;
-- campaign/selection emphasis must remain stronger than ordinary boundaries.
+- current/recommended/selection emphasis must remain stronger than ordinary boundaries.
 
 ## 10. Delivery
 
@@ -390,13 +446,14 @@ Browser review remains required for final spacing and WebGL visuals. Headless Ch
 ## 12. Preserve
 
 - strict TypeScript boundaries;
-- deterministic scoring, seller actions, and simulation;
+- deterministic scoring, client planning, seller actions, and simulation;
 - exact statewide ZIP/territory coverage;
 - curated versus baseline record distinction;
 - shared territory/viewport state;
 - expanded and compact layout contracts;
 - map-first desktop proportions;
 - feature-state performance optimizations;
+- distinct current, diagnostic, and recommended Client Growth states;
 - pastel opportunity heat and neutral inactive context;
 - prominent typed evidence layers;
 - ZIP-level competitive details;
@@ -409,10 +466,10 @@ Browser review remains required for final spacing and WebGL visuals. Headless Ch
 
 - document-level desktop scrolling;
 - duplicate Explorer/Seller workflows;
-- business calculations in MapLibre expressions or JSX handlers;
+- business or recommendation calculations in MapLibre expressions or JSX handlers;
 - statewide geometry re-upload for recoloring;
 - duplicate overlay geometry sources;
-- map-owned territory or seller-action generation;
+- map-owned territory, client recommendation, or seller-action generation;
 - manually edited generated geography;
 - uncontrolled randomness;
 - direct fixture access scattered through UI;
@@ -424,8 +481,8 @@ Browser review remains required for final spacing and WebGL visuals. Headless Ch
 
 ## 14. Next implementation sequence
 
-1. Review this differentiated UI through the stable Pages URL on the target laptop.
-2. Extend campaign/coverage comparison controls through Client Growth Studio.
+1. Review the three-step Client Growth workflow through the stable Pages URL on the target laptop.
+2. Add richer deterministic advertiser profiles and client switching.
 3. Add richer deterministic account/prospect/retention datasets to Seller Growth Studio.
 4. Add additional state and major-city market packages.
-5. Add the executive tour, keyboard tab behavior, compact-mode polish, and automated visual regression.
+5. Add the executive tour, keyboard tab behavior, remaining compact-mode polish, and automated visual regression.
