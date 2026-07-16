@@ -1,22 +1,22 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
 
 export const OPPORTUNITY_COLOR_STOPS = [
-  [35, '#e9f1f7'],
-  [50, '#cfdfeb'],
-  [65, '#a7c7dd'],
-  [75, '#78a6c8'],
-  [85, '#477fae'],
-  [95, '#1e5689'],
-  [100, '#082f57'],
+  [35, '#dcecf7'],
+  [50, '#b9deda'],
+  [65, '#cfe7b2'],
+  [75, '#f4e6a2'],
+  [85, '#f5c08a'],
+  [95, '#ee9a87'],
+  [100, '#dc6f78'],
 ] as const;
 
 export const opportunityLegendGradient =
-  'linear-gradient(90deg, #e9f1f7 0%, #cfdfeb 18%, #a7c7dd 38%, #78a6c8 58%, #477fae 76%, #1e5689 91%, #082f57 100%)';
+  'linear-gradient(90deg, #dcecf7 0%, #b9deda 18%, #cfe7b2 38%, #f4e6a2 58%, #f5c08a 76%, #ee9a87 91%, #dc6f78 100%)';
 
 export const opportunityColorExpression: ExpressionSpecification = [
   'case',
   ['boolean', ['feature-state', 'territoryDim'], false],
-  '#d9dee4',
+  '#e4e7ea',
   [
     'interpolate',
     ['linear'],
@@ -30,10 +30,10 @@ export const zipFillOpacityExpression: ExpressionSpecification = [
   ['boolean', ['feature-state', 'dim'], false],
   0.12,
   ['boolean', ['feature-state', 'territoryDim'], false],
-  0.48,
+  0.3,
   ['boolean', ['feature-state', 'campaign'], false],
   0.86,
-  0.76,
+  0.78,
 ];
 
 export const zipLineColorExpression: ExpressionSpecification = [
@@ -45,7 +45,7 @@ export const zipLineColorExpression: ExpressionSpecification = [
   ['boolean', ['feature-state', 'hover'], false],
   '#071524',
   ['boolean', ['feature-state', 'territoryDim'], false],
-  '#aab3bd',
+  'rgba(100,116,139,0.18)',
   'rgba(255,255,255,0.96)',
 ];
 
@@ -58,6 +58,6 @@ export const zipLineWidthExpression: ExpressionSpecification = [
   ['boolean', ['feature-state', 'hover'], false],
   1.9,
   ['boolean', ['feature-state', 'territoryDim'], false],
-  0.75,
+  0.32,
   1.15,
 ];

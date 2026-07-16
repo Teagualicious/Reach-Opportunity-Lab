@@ -7,8 +7,7 @@ on:
       - agent/all-offline-review-build
     paths:
       - offline.html
-      - src/offline-main.tsx
-      - src/map/offlineBasemapStyle.ts
+      - src/**
       - scripts/build-offline-map-context.mjs
       - scripts/build-offline-review.mjs
       - scripts/validate-offline-review.mjs
@@ -21,8 +20,7 @@ on:
       - main
     paths:
       - offline.html
-      - src/offline-main.tsx
-      - src/map/offlineBasemapStyle.ts
+      - src/**
       - scripts/build-offline-map-context.mjs
       - scripts/build-offline-review.mjs
       - scripts/validate-offline-review.mjs

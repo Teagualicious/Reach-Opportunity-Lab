@@ -91,7 +91,8 @@ Responsibilities:
 - hover, selection, filter dimming, campaign emphasis, and territory dimming through feature state
 - rendering typed reach-gap and competitor overlays
 - fitting territory/statewide bounds
-- resizing/refitting after sidebar collapse
+- fitting selected ZIP geometry
+- resizing/refitting after sidebar collapse while preserving the current ZIP or territory focus
 - preserving geographic attribution
 
 The map does not calculate business scores, assign territories, or own product truth.
@@ -149,18 +150,21 @@ The executive application is a fixed one-viewport dashboard:
 - Each sidebar scrolls independently.
 - Sidebars can collapse without unmounting feature workflows.
 - The map fills the remaining grid cell.
-- MapLibre must call `resize()` and refit after panel-layout changes.
+- MapLibre must call `resize()` after panel-layout changes.
+- Panel-layout changes preserve selected-ZIP focus when a ZIP is selected; otherwise they refit the active territory.
+- Clearing selection returns the camera to the active territory bounds.
 
 Do not reintroduce document-level scrolling for desktop product views.
 
 ## Visual map rules
 
 - Standard basemap: light, fully desaturated OpenStreetMap raster context.
-- Active opportunity scale: restrained light-to-deep blue.
-- Inactive territories: neutral gray.
-- ZIP boundaries: strong white lines for active territories, muted gray outside them.
+- Active opportunity scale: soft pastel cool-to-hot progression.
+- Inactive territories: neutral gray with low-opacity fills.
+- ZIP boundaries: strong white lines for active territories and extremely faint gray outside them.
 - Selection: gold.
 - Campaign emphasis: cyan.
+- Selecting a ZIP fits its official Polygon or MultiPolygon geometry with bounded zoom.
 - Business overlay colors remain typed fixture values.
 
 Scores are attached to features before rendering; paint expressions never calculate opportunity logic.
@@ -221,7 +225,7 @@ The offline target:
 6. rejects all unapproved runtime fetches;
 7. validates that no external tags or split chunks remain.
 
-Offline packaging is a distribution adapter, not a duplicate business implementation.
+Offline packaging is a distribution adapter, not a duplicate business implementation. The offline workflow must run for shared `src/` changes because it consumes the same feature and map source.
 
 ## Source structure
 
@@ -231,7 +235,7 @@ src/
   domain/              opportunities, territories, scoring, simulation, overlays
   data/                repositories, public-asset and geometry adapters
   features/            product-owned UI/workflows
-  map/                 MapLibre lifecycle, layers, expressions, basemap adapters
+  map/                 MapLibre lifecycle, geometry bounds, layers, expressions, basemap adapters
   components/          reusable presentation controls
   styles/              tokens, fixed viewport layout, components, overlays
 scripts/

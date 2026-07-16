@@ -12,7 +12,8 @@ The repository contains a Vite + React + strict TypeScript application with one 
 - All Ohio plus seven major-city operating territories;
 - inactive territories remain visible in neutral gray;
 - selected territory fits the viewport and stays vivid;
-- restrained light-to-deep blue opportunity scale;
+- pastel cool-to-hot opportunity scale;
+- selecting a ZIP zooms to its official geometry;
 - score/category filters, ranked ZIPs, hover/selection, explainable components, confidence, and market context;
 - synthetic reach-gap and competitor controls.
 
@@ -22,6 +23,7 @@ The repository contains a Vite + React + strict TypeScript application with one 
 - four deterministic strategy definitions;
 - territory-aware campaign footprints;
 - territory-aware recommended expansion ZIPs;
+- selected ZIP camera focus;
 - staged simulation theater and current-versus-modeled metrics;
 - conceptual Architect handoff.
 
@@ -32,6 +34,7 @@ The repository contains a Vite + React + strict TypeScript application with one 
 - Retention Risk;
 - Category Opportunity;
 - territory-aware rankings and map recoloring;
+- selected ZIP camera focus;
 - fictional prospect/account examples and recommended actions.
 
 All business, opportunity, territory, campaign, account, prospect, competitor, recommendation, and simulation values are synthetic.
@@ -60,7 +63,8 @@ Desktop layout laws:
 - left and right sidebars scroll independently;
 - both sidebars collapse without resetting feature workflows;
 - map width expands when panels collapse;
-- MapLibre resizes and refits after layout changes.
+- MapLibre resizes after layout changes;
+- panel changes preserve selected-ZIP focus when a ZIP is selected and otherwise refit the active territory.
 
 ## 3. Geography and statewide data
 
@@ -157,6 +161,7 @@ src/
     market-growth/
   map/
     OpportunityMap.tsx
+    geometryBounds.ts
     mapExpressions.ts
     offlineBasemapStyle.ts
   styles/
@@ -206,15 +211,19 @@ Map rules:
 
 - opportunity values arrive already calculated;
 - MapLibre paint expressions do not calculate business scores;
-- active ZIPs use a light-to-deep blue scale;
-- inactive territories use neutral gray;
+- active ZIPs use a pastel cool-to-hot progression;
+- inactive territories use low-opacity neutral gray;
 - active ZIP boundaries are strong white;
-- inactive boundaries are muted gray;
+- inactive boundaries are extremely faint gray;
 - selection remains gold;
 - campaign emphasis remains cyan;
 - selected territory ZIPs alone are interactive;
 - territory and statewide bounds are supplied by shared application state;
-- map calls `resize()` and refits after sidebar changes.
+- selecting from the map or a ranked list fits the ZIP Polygon/MultiPolygon bounds;
+- clearing selection returns to the selected territory frame;
+- map calls `resize()` after sidebar changes and preserves current ZIP focus when selected.
+
+`geometryBounds.ts` owns recursive coordinate traversal and converts Polygon, MultiPolygon, and GeometryCollection geometry into a typed `[west, south, east, north]` viewport bound. Keep this pure and covered by Vitest.
 
 The standard basemap is OpenStreetMap raster tiles with full desaturation and high brightness. Attribution remains visible.
 
@@ -230,7 +239,7 @@ Owns:
 - ranked ZIPs inside the selected territory;
 - selected ZIP details and disclosures.
 
-Changing territory clears the selected ZIP and category while preserving the global shell state.
+Changing territory clears the selected ZIP and category while preserving the global shell state. ZIP selection from either the map or ranking drives the same detail and camera state.
 
 ### Client Growth Studio
 
@@ -240,6 +249,7 @@ Changing territory clears the selected ZIP and category while preserving the glo
 - Other territories use their highest-scoring ZIPs as a synthetic current footprint.
 - Recommended expansion ZIPs are derived from the selected territory.
 - Identical strategy inputs produce identical model outputs.
+- ZIP selection drives both the map focus and the selected context.
 
 ### Market Growth Studio
 
@@ -298,7 +308,7 @@ Output:
 offline-dist/Opportunity-Lab-All-Offline/
 ```
 
-The offline workflow publishes a workflow artifact and attaches the validated ZIP to the latest release. Never upload the package when offline validation fails.
+The offline workflow publishes a workflow artifact and attaches the validated ZIP to the latest release. Never upload the package when offline validation fails. Its path filters include shared `src/**` changes because the offline review consumes the same product and map implementation.
 
 ## 9. Required validation
 
@@ -318,9 +328,8 @@ npm run offline:all
 
 Current validated branch runs:
 
-- statewide generation run 26 — passed;
-- standard CI run 280 — passed;
-- all-offline run 52 — passed.
+- standard CI run 299 — passed;
+- all-offline run 57 — passed.
 
 Visual correctness still requires browser review because the current automated Chromium environment cannot initialize WebGL.
 
@@ -334,8 +343,9 @@ Visual correctness still requires browser review because the current automated C
 - shared territory state across all product modes;
 - one fixed desktop viewport;
 - independently scrollable/collapsible sidebars;
-- map resize/refit on panel changes;
-- blue active opportunity scale, gray inactive context, gold selection, cyan campaign;
+- map resize on panel changes while preserving current camera focus;
+- pastel active opportunity scale, gray inactive context, gold selection, cyan campaign;
+- selected-ZIP geometry focus and territory reset behavior;
 - geographic provenance;
 - synthetic disclosures;
 - client/internal separation;
@@ -346,6 +356,8 @@ Visual correctness still requires browser review because the current automated C
 
 - document-level desktop scrolling;
 - fragmented selected-ZIP-only geometry;
+- strong inactive-territory boundary clutter;
+- detail selection without corresponding map focus;
 - business score calculation in MapLibre expressions or JSX handlers;
 - map-owned territory assignment;
 - manually edited generated geography;
@@ -359,8 +371,8 @@ Visual correctness still requires browser review because the current automated C
 
 ## 12. Next sequence
 
-1. Merge and visually inspect the statewide UI through GitHub Pages on the target laptop.
-2. Tune layout and map framing based on screenshots from that build.
+1. Merge and visually inspect the pastel map polish through GitHub Pages on the target laptop.
+2. Tune layout and camera padding based on screenshots from that build.
 3. Expand supporting overlays and campaign comparison controls in Client Growth Studio.
 4. Add richer statewide account/prospect/retention datasets.
 5. Add additional state and major-city market packages behind the current market/territory contracts.
