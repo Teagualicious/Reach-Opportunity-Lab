@@ -13,7 +13,7 @@ const html = await readFile(HTML_PATH, 'utf8');
 const context = JSON.parse(await readFile(CONTEXT_PATH, 'utf8'));
 const htmlStats = await stat(HTML_PATH);
 
-if (htmlStats.size < 500_000) {
+if (htmlStats.size < 1_000_000) {
   throw new Error(`Offline review HTML is unexpectedly small: ${htmlStats.size} bytes`);
 }
 
@@ -39,10 +39,13 @@ for (const forbidden of [
 }
 
 for (const required of [
-  '/data/zip-opportunities.json',
+  '/data/ohio-opportunities.json',
   '/data/market-overlays.json',
-  '/data/cleveland-akron-zcta-2020.geojson',
+  '/data/ohio-zcta-2020.geojson',
   '/data/offline-map-context.geojson',
+  'cleveland-akron',
+  'columbus-central',
+  'cincinnati-southwest',
   'Offline review blocked external request:',
   'Opportunity Lab',
 ]) {
