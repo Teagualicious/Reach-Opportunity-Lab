@@ -45,6 +45,8 @@ export const LAKEFRONT_BASELINE: Readonly<ClientMetrics> = {
   priorityClusters: 4,
 };
 
+export const LAKEFRONT_CAMPAIGN_TERRITORY_ID = 'cleveland-akron';
+
 export const LAKEFRONT_CAMPAIGN_ZIPS = [
   '44102',
   '44103',

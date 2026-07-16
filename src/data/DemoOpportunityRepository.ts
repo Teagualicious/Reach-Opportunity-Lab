@@ -1,9 +1,5 @@
 import type { FeatureCollection, Geometry } from 'geojson';
-import {
-  assertMarketOverlayData,
-  EMPTY_MARKET_OVERLAYS,
-  type MarketOverlayData,
-} from '../domain/mapOverlay';
+import { assertMarketOverlayData, EMPTY_MARKET_OVERLAYS } from '../domain/mapOverlay';
 import { assertZipOpportunity, getPriorityBand, type ZipOpportunity } from '../domain/opportunity';
 import { assertTerritoryDefinitions } from '../domain/territory';
 import type {
@@ -40,7 +36,7 @@ export function buildOpportunityMarket(
   payload: DemoMarketPayload,
   geometry: RawZipGeometry,
   geometryMetadata: GeometryMetadata = FALLBACK_GEOMETRY_METADATA,
-  overlays: MarketOverlayData = EMPTY_MARKET_OVERLAYS,
+  overlays: unknown = EMPTY_MARKET_OVERLAYS,
 ): OpportunityMarket {
   const opportunitiesByZip = new Map<string, ZipOpportunity>();
 
@@ -99,6 +95,7 @@ export function buildOpportunityMarket(
   return {
     market: payload.market,
     opportunities: payload.opportunities,
+    opportunitiesByZip,
     geometry: {
       type: 'FeatureCollection',
       features: enrichedFeatures,
@@ -125,14 +122,19 @@ export class DemoOpportunityRepository implements OpportunityRepository {
       throw new Error(`Unknown demonstration market: ${marketId}`);
     }
 
-    const [payload, rawOverlays] = await Promise.all([
-      readJson<DemoMarketPayload>('data/ohio-opportunities.json'),
+    // All three files download concurrently; the geometry source only needs the
+    // ZIP list after its fetch completes. Overlay validation happens once,
+    // inside buildOpportunityMarket.
+    const payloadPromise = readJson<DemoMarketPayload>('data/ohio-opportunities.json');
+    const zipsPromise = payloadPromise.then((payload) =>
+      payload.opportunities.map((opportunity) => opportunity.zip),
+    );
+    const [payload, rawOverlays, checkedInGeometry] = await Promise.all([
+      payloadPromise,
       readJson<unknown>('data/market-overlays.json'),
+      this.geometrySource.load(zipsPromise),
     ]);
-    const zips = payload.opportunities.map((opportunity) => opportunity.zip);
-    assertMarketOverlayData(rawOverlays, zips);
 
-    const checkedInGeometry = await this.geometrySource.load(zips);
     return buildOpportunityMarket(
       payload,
       checkedInGeometry,

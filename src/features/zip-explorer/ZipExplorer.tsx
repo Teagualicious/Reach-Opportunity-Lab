@@ -7,7 +7,6 @@ import {
   COMPONENT_LABELS,
   COMPONENT_MAXIMUMS,
   getPriorityBand,
-  type ZipOpportunity,
 } from '../../domain/opportunity';
 import { OpportunityMap } from '../../map/OpportunityMap';
 import { opportunityLegendGradient } from '../../map/mapExpressions';
@@ -24,11 +23,6 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   maximumFractionDigits: 0,
 });
-
-function findOpportunity(data: OpportunityMarket, zip: string | null): ZipOpportunity | null {
-  if (!zip) return null;
-  return data.opportunities.find((opportunity) => opportunity.zip === zip) ?? null;
-}
 
 export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
@@ -61,7 +55,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     [category, minScore, territoryOpportunities],
   );
   const activeZips = useMemo(() => activeOpportunities.map(({ zip }) => zip), [activeOpportunities]);
-  const selected = findOpportunity(data, selectedZip);
+  const selected = selectedZip ? data.opportunitiesByZip.get(selectedZip) ?? null : null;
   const ranked = useMemo(
     () => [...activeOpportunities].sort((a, b) => b.score - a.score).slice(0, 8),
     [activeOpportunities],

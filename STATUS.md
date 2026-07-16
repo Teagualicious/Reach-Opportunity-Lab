@@ -31,9 +31,16 @@ Phase 2 — Statewide map foundation and first product journeys
 - Expanded the all-offline context generator to statewide Ohio using tiled TIGERweb requests and feature deduplication.
 - Expanded the offline workflow path filter so shared `src/` changes always rebuild and validate the offline artifact.
 - Added territory domain tests and statewide fixture validation.
+- Optimized statewide map interaction hot paths: objective/simulation recolors now use `displayScore` feature state with a `coalesce` paint expression instead of re-uploading the 2.7 MB GeoJSON source; dim/campaign/territory feature-state updates are diffed against the previously applied ZIP sets; hover/click territory membership checks use Sets; selection updates touch two features instead of all 1,233.
+- Replaced duplicated reach-gap and per-competitor GeoJSON sources with filtered layers over the shared statewide source.
+- Parallelized startup data loading: opportunities, overlays, and ZCTA geometry download concurrently (`ZipGeometrySource.load` now accepts a pending ZIP list).
+- Split MapLibre into its own cache-stable vendor chunk for standard builds (app chunk 242 KB / MapLibre 1,053 KB, previously one 1,301 KB chunk); the offline-review build still emits a single inlinable script.
+- Exposed `opportunitiesByZip` on `OpportunityMarket` so features look up ZIPs without linear scans; overlay validation now happens once inside `buildOpportunityMarket`; the Lakefront canonical territory id moved into the client-scenario domain module.
+- Checked in `package-lock.json` for reproducible installs.
 - Current validation:
   - standard CI run 299 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
-  - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload.
+  - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload;
+  - this session: typecheck, statewide validation + 25 Vitest tests, production build, offline-review Vite build (single chunk confirmed), and a headless SwiftShader browser walkthrough of all three product modes (selection zoom, score-filter dimming, reach-gap overlay, territory switch, objective recolors, client simulation) all passed locally.
 
 ## Next up
 
@@ -107,6 +114,16 @@ Phase 2 — Statewide map foundation and first product journeys
   Rejected because: monochromatic blue weakens heat-map storytelling while saturated colors overpower the neutral basemap
   Must preserve: the progression remains soft and readable; inactive territories remain neutral gray; selection remains gold; campaign emphasis remains cyan
 
+- 2026-07-16 | DECISION: map presentation state flows through diffed MapLibre feature state over one shared statewide source
+  Considered: rebuilding and re-setting the GeoJSON source per recolor, per-ZIP full-state rewrites, and separate GeoJSON sources per overlay
+  Rejected because: `setData` re-parses and re-tiles 2.7 MB of geometry per objective switch, full rewrites issue 1,200+ `setFeatureState` calls per filter tick, and per-overlay sources duplicate polygons in memory
+  Must preserve: `displayScore` feature state is presentation-only (domain still owns score truth); overlay layers filter the shared `zip-opportunities` source; applied-state diffing resets whenever a map instance is recreated
+
+- 2026-07-16 | DECISION: geometry sources accept a pending ZIP list so startup downloads run concurrently
+  Considered: keeping the serial payload-then-geometry load, fetching geometry directly in the repository, and a separate prefetch method
+  Rejected because: serial loading delays the largest download by a full round trip, direct fetches bypass the source boundary, and a prefetch method splits one responsibility across two calls
+  Must preserve: `ZipGeometrySource.load` still validates and normalizes against the resolved ZIP list; adapters whose request URL depends on ZIPs (Census) simply await the list first
+
 - 2026-07-16 | DECISION: selecting a ZIP changes both detail state and map camera focus
   Considered: updating the detail panel without moving the map
   Rejected because: spatial focus is part of the executive explanation and makes small ZIPs easier to understand
@@ -116,8 +133,10 @@ Phase 2 — Statewide map foundation and first product journeys
 
 - Reach-gap and competitor fixtures currently describe Northeast Ohio only. Controls remain visible statewide, but production-shaped statewide coverage definitions are a later data task.
 - Generated statewide metrics are deliberately baseline-quality synthetic records; only the existing Cleveland–Akron records have curated narratives.
-- The standard Vite build remains large because MapLibre is bundled up front. Consider code splitting after product journeys stabilize.
-- Automated screenshot testing is blocked in the current container because Chromium cannot initialize WebGL.
+- MapLibre now ships as its own vendor chunk, so returning visitors re-download only the ~242 KB app chunk after merges; further size reduction would require lazy product-mode loading, which buys little while all three modes share the map.
+- Headless Chromium renders MapLibre in this container with `--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader` (software WebGL; allow ~8 s per frame settle). OpenStreetMap raster tiles are proxy-blocked, so screenshots show vector layers over the plain background. This unblocks the previously noted WebGL limitation for visual checks.
+- The mode-switch and Market Growth objective lists use `role="tab"` without arrow-key navigation/roving tabindex; keyboard a11y polish fits the planned spacing/typography pass.
+- Legacy curated fixtures (`zip-opportunities.json`, `cleveland-*.geojson`) are generator inputs but still ship in `public/` on every deploy (~76 KB); relocating them would touch generator scripts and two workflows.
 - The all-offline context is lighter than a commercial street basemap and prioritizes reliable statewide orientation.
 
 ## How to run

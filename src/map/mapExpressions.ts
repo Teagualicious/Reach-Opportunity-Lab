@@ -13,6 +13,14 @@ export const OPPORTUNITY_COLOR_STOPS = [
 export const opportunityLegendGradient =
   'linear-gradient(90deg, #dcecf7 0%, #b9deda 18%, #cfe7b2 38%, #f4e6a2 58%, #f5c08a 76%, #ee9a87 91%, #dc6f78 100%)';
 
+// Feature-state display scores let objective/simulation recolors update per feature
+// without re-uploading the statewide GeoJSON source; null falls through to the base score.
+export const effectiveScoreExpression: ExpressionSpecification = [
+  'coalesce',
+  ['feature-state', 'displayScore'],
+  ['get', 'score'],
+];
+
 export const opportunityColorExpression: ExpressionSpecification = [
   'case',
   ['boolean', ['feature-state', 'territoryDim'], false],
@@ -20,7 +28,7 @@ export const opportunityColorExpression: ExpressionSpecification = [
   [
     'interpolate',
     ['linear'],
-    ['get', 'score'],
+    effectiveScoreExpression,
     ...OPPORTUNITY_COLOR_STOPS.flatMap(([score, color]) => [score, color]),
   ],
 ];

@@ -4,6 +4,7 @@ import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import {
   CLIENT_STRATEGIES,
   LAKEFRONT_BASELINE,
+  LAKEFRONT_CAMPAIGN_TERRITORY_ID,
   LAKEFRONT_CAMPAIGN_ZIPS,
   simulateClientScenario,
   type ClientMetrics,
@@ -83,7 +84,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         .sort((a, b) => b.score - a.score),
     [data.opportunities, territoryZipSet],
   );
-  const isCanonicalMarket = view.selectedTerritory?.id === 'cleveland-akron';
+  const isCanonicalMarket = view.selectedTerritory?.id === LAKEFRONT_CAMPAIGN_TERRITORY_ID;
   const currentCampaignZips = useMemo(() => {
     if (isCanonicalMarket) {
       return LAKEFRONT_CAMPAIGN_ZIPS.filter((zip) => territoryZipSet.has(zip));

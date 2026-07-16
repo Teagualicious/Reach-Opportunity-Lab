@@ -33,8 +33,9 @@ export function buildCensusZctaQueryUrl(zips: readonly string[]): string {
 }
 
 export class CensusZctaGeometrySource implements ZipGeometrySource {
-  async load(zips: readonly string[]): Promise<RawZipGeometry> {
-    const response = await fetch(buildCensusZctaQueryUrl(zips));
+  async load(zips: readonly string[] | Promise<readonly string[]>): Promise<RawZipGeometry> {
+    const requestedZips = await zips;
+    const response = await fetch(buildCensusZctaQueryUrl(requestedZips));
     if (!response.ok) {
       throw new Error(
         `Unable to load official Census ZCTA geometry: ${response.status} ${response.statusText}`,
@@ -42,6 +43,6 @@ export class CensusZctaGeometrySource implements ZipGeometrySource {
     }
 
     const geometry: unknown = await response.json();
-    return normalizeZipGeometry(geometry, zips, 'Census ZCTA service');
+    return normalizeZipGeometry(geometry, requestedZips, 'Census ZCTA service');
   }
 }

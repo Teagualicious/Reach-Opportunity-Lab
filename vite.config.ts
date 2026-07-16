@@ -7,6 +7,12 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       input: mode === 'offline-review' ? 'offline.html' : 'index.html',
+      // The offline review package must remain a single inlinable module script,
+      // so the MapLibre vendor chunk applies to standard builds only.
+      output:
+        mode === 'offline-review'
+          ? {}
+          : { manualChunks: { maplibre: ['maplibre-gl'] } },
     },
   },
   server: {

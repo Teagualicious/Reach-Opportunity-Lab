@@ -56,7 +56,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     setSimulated(false);
   }, [ranked, view.selectedTerritoryId]);
 
-  const selected = data.opportunities.find((opportunity) => opportunity.zip === selectedZip) ?? ranked[0];
+  const selected = (selectedZip ? data.opportunitiesByZip.get(selectedZip) : undefined) ?? ranked[0];
   const selectedScore = selected ? scores[selected.zip] : 0;
   const projectedScore = simulated ? Math.min(100, selectedScore + 9) : selectedScore;
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
