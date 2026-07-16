@@ -1,6 +1,7 @@
 name: Apply product handoff patch
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - agent/map-clarity-sales-workspace-v2
