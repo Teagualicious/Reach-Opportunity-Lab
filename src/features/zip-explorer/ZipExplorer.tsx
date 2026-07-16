@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
+import { MapBreadcrumb } from '../../components/MapBreadcrumb';
 import { MapLayerControls } from '../../components/MapLayerControls';
 import { RangeSlider } from '../../components/RangeSlider';
+import { RegionPicker } from '../../components/RegionPicker';
 import { ScoreRing } from '../../components/ScoreRing';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { getInternalZipMetrics } from '../../domain/internalMetrics';
@@ -21,6 +23,7 @@ import {
   COMPONENT_MAXIMUMS,
   getPriorityBand,
 } from '../../domain/opportunity';
+import { buildRegionSummaries } from '../../domain/regionSummary';
 import { buildTerritoryBrief } from '../../domain/territoryBrief';
 import {
   DEMOGRAPHIC_METRICS,
@@ -47,7 +50,7 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 const LENS_GROUP_LABELS = {
   opportunity: 'Opportunity',
   demographics: 'Demographics',
-  internal: 'Internal signals · modeled',
+  internal: 'Business signals · modeled',
 } as const;
 
 function sliderStep(format: MarketLensFormat): number {
@@ -92,6 +95,13 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const [visibleCompetitorIds, setVisibleCompetitorIds] = useState<string[]>([]);
   const [showBrief, setShowBrief] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
+
+  const regionMode = view.regionMode;
+  const territories = data.market.territories ?? [];
+  const regionSummaries = useMemo(
+    () => buildRegionSummaries(data.opportunities, territories),
+    [data.opportunities, territories],
+  );
 
   const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
   const territoryOpportunities = useMemo(
@@ -246,148 +256,155 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     <main className="explorer-grid product-grid">
       <aside className="panel panel--left">
         <div className="panel__heading">
-          <span className="eyebrow">Market intelligence</span>
-          <h1>{territoryName}</h1>
-          <p>{view.selectedTerritory ? view.selectedTerritory.anchorCities.join(' · ') : data.market.subtitle}</p>
+          <span className="eyebrow">Find the market</span>
+          <h1>{regionMode ? 'Ohio' : territoryName}</h1>
+          <p>
+            {regionMode
+              ? 'Seven operating regions across the state.'
+              : view.selectedTerritory
+                ? view.selectedTerritory.anchorCities.join(' · ')
+                : data.market.subtitle}
+          </p>
         </div>
 
-        <section className="panel-section lens-section">
-          <div className="section-heading">
-            <span>Color ZIPs by</span>
-            <small>Market lens</small>
-          </div>
-          <select
-            className="lens-select"
-            value={lens.id}
-            aria-label="Color ZIP areas by market lens"
-            onChange={(event) => setLensId(event.target.value)}
-          >
-            {(['opportunity', 'demographics', 'internal'] as const).map((group) => (
-              <optgroup key={group} label={LENS_GROUP_LABELS[group]}>
-                {MARKET_LENSES.filter((candidate) => candidate.group === group).map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>{candidate.label}</option>
+        {regionMode ? (
+          <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
+        ) : (
+          <>
+            <section className="panel-section lens-section">
+              <div className="section-heading">
+                <span>View map by</span>
+              </div>
+              <select
+                className="lens-select"
+                value={lens.id}
+                aria-label="View map by"
+                onChange={(event) => setLensId(event.target.value)}
+              >
+                {(['opportunity', 'demographics', 'internal'] as const).map((group) => (
+                  <optgroup key={group} label={LENS_GROUP_LABELS[group]}>
+                    {MARKET_LENSES.filter((candidate) => candidate.group === group).map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>{candidate.label}</option>
+                    ))}
+                  </optgroup>
                 ))}
-              </optgroup>
-            ))}
-          </select>
-          <div className="legend-ramp" style={{ background: opportunityLegendGradient }} aria-label={`${lens.label} legend`} />
-          {lensIsOpportunity ? (
-            <div className="legend-labels"><span>Emerging</span><span>Qualified</span><span>Priority</span></div>
-          ) : (
-            <div className="legend-labels">
-              <span>{formatLensValue(lens.format, lensSurface.minimum)}</span>
-              <span>{formatLensValue(lens.format, lensSurface.maximum)}</span>
-            </div>
-          )}
-        </section>
+              </select>
+              <div className="legend-ramp" style={{ background: opportunityLegendGradient }} aria-label={`${lens.label} legend`} />
+              {lensIsOpportunity ? (
+                <div className="legend-labels"><span>Lower</span><span>Higher</span></div>
+              ) : (
+                <div className="legend-labels">
+                  <span>{formatLensValue(lens.format, lensSurface.minimum)}</span>
+                  <span>{formatLensValue(lens.format, lensSurface.maximum)}</span>
+                </div>
+              )}
+            </section>
 
-        <section className="panel-section filter-zones">
-          <button
-            className="filter-zones__summary"
-            type="button"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <span>Filter ZIPs</span>
-            <strong>{activeOpportunities.length} of {territoryOpportunities.length}</strong>
-            <i aria-hidden="true">{filtersOpen ? '−' : '+'}</i>
-          </button>
-
-          {filtersOpen && (
-            <div className="filter-zones__body">
-              <label className="filter-control">
-                <span><strong>Minimum opportunity</strong><b>{minScore}+</b></span>
-                <input
-                  type="range"
-                  min="35"
-                  max="90"
-                  step="5"
-                  value={minScore}
-                  onChange={(event) => setMinScore(Number(event.target.value))}
-                />
-              </label>
-              <label className="filter-control">
-                <span><strong>Category strength</strong></span>
-                <select value={category} onChange={(event) => setCategory(event.target.value)}>
-                  {categories.map((option) => <option key={option}>{option}</option>)}
-                </select>
-              </label>
-
-              {DEMOGRAPHIC_METRICS.map((metric) => {
-                const range = demographicRanges[metric.id];
-                const value = demographicFilters[metric.id] ?? range;
-                return (
-                  <RangeSlider
-                    key={metric.id}
-                    label={metric.label}
-                    minimum={range.minimum}
-                    maximum={range.maximum}
-                    step={sliderStep(metric.format)}
-                    valueMinimum={value.minimum}
-                    valueMaximum={value.maximum}
-                    formattedRange={`${formatCompact(metric.format, value.minimum)} – ${formatCompact(metric.format, value.maximum)}`}
-                    onChange={(minimum, maximum) => handleDemographicFilterChange(metric.id, minimum, maximum)}
-                  />
-                );
-              })}
-
+            <section className="panel-section filter-zones">
               <button
-                className="filter-zones__reset"
+                className="filter-zones__summary"
                 type="button"
-                disabled={demographicFilterCount === 0 && minScore === 35 && category === 'All categories'}
-                onClick={() => {
-                  setDemographicFilters({});
-                  setMinScore(35);
-                  setCategory('All categories');
-                }}
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen((open) => !open)}
               >
-                Reset filters
+                <span>Narrow the list</span>
+                <strong>{activeOpportunities.length} of {territoryOpportunities.length}</strong>
+                <i aria-hidden="true">{filtersOpen ? '−' : '+'}</i>
               </button>
-            </div>
-          )}
-        </section>
 
-        <MapLayerControls
-          overlays={data.overlays}
-          showReachGap={showReachGap}
-          visibleCompetitorIds={visibleCompetitorIds}
-          onShowReachGapChange={setShowReachGap}
-          onCompetitorVisibilityChange={handleCompetitorVisibilityChange}
-        />
+              {filtersOpen && (
+                <div className="filter-zones__body">
+                  <label className="filter-control">
+                    <span><strong>Minimum opportunity</strong><b>{minScore}+</b></span>
+                    <input
+                      type="range"
+                      min="35"
+                      max="90"
+                      step="5"
+                      value={minScore}
+                      onChange={(event) => setMinScore(Number(event.target.value))}
+                    />
+                  </label>
+                  <label className="filter-control">
+                    <span><strong>Business category</strong></span>
+                    <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                      {categories.map((option) => <option key={option}>{option}</option>)}
+                    </select>
+                  </label>
 
-        <section className="panel-section panel-section--grow">
-          <div className="section-heading">
-            <span>{lensIsOpportunity ? 'Highest opportunity' : `Strongest · ${lens.label}`}</span>
-            <small>{territoryName}</small>
-          </div>
-          <div className="ranked-list">
-            {ranked.length > 0 ? ranked.map((opportunity, index) => (
-              <button
-                className={`ranked-item ${selectedZip === opportunity.zip ? 'is-selected' : ''}`}
-                key={opportunity.zip}
-                type="button"
-                onClick={() => setSelectedZip(opportunity.zip)}
-              >
-                <span className="ranked-item__rank">{index + 1}</span>
-                <span className="ranked-item__body">
-                  <strong>{opportunity.name}</strong>
-                  <small>ZIP {opportunity.zip} · {getPriorityBand(opportunity.score)}</small>
-                </span>
-                <span className={`ranked-item__score ${lensIsOpportunity ? '' : 'is-metric'}`}>
-                  {lensIsOpportunity ? opportunity.score : formatLensValue(lens.format, lens.getValue(opportunity))}
-                </span>
-              </button>
-            )) : <p className="filter-empty">No ZIPs match these filters.</p>}
-          </div>
-        </section>
+                  {DEMOGRAPHIC_METRICS.map((metric) => {
+                    const range = demographicRanges[metric.id];
+                    const value = demographicFilters[metric.id] ?? range;
+                    return (
+                      <RangeSlider
+                        key={metric.id}
+                        label={metric.label}
+                        minimum={range.minimum}
+                        maximum={range.maximum}
+                        step={sliderStep(metric.format)}
+                        valueMinimum={value.minimum}
+                        valueMaximum={value.maximum}
+                        formattedRange={`${formatCompact(metric.format, value.minimum)} – ${formatCompact(metric.format, value.maximum)}`}
+                        onChange={(minimum, maximum) => handleDemographicFilterChange(metric.id, minimum, maximum)}
+                      />
+                    );
+                  })}
 
-        <div className={`geometry-notice geometry-notice--${data.geometryMetadata.kind}`}>
-          <span className="synthetic-notice__dot" />
-          <div><strong>{data.geometryMetadata.label}</strong><small>{data.geometryMetadata.source} · {data.geometryMetadata.vintage}</small></div>
-        </div>
-        <div className="synthetic-notice">
-          <span className="synthetic-notice__dot" />
-          Opportunity, demographic, coverage, competitor, and internal business values are deterministic synthetic demonstration data.
+                  <button
+                    className="filter-zones__reset"
+                    type="button"
+                    disabled={demographicFilterCount === 0 && minScore === 35 && category === 'All categories'}
+                    onClick={() => {
+                      setDemographicFilters({});
+                      setMinScore(35);
+                      setCategory('All categories');
+                    }}
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              )}
+            </section>
+
+            <MapLayerControls
+              overlays={data.overlays}
+              showReachGap={showReachGap}
+              visibleCompetitorIds={visibleCompetitorIds}
+              onShowReachGapChange={setShowReachGap}
+              onCompetitorVisibilityChange={handleCompetitorVisibilityChange}
+            />
+
+            <section className="panel-section panel-section--grow">
+              <div className="section-heading">
+                <span>Top areas</span>
+                <small>{lensIsOpportunity ? territoryName : lens.label}</small>
+              </div>
+              <div className="ranked-list">
+                {ranked.length > 0 ? ranked.map((opportunity, index) => (
+                  <button
+                    className={`ranked-item ${selectedZip === opportunity.zip ? 'is-selected' : ''}`}
+                    key={opportunity.zip}
+                    type="button"
+                    onClick={() => setSelectedZip(opportunity.zip)}
+                  >
+                    <span className="ranked-item__rank">{index + 1}</span>
+                    <span className="ranked-item__body">
+                      <strong>{opportunity.name}</strong>
+                      <small>ZIP {opportunity.zip}</small>
+                    </span>
+                    <span className={`ranked-item__score ${lensIsOpportunity ? '' : 'is-metric'}`}>
+                      {lensIsOpportunity ? opportunity.score : formatLensValue(lens.format, lens.getValue(opportunity))}
+                    </span>
+                  </button>
+                )) : <p className="filter-empty">No areas match these filters.</p>}
+              </div>
+            </section>
+          </>
+        )}
+
+        <div className="data-footnote">
+          Demonstration data: opportunity, demographic, coverage, competitor, and business values
+          are synthetic · {data.geometryMetadata.vintage} ZCTA boundaries
         </div>
       </aside>
 
@@ -405,10 +422,23 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           showReachGap={showReachGap}
           visibleCompetitorIds={visibleCompetitorIds}
           popupValueText={popupValueText}
+          regionMode={regionMode}
+          regions={regionSummaries}
+          onSelectRegion={view.selectTerritory}
+        />
+        <MapBreadcrumb
+          regionName={view.selectedTerritory?.name ?? null}
+          onSelectTerritory={view.selectTerritory}
         />
         <div className="map-stage__caption">
-          <span>{territoryName}</span>
-          <strong>{lensIsOpportunity ? 'Statewide ZIP fabric · selected territory stays vivid' : `ZIPs colored by ${lens.label.toLowerCase()}`}</strong>
+          <span>{regionMode ? 'Ohio' : territoryName}</span>
+          <strong>
+            {regionMode
+              ? 'Click a region to see its ZIP areas'
+              : lensIsOpportunity
+                ? 'ZIP areas colored by opportunity'
+                : `ZIP areas colored by ${lens.label.toLowerCase()}`}
+          </strong>
         </div>
       </section>
 
@@ -417,32 +447,44 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           tone="market"
           title="Market Opportunity Map"
           audience="Strategy, intelligence, and leadership"
-          purpose="Compare demand, demographics, competitor activity, modeled Spectrum Reach position, and revenue whitespace."
-          nextStep="Select a market or ZIP, then generate a territory opportunity brief."
+          purpose="See where the company can compete and grow — demand, audience, competitors, and unclaimed revenue."
+          nextStep={
+            regionMode
+              ? 'Pick a region, then choose a ZIP area to see what makes it strong.'
+              : 'Choose a ZIP area, then create the opportunity brief.'
+          }
         />
         {selected && selectedDemographics && selectedInternalMetrics ? (
           <>
             <div className="detail-hero">
               <div>
-                <span className="eyebrow">Selected opportunity</span>
+                <span className="eyebrow">Selected area</span>
                 <h2>{selected.name}</h2>
-                <p>ZIP {selected.zip} · {getPriorityBand(selected.score)} priority</p>
+                <p>ZIP {selected.zip} · {getPriorityBand(selected.score)} · {selected.confidence} confidence</p>
               </div>
-              <ScoreRing score={selected.score} />
+              <ScoreRing score={selected.score} label="Opportunity" />
             </div>
 
-            <div className="confidence-row">
-              <span>Model confidence</span>
-              <strong>{selected.confidence}</strong>
-            </div>
+            <p className="detail-summary">{selected.summary}</p>
 
             <section className="detail-section">
-              <span className="detail-section__label">Demographics · synthetic</span>
-              <div className="demographics-table">
-                <div className="demographics-row">
-                  <span>Households</span>
-                  <strong>{numberFormatter.format(selected.householdCount)}</strong>
+              <span className="detail-section__label">At a glance</span>
+              <div className="glance-grid">
+                <div><span>Households</span><strong>{numberFormatter.format(selected.householdCount)}</strong></div>
+                <div><span>Median income</span><strong>{currencyFormatter.format(selected.medianIncome)}</strong></div>
+                <div><span>Strongest category</span><strong>{selected.categoryStrength}</strong></div>
+                <div>
+                  <span>Our coverage</span>
+                  <strong className={selectedHasReachGap ? 'is-gap' : ''}>
+                    {selectedHasReachGap ? 'Reach gap' : 'Covered'}
+                  </strong>
                 </div>
+              </div>
+            </section>
+
+            <details className="detail-disclosure">
+              <summary>All demographics</summary>
+              <div className="demographics-table">
                 {DEMOGRAPHIC_METRICS.map((metric) => (
                   <div
                     className={`demographics-row ${lens.id === metric.id ? 'is-lens' : ''}`}
@@ -453,10 +495,10 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
                   </div>
                 ))}
               </div>
-            </section>
+            </details>
 
-            <section className="detail-section">
-              <span className="detail-section__label">Internal signals · modeled</span>
+            <details className="detail-disclosure">
+              <summary>Business signals · internal, modeled</summary>
               <dl className="internal-metrics">
                 <div><dt>Reach penetration</dt><dd>{selectedInternalMetrics.penetrationRate.toFixed(1)}%</dd></div>
                 <div><dt>ARPU</dt><dd>${selectedInternalMetrics.arpu.toFixed(2)}</dd></div>
@@ -470,16 +512,10 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
                 <div><dt>YoY growth</dt><dd>{selectedInternalMetrics.yoyGrowth > 0 ? '+' : ''}{selectedInternalMetrics.yoyGrowth.toFixed(1)}%</dd></div>
               </dl>
               <small className="competitive-disclosure">Modeled synthetic business signals. Internal only — never shown in the client workspace.</small>
-            </section>
+            </details>
 
-            <section className="detail-section competitive-landscape">
-              <span className="detail-section__label">Competitive landscape</span>
-              <div className="competition-summary">
-                <div><strong>{selectedCompetitors.length}</strong><span>modeled competitor footprints</span></div>
-                <span className={`reach-status ${selectedHasReachGap ? 'has-gap' : ''}`}>
-                  {selectedHasReachGap ? 'Reach gap detected' : 'No modeled reach gap'}
-                </span>
-              </div>
+            <details className="detail-disclosure">
+              <summary>Competitors here · {selectedCompetitors.length}</summary>
               {selectedCompetitors.length > 0 ? (
                 <div className="competitor-intel-list">
                   {selectedCompetitors.map((competitor) => {
@@ -495,20 +531,19 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
                       >
                         <span className="competitor-intel-card__swatch" aria-hidden="true" />
                         <span><strong>{competitor.label}</strong><small>{competitor.subtitle}</small></span>
-                        <em>{visible ? 'Layer visible' : 'Show footprint'}</em>
+                        <em>{visible ? 'On the map' : 'Show on map'}</em>
                       </button>
                     );
                   })}
                 </div>
               ) : (
-                <p className="competitive-empty">No synthetic competitor footprint currently intersects this ZIP.</p>
+                <p className="competitive-empty">No modeled competitor footprint intersects this ZIP area.</p>
               )}
-              <small className="competitive-disclosure">Footprints are illustrative fictional ZIP memberships, not provider service-area claims.</small>
-            </section>
+              <small className="competitive-disclosure">Footprints are illustrative ZIP memberships, not provider service-area claims.</small>
+            </details>
 
-            <section className="detail-section detail-section--grow">
-              <span className="detail-section__label">Why this ZIP stands out</span>
-              <p className="detail-summary">{selected.summary}</p>
+            <details className="detail-disclosure detail-disclosure--grow">
+              <summary>How the score is built</summary>
               <div className="driver-grid">
                 <div><span>Top driver</span><strong>{COMPONENT_LABELS[selected.topDriver]}</strong></div>
                 <div><span>Top limiter</span><strong>{COMPONENT_LABELS[selected.topLimiter]}</strong></div>
@@ -528,30 +563,34 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
                   );
                 })}
               </div>
-            </section>
+            </details>
           </>
         ) : (
           <div className="empty-detail">
             <div className="empty-detail__visual"><span>OH</span></div>
             <span className="eyebrow">Find the market</span>
-            <h2>Where can the company compete and grow?</h2>
-            <p>Color the map with a market lens, narrow the ZIP set, then open any ZIP for its full market profile.</p>
-            <div className="empty-detail__hint"><span>1</span>Choose a market lens and territory</div>
-            <div className="empty-detail__hint"><span>2</span>Select a ZIP on the map or ranked list</div>
-            <div className="empty-detail__hint"><span>3</span>Generate the territory opportunity brief</div>
+            <h2>{regionMode ? 'Start with a region' : 'Choose a ZIP area'}</h2>
+            <p>
+              {regionMode
+                ? 'Each region has its own color. Click one to see the ZIP areas inside it.'
+                : 'Pick any area on the map or in the Top areas list to see what makes it strong.'}
+            </p>
+            <div className="empty-detail__hint"><span>1</span>{regionMode ? 'Click a region on the map' : 'Choose an area on the map or list'}</div>
+            <div className="empty-detail__hint"><span>2</span>{regionMode ? 'Explore its ZIP areas' : 'Review its market profile'}</div>
+            <div className="empty-detail__hint"><span>3</span>Create the opportunity brief</div>
           </div>
         )}
 
         <button className="primary-action" type="button" onClick={() => setShowBrief(true)}>
-          Create territory brief
+          Create opportunity brief
         </button>
-        <p className="model-disclosure">Illustrative synthetic market intelligence. No real company, client, or competitor data is shown.</p>
+        <p className="model-disclosure">Illustrative synthetic market intelligence. No real company, client, or competitor performance data.</p>
       </aside>
 
       {showBrief && territoryBrief && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowBrief(false)}>
           <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="brief-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" aria-label="Close territory brief" onClick={() => setShowBrief(false)}>×</button>
+            <button className="modal-close" type="button" aria-label="Close opportunity brief" onClick={() => setShowBrief(false)}>×</button>
             <span className="eyebrow">Market opportunity brief</span>
             <h2 id="brief-title">{territoryBrief.territoryName}</h2>
             <p>Where Spectrum Reach can win, why it matters, and the strongest modeled company-level advantage.</p>

@@ -9,6 +9,14 @@
 
 .synthetic-notice--light { border-color: var(--slate-200); color: var(--slate-500); background: var(--slate-100); }
 
+/* Region picker on the light client rail. */
+.is-client-mode .region-picker__intro { color: var(--slate-500); }
+.is-client-mode .region-picker__list button { border-color: var(--slate-200); color: var(--slate-950); background: white; box-shadow: var(--shadow-card); }
+.is-client-mode .region-picker__list button:hover { border-color: var(--blue-500); background: #f4faff; }
+.is-client-mode .region-picker__body small { color: var(--slate-500); }
+.is-client-mode .region-picker__score b { color: var(--blue-700); }
+.is-client-mode .region-picker__score i { color: var(--slate-500); }
+
 .client-section { padding: 16px 0; border-top: 1px solid var(--slate-200); }
 .panel__heading + .client-section { margin-top: 17px; }
 .client-section--grow { flex: 1 0 auto; }

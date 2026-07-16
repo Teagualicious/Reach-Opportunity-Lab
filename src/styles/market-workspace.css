@@ -1,5 +1,121 @@
 /* Market Opportunity Map workspace: lens, zone filters, and market profile. */
 
+/* Region-first navigation ------------------------------------------------ */
+
+.region-picker { display: grid; gap: 12px; padding: 16px 0; flex: 1 0 auto; align-content: start; }
+.region-picker__intro { margin: 0; color: rgba(255, 255, 255, 0.66); font-size: 12px; line-height: 1.55; }
+.region-picker__list { display: grid; gap: 8px; }
+.region-picker__list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  color: white;
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+.region-picker__list button:hover { border-color: rgba(41, 194, 232, 0.5); background: rgba(41, 194, 232, 0.1); transform: translateX(2px); }
+.region-picker__body { min-width: 0; display: grid; gap: 3px; }
+.region-picker__body strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.region-picker__body small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255, 255, 255, 0.5); font-size: 10px; }
+.region-picker__score { display: grid; justify-items: end; gap: 1px; }
+.region-picker__score b { color: var(--green-400); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.region-picker__score i { color: rgba(255, 255, 255, 0.45); font-size: 8px; font-style: normal; font-weight: 800; text-transform: uppercase; }
+
+.map-breadcrumb {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(10px);
+  z-index: 6;
+}
+.map-breadcrumb button { border: 0; padding: 0; color: var(--blue-600); background: none; font-size: 11px; font-weight: 800; }
+.map-breadcrumb button:disabled { color: var(--navy-900); }
+.map-breadcrumb button:not(:disabled):hover { text-decoration: underline; }
+.map-breadcrumb span { color: var(--slate-300); font-size: 11px; }
+.map-breadcrumb strong { color: var(--navy-900); font-size: 11px; white-space: nowrap; }
+
+/* Keep in sync with the compact breakpoint in layout.css: the caption moves
+   to the top of the map, so the breadcrumb anchors above the bottom pills. */
+@media (max-width: 900px) {
+  .map-breadcrumb {
+    top: auto;
+    bottom: calc(var(--compact-bar-offset, 70px) + 52px);
+    left: 10px;
+  }
+}
+
+.region-label {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.region-label strong { color: var(--navy-900); font-size: 11px; letter-spacing: -0.01em; }
+.region-label span { color: var(--slate-500); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+
+/* Simplified rail and detail --------------------------------------------- */
+
+.layer-controls__body { display: grid; gap: 8px; }
+
+.data-footnote {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding: 10px 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+  line-height: 1.5;
+}
+.is-client-mode .data-footnote { border-top-color: var(--slate-200); color: var(--slate-500); }
+
+.glance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.glance-grid > div { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--slate-200); border-radius: 11px; background: var(--slate-100); }
+.glance-grid span { color: var(--slate-500); font-size: 9px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.glance-grid strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+.glance-grid strong.is-gap { color: #86198f; }
+
+.detail-disclosure { border-top: 1px solid var(--slate-200); }
+.detail-disclosure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 2px;
+  color: var(--slate-700);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+.detail-disclosure summary::-webkit-details-marker { display: none; }
+.detail-disclosure summary::after { content: '+'; color: var(--blue-600); font-size: 16px; font-weight: 900; }
+.detail-disclosure[open] summary::after { content: '−'; }
+.detail-disclosure summary:hover { color: var(--blue-700); }
+.detail-disclosure > *:not(summary) { margin-bottom: 14px; }
+.detail-disclosure .driver-grid { margin-bottom: 12px; }
+.detail-disclosure--grow { flex: 1 0 auto; }
+
 .lens-section { display: grid; gap: 9px; }
 .lens-select {
   width: 100%;

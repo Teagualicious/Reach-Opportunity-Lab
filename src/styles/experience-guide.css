@@ -51,9 +51,9 @@
 .experience-guide__title-row span,
 .experience-guide__details span {
   color: var(--slate-500);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -68,8 +68,8 @@
 .experience-guide > p {
   margin: 0;
   color: var(--slate-600);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .experience-guide__details {
