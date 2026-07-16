@@ -52,8 +52,7 @@ The right panel in every workspace begins with a compact guide showing the same 
 - Current campaign or seller-focus ZIPs use cyan outlines.
 - Recommended campaign expansion ZIPs use green outlines.
 - Reach-gap and competitor evidence layers use strong typed colors and outlines.
-- Whenever any emphasized layer is active, the base opportunity surface automatically mutes rather than disappearing.
-- Colored evidence outlines render above ordinary ZIP boundaries so they are not washed out.
+- Whenever a reach-gap or competitor evidence layer is active, the base opportunity surface automatically mutes rather than disappearing.
 - ZIP selection zooms to official Polygon or MultiPolygon geometry.
 
 All opportunity, territory, coverage, competitor, advertiser, campaign, seller, account, prospect, recommendation, and simulation values are deterministic synthetic demonstration data.
