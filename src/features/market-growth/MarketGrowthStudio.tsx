@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
+import { MapBreadcrumb } from '../../components/MapBreadcrumb';
+import { RegionPicker } from '../../components/RegionPicker';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { MARKET_MODES, getMarketModeScore, type MarketModeId } from '../../domain/marketMode';
+import { buildRegionSummaries } from '../../domain/regionSummary';
 import { buildSellerOpportunity } from '../../domain/sellerOpportunity';
 import { OpportunityMap } from '../../map/OpportunityMap';
 
@@ -25,6 +28,12 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   const [simulated, setSimulated] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
 
+  const regionMode = view.regionMode;
+  const territories = data.market.territories ?? [];
+  const regionSummaries = useMemo(
+    () => buildRegionSummaries(data.opportunities, territories),
+    [data.opportunities, territories],
+  );
   const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
   const territoryOpportunities = useMemo(
     () => data.opportunities.filter((opportunity) => territoryZipSet.has(opportunity.zip)),
@@ -75,11 +84,22 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     <main className="studio-grid market-studio product-grid">
       <aside className="panel panel--left seller-workspace-controls">
         <div className="panel__heading">
-          <span className="eyebrow">Seller Action Center</span>
-          <h1>{territoryName}</h1>
-          <p>Turn ZIP intelligence into a prioritized prospect, growth, and retention action queue.</p>
+          <span className="eyebrow">Prioritize the business</span>
+          <h1>{regionMode ? 'Ohio' : territoryName}</h1>
+          <p>
+            {regionMode
+              ? 'Pick a region to build its seller action queue.'
+              : 'Who is worth pursuing, growing, or saving — and what to do next.'}
+          </p>
         </div>
 
+        {regionMode ? (
+          <>
+            <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
+            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+          </>
+        ) : (
+        <>
         <div className="internal-mode-list" role="tablist" aria-label="Seller growth objective">
           {MARKET_MODES.map((candidate) => (
             <button
@@ -120,21 +140,39 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
         </section>
 
         <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+        </>
+        )}
       </aside>
 
       <section className="map-stage">
         <OpportunityMap
           data={data}
-          selectedZip={selected?.zip ?? null}
+          selectedZip={regionMode ? null : selected?.zip ?? null}
           resetVersion={resetVersion}
           onSelectZip={handleSelectZip}
-          displayScores={scores}
-          campaignZips={selected ? [selected.zip] : []}
+          displayScores={regionMode ? undefined : scores}
+          campaignZips={!regionMode && selected ? [selected.zip] : []}
           territoryZips={view.territoryZips}
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
+          regionMode={regionMode}
+          regions={regionSummaries}
+          onSelectRegion={view.selectTerritory}
         />
-        <div className="map-stage__caption"><span>Geographic evidence</span><strong>{selectedItem ? `${selectedItem.entityName} · ${definition.label}` : definition.label}</strong></div>
+        <MapBreadcrumb
+          regionName={view.selectedTerritory?.name ?? null}
+          onSelectTerritory={view.selectTerritory}
+        />
+        <div className="map-stage__caption">
+          <span>{regionMode ? 'Ohio' : 'Geographic evidence'}</span>
+          <strong>
+            {regionMode
+              ? 'Click a region to build its action queue'
+              : selectedItem
+                ? `${selectedItem.entityName} · ${definition.label}`
+                : definition.label}
+          </strong>
+        </div>
       </section>
 
       <aside className="panel panel--right seller-action-detail">
@@ -143,9 +181,20 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           title="Seller Action Center"
           audience="Local sellers and sales managers"
           purpose="Turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save."
-          nextStep="Choose an objective, open a seller action brief, then model the recommended move."
+          nextStep={
+            regionMode
+              ? 'Pick a region to see who is worth contacting there.'
+              : 'Choose an objective, open an action brief, then build the outreach plan.'
+          }
         />
-        {selected && selectedItem && (
+        {regionMode && (
+          <div className="empty-detail">
+            <span className="eyebrow">Prioritize the business</span>
+            <h2>Start with a region</h2>
+            <p>Choose a region on the map or in the list to build its prioritized seller action queue.</p>
+          </div>
+        )}
+        {!regionMode && selected && selectedItem && (
           <>
             <div className="seller-action-hero">
               <div className="seller-action-hero__meta">

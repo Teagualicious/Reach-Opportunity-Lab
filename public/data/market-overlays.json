@@ -10,8 +10,8 @@
   ],
   "competitors": [
     {
-      "id": "northline",
-      "label": "Northline Cable",
+      "id": "cox",
+      "label": "Cox",
       "subtitle": "Central and western Cleveland clusters",
       "color": "#7c3aed",
       "zips": [
@@ -26,8 +26,8 @@
       ]
     },
     {
-      "id": "ridgeway",
-      "label": "Ridgeway Broadband",
+      "id": "armstrong",
+      "label": "Armstrong",
       "subtitle": "Outer southwest market clusters",
       "color": "#f97316",
       "zips": [
@@ -39,8 +39,8 @@
       ]
     },
     {
-      "id": "lakelight",
-      "label": "Lakelight Fiber",
+      "id": "breezeline",
+      "label": "Breezeline",
       "subtitle": "Eastern suburban clusters",
       "color": "#06b6d4",
       "zips": [
@@ -55,8 +55,8 @@
       ]
     },
     {
-      "id": "metrolink",
-      "label": "MetroLink TV",
+      "id": "att-uverse",
+      "label": "AT&T U-verse",
       "subtitle": "Broad urban and suburban footprint",
       "color": "#ec4899",
       "zips": [
@@ -79,8 +79,8 @@
       ]
     },
     {
-      "id": "skycast",
-      "label": "SkyCast Stream",
+      "id": "directv-stream",
+      "label": "DirecTV Stream",
       "subtitle": "DMA-wide streaming availability",
       "color": "#94a3b8",
       "wide": true,
@@ -114,8 +114,8 @@
       ]
     },
     {
-      "id": "orbitview",
-      "label": "OrbitView Satellite",
+      "id": "dish-network",
+      "label": "Dish Network",
       "subtitle": "DMA-wide satellite availability",
       "color": "#f43f5e",
       "wide": true,

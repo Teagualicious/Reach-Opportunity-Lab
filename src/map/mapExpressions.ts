@@ -13,6 +13,37 @@ export const OPPORTUNITY_COLOR_STOPS = [
 export const opportunityLegendGradient =
   'linear-gradient(90deg, #dcecf7 0%, #b9deda 18%, #cfe7b2 38%, #f4e6a2 58%, #f5c08a 76%, #ee9a87 91%, #dc6f78 100%)';
 
+/**
+ * Soft categorical colors for the region-first statewide view. Opportunity
+ * averages cluster tightly statewide, so distinct hues keep the seven
+ * regions readable instead of projecting them onto the heat ramp.
+ */
+export const REGION_PALETTE = [
+  '#a8cdea',
+  '#9adbd3',
+  '#b5dea9',
+  '#ead9a0',
+  '#d9c3e6',
+  '#f2bfa4',
+  '#c4d3df',
+] as const;
+
+export function regionColorForIndex(index: number): string {
+  return REGION_PALETTE[index % REGION_PALETTE.length];
+}
+
+/** Solid region coloring: every ZIP in a territory shares one fill. */
+export function regionFillColorExpression(
+  regionColors: ReadonlyMap<string, string>,
+): ExpressionSpecification {
+  const branches: unknown[] = ['match', ['get', 'territoryId']];
+  for (const [territoryId, color] of regionColors) {
+    branches.push(territoryId, color);
+  }
+  branches.push('#e4e7ea');
+  return branches as unknown as ExpressionSpecification;
+}
+
 // Feature-state display scores let objective/simulation recolors update per feature
 // without re-uploading the statewide GeoJSON source; null falls through to the base score.
 export const effectiveScoreExpression: ExpressionSpecification = [

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
+import { MapBreadcrumb } from '../../components/MapBreadcrumb';
+import { RegionPicker } from '../../components/RegionPicker';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { buildClientGeographyPlan } from '../../domain/clientGeography';
+import { buildRegionSummaries } from '../../domain/regionSummary';
 import {
   CLIENT_STRATEGIES,
   LAKEFRONT_BASELINE,
@@ -106,6 +109,12 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
   const [showContact, setShowContact] = useState(false);
   const runIdRef = useRef(0);
 
+  const regionMode = view.regionMode;
+  const territories = data.market.territories ?? [];
+  const regionSummaries = useMemo(
+    () => buildRegionSummaries(data.opportunities, territories),
+    [data.opportunities, territories],
+  );
   const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
   const territoryRanked = useMemo(
     () =>
@@ -223,9 +232,23 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         <div className="panel__heading">
           <span className="eyebrow">Client Campaign Planner</span>
           <h1>Lakefront Automotive Group</h1>
-          <p>Fictional advertiser · {territoryName} qualified lead growth</p>
+          <p>
+            {regionMode
+              ? 'Fictional advertiser · choose the campaign market'
+              : `Fictional advertiser · ${territoryName} qualified lead growth`}
+          </p>
         </div>
 
+        {regionMode ? (
+          <>
+            <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
+            <div className="synthetic-notice synthetic-notice--light">
+              <span className="synthetic-notice__dot" />
+              Fictional advertiser with modeled demonstration results — not a performance forecast.
+            </div>
+          </>
+        ) : (
+        <>
         <section className="client-section">
           <div className="client-section__heading">
             <span>Your campaign today</span>
@@ -308,32 +331,45 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           <span className="synthetic-notice__dot" />
           Fictional advertiser with modeled demonstration results — not a performance forecast.
         </div>
+        </>
+        )}
       </aside>
 
       <section className={`map-stage simulation-stage ${status === 'running' ? 'is-simulating' : ''}`}>
         <OpportunityMap
           data={data}
-          selectedZip={selectedZip}
+          selectedZip={regionMode ? null : selectedZip}
           resetVersion={resetVersion}
           onSelectZip={handleSelectZip}
-          campaignZips={currentCampaignZips}
+          campaignZips={regionMode ? [] : currentCampaignZips}
           recommendedZips={growthVisible ? recommendedZipExpansions : []}
           displayScores={displayScores}
           territoryZips={view.territoryZips}
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
+          regionMode={regionMode}
+          regions={regionSummaries}
+          onSelectRegion={view.selectTerritory}
+        />
+        <MapBreadcrumb
+          regionName={view.selectedTerritory?.name ?? null}
+          onSelectTerritory={view.selectTerritory}
         />
         <div className="map-stage__caption client-map-caption">
-          <span>{growthVisible ? 'Current reach + growth' : 'Your campaign today'}</span>
+          <span>{regionMode ? 'Ohio' : growthVisible ? 'Current reach + growth' : 'Your campaign today'}</span>
           <strong>
-            {growthVisible
-              ? `${recommendedZipExpansions.length} added ${recommendedZipExpansions.length === 1 ? 'area appears' : 'areas appear'} in growth green`
-              : `${currentCampaignZips.length} campaign ZIPs in Spectrum blue`}
+            {regionMode
+              ? 'Click a region to plan the campaign there'
+              : growthVisible
+                ? `${recommendedZipExpansions.length} added ${recommendedZipExpansions.length === 1 ? 'area appears' : 'areas appear'} in growth green`
+                : `${currentCampaignZips.length} campaign ZIPs in Spectrum blue`}
           </strong>
-          <span className="client-map-legend">
-            <i className="is-current" aria-hidden="true" />Current reach
-            <i className="is-added" aria-hidden="true" />Added reach
-          </span>
+          {!regionMode && (
+            <span className="client-map-legend">
+              <i className="is-current" aria-hidden="true" />Current reach
+              <i className="is-added" aria-hidden="true" />Added reach
+            </span>
+          )}
         </div>
         {status === 'running' && (
           <div className="simulation-overlay" role="status" aria-live="polite">
@@ -350,9 +386,24 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           title="Client Campaign Planner"
           audience="Advertisers with their account executive"
           purpose="See where your campaign reaches today and what growth adds — in plain language."
-          nextStep="Choose growth ideas, compare the expanded map, then talk to your account executive."
+          nextStep={
+            regionMode
+              ? 'Choose the market where this campaign runs.'
+              : 'Choose growth ideas, compare the expanded map, then talk to your account executive.'
+          }
         />
 
+        {regionMode ? (
+          <div className="client-story-card">
+            <span className="eyebrow">Getting started</span>
+            <h2>Choose your campaign market</h2>
+            <p>
+              Pick the region where Lakefront Automotive runs its campaign. You will see today’s
+              reach first, then what growth could add.
+            </p>
+          </div>
+        ) : (
+        <>
         {selectedOpportunity && selectedRole && (
           <section className="client-zip-card">
             <div>
@@ -465,6 +516,8 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
               Pick one or more growth ideas on the left, then choose <b>See my growth plan</b>.
             </div>
           </>
+        )}
+        </>
         )}
       </aside>
 

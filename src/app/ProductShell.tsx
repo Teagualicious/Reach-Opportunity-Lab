@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import spectrumReachLogo from '../assets/spectrum-reach-logo.jpg';
 import { TerritorySelector } from '../components/TerritorySelector';
 import type { OpportunityMarket } from '../data/OpportunityRepository';
 import {
@@ -67,6 +68,9 @@ export function ProductShell({ data }: ProductShellProps) {
     () => getTerritoryZips(territories, selectedTerritoryId, allZips),
     [allZips, selectedTerritoryId, territories],
   );
+  const selectTerritory = useCallback((territoryId: string) => {
+    setSelectedTerritoryId(territoryId);
+  }, []);
   const view = useMemo<ProductViewContext>(
     () => ({
       selectedTerritoryId,
@@ -76,6 +80,8 @@ export function ProductShell({ data }: ProductShellProps) {
       panelLayoutVersion:
         (leftCollapsed ? 1 : 0) + (rightCollapsed ? 2 : 0) + (isCompact ? 4 : 0),
       viewportMode,
+      regionMode: selectedTerritoryId === ALL_TERRITORIES_ID && territories.length > 0,
+      selectTerritory,
     }),
     [
       data.market.bounds,
@@ -84,6 +90,8 @@ export function ProductShell({ data }: ProductShellProps) {
       rightCollapsed,
       selectedTerritory,
       selectedTerritoryId,
+      selectTerritory,
+      territories.length,
       territoryZips,
       viewportMode,
     ],
@@ -118,11 +126,9 @@ export function ProductShell({ data }: ProductShellProps) {
     >
       <header className="app-header">
         <div className="brand-lockup">
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-          <div>
-            <span className="brand-kicker">Spectrum Reach</span>
-            <strong>Opportunity Lab</strong>
-          </div>
+          <img className="brand-logo" src={spectrumReachLogo} alt="Spectrum Reach" />
+          <span className="brand-divider" aria-hidden="true" />
+          <strong className="brand-product">Opportunity Lab</strong>
         </div>
 
         <TerritorySelector

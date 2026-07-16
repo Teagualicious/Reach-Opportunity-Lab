@@ -9,4 +9,8 @@ export interface ProductViewContext {
   panelLayoutVersion: number;
   /** 'compact' on phone-sized viewports; features adapt to this, never to user-agent strings. */
   viewportMode: ViewportMode;
+  /** True at the statewide level: the map shows solid regions until one is chosen. */
+  regionMode: boolean;
+  /** Region-first navigation: drill into a region or return to all regions. */
+  selectTerritory: (territoryId: string) => void;
 }

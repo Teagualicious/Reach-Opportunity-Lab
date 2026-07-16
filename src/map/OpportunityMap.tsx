@@ -10,11 +10,22 @@ import type { GeographicBounds } from '../domain/territory';
 import { getGeometryBounds } from './geometryBounds';
 import {
   opportunityColorExpression,
+  regionColorForIndex,
+  regionFillColorExpression,
   zipFillOpacityEvidenceExpression,
   zipFillOpacityExpression,
   zipLineColorExpression,
   zipLineWidthExpression,
 } from './mapExpressions';
+
+/** Domain-supplied region aggregate rendered at the statewide level. */
+export interface RegionMapSummary {
+  territoryId: string;
+  name: string;
+  center: [longitude: number, latitude: number];
+  averageOpportunityScore: number;
+  zipCount: number;
+}
 
 interface OpportunityMapProps {
   data: OpportunityMarket;
@@ -33,6 +44,10 @@ interface OpportunityMapProps {
   layoutVersion?: number;
   /** Optional domain-supplied hover text replacing the default score line. */
   popupValueText?: (zip: string) => string | null;
+  /** Region-first navigation: render territories as solid regions. */
+  regionMode?: boolean;
+  regions?: readonly RegionMapSummary[];
+  onSelectRegion?: (territoryId: string) => void;
 }
 
 const SOURCE_ID = 'zip-opportunities';
@@ -59,6 +74,40 @@ function getZipBounds(data: OpportunityMarket, zip: string | null): GeographicBo
   if (!zip) return null;
   const feature = data.geometry.features.find((candidate) => candidate.properties.zip === zip);
   return feature ? getGeometryBounds(feature.geometry) : null;
+}
+
+function buildRegionPopupContent(region: RegionMapSummary): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'map-tooltip';
+
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'map-tooltip__eyebrow';
+  eyebrow.textContent = 'Region';
+
+  const name = document.createElement('strong');
+  name.textContent = region.name;
+
+  const score = document.createElement('span');
+  score.className = 'map-tooltip__score';
+  score.textContent = `Opportunity ${region.averageOpportunityScore}/100 · click to explore ${region.zipCount} ZIP areas`;
+
+  wrapper.append(eyebrow, name, score);
+  return wrapper;
+}
+
+function buildRegionLabelElement(region: RegionMapSummary): HTMLDivElement {
+  const element = document.createElement('div');
+  element.className = 'region-label';
+  element.setAttribute('aria-hidden', 'true');
+
+  const name = document.createElement('strong');
+  name.textContent = region.name;
+
+  const score = document.createElement('span');
+  score.textContent = `${region.averageOpportunityScore} opportunity`;
+
+  element.append(name, score);
+  return element;
 }
 
 function buildPopupContent(
@@ -119,6 +168,53 @@ function syncDisplayScoreState(
   return next;
 }
 
+/**
+ * One paint-property pass switches the shared surface between ZIP detail and
+ * solid-region presentation without touching geometry or feature state.
+ */
+function applySurfacePaint(
+  map: MapLibreMap,
+  regionMode: boolean,
+  regions: readonly RegionMapSummary[],
+  evidenceFocusActive: boolean,
+) {
+  if (!map.getLayer(FILL_LAYER_ID) || !map.getLayer(LINE_LAYER_ID)) return;
+  if (regionMode && regions.length > 0) {
+    const regionColors = new Map(
+      regions.map((region, index) => [region.territoryId, regionColorForIndex(index)]),
+    );
+    const regionExpression = regionFillColorExpression(regionColors);
+    map.setPaintProperty(FILL_LAYER_ID, 'fill-color', regionExpression);
+    map.setPaintProperty(FILL_LAYER_ID, 'fill-opacity', 0.85);
+    map.setPaintProperty(LINE_LAYER_ID, 'line-color', regionExpression);
+    map.setPaintProperty(LINE_LAYER_ID, 'line-width', 0.6);
+  } else {
+    map.setPaintProperty(FILL_LAYER_ID, 'fill-color', opportunityColorExpression);
+    map.setPaintProperty(
+      FILL_LAYER_ID,
+      'fill-opacity',
+      evidenceFocusActive ? zipFillOpacityEvidenceExpression : zipFillOpacityExpression,
+    );
+    map.setPaintProperty(LINE_LAYER_ID, 'line-color', zipLineColorExpression);
+    map.setPaintProperty(LINE_LAYER_ID, 'line-width', zipLineWidthExpression);
+  }
+}
+
+function syncRegionLabels(
+  map: MapLibreMap,
+  markers: maplibregl.Marker[],
+  regionMode: boolean,
+  regions: readonly RegionMapSummary[],
+): maplibregl.Marker[] {
+  for (const marker of markers) marker.remove();
+  if (!regionMode) return [];
+  return regions.map((region) =>
+    new maplibregl.Marker({ element: buildRegionLabelElement(region), anchor: 'center' })
+      .setLngLat(region.center)
+      .addTo(map),
+  );
+}
+
 function setLayerVisibility(map: MapLibreMap, layerIds: readonly string[], visible: boolean) {
   for (const layerId of layerIds) {
     if (map.getLayer(layerId)) {
@@ -159,6 +255,9 @@ export function OpportunityMap({
   viewportBounds,
   layoutVersion = 0,
   popupValueText,
+  regionMode = false,
+  regions = [],
+  onSelectRegion,
 }: OpportunityMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -196,6 +295,13 @@ export function OpportunityMap({
   const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
   const evidenceFocusActiveRef = useRef(evidenceFocusActive);
   const popupValueTextRef = useRef(popupValueText);
+  const regionModeRef = useRef(regionMode);
+  const regionsRef = useRef<readonly RegionMapSummary[]>(regions);
+  const regionsByIdRef = useRef<ReadonlyMap<string, RegionMapSummary>>(
+    new Map(regions.map((region) => [region.territoryId, region])),
+  );
+  const onSelectRegionRef = useRef(onSelectRegion);
+  const regionMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   // Feature state already written to the current map instance, so updates only
   // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
@@ -366,12 +472,41 @@ export function OpportunityMap({
       if (selectedZipRef.current) {
         map.setFeatureState({ source: SOURCE_ID, id: selectedZipRef.current }, { selected: true });
       }
+      applySurfacePaint(map, regionModeRef.current, regionsRef.current, evidenceFocusActiveRef.current);
+      regionMarkersRef.current = syncRegionLabels(
+        map,
+        regionMarkersRef.current,
+        regionModeRef.current,
+        regionsRef.current,
+      );
       fitViewport(map, viewportBoundsRef.current, 0);
     });
 
     const handleMouseMove = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       if (!feature) return;
+
+      if (regionModeRef.current) {
+        const territoryId =
+          typeof feature.properties?.territoryId === 'string' ? feature.properties.territoryId : null;
+        const region = territoryId ? regionsByIdRef.current.get(territoryId) : undefined;
+        if (hoveredZipRef.current) {
+          map.setFeatureState({ source: SOURCE_ID, id: hoveredZipRef.current }, { hover: false });
+          hoveredZipRef.current = null;
+        }
+        if (!region) {
+          map.getCanvas().style.cursor = '';
+          popupRef.current?.remove();
+          return;
+        }
+        map.getCanvas().style.cursor = 'pointer';
+        popupRef.current
+          ?.setLngLat(event.lngLat)
+          .setDOMContent(buildRegionPopupContent(region))
+          .addTo(map);
+        return;
+      }
+
       const zip = typeof feature.properties?.zip === 'string' ? feature.properties.zip : null;
       if (!zip || !territoryZipSetRef.current.has(zip)) {
         map.getCanvas().style.cursor = '';
@@ -409,6 +544,15 @@ export function OpportunityMap({
 
     const handleZipClick = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
+      if (regionModeRef.current) {
+        const territoryId =
+          typeof feature?.properties?.territoryId === 'string' ? feature.properties.territoryId : null;
+        if (territoryId && regionsByIdRef.current.has(territoryId)) {
+          popupRef.current?.remove();
+          onSelectRegionRef.current?.(territoryId);
+        }
+        return;
+      }
       const zip = typeof feature?.properties?.zip === 'string' ? feature.properties.zip : null;
       if (zip && territoryZipSetRef.current.has(zip)) onSelectZip(zip);
     };
@@ -417,6 +561,7 @@ export function OpportunityMap({
     map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave);
     map.on('click', FILL_LAYER_ID, handleZipClick);
     map.on('click', (event) => {
+      if (regionModeRef.current) return;
       const features = map.queryRenderedFeatures(event.point, { layers: [FILL_LAYER_ID] });
       if (features.length === 0) onSelectZip(null);
     });
@@ -424,10 +569,27 @@ export function OpportunityMap({
     return () => {
       popupRef.current?.remove();
       popupRef.current = null;
+      for (const marker of regionMarkersRef.current) marker.remove();
+      regionMarkersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
   }, [allZips, data, onSelectZip]);
+
+  useEffect(() => {
+    onSelectRegionRef.current = onSelectRegion;
+  }, [onSelectRegion]);
+
+  useEffect(() => {
+    regionModeRef.current = regionMode;
+    regionsRef.current = regions;
+    regionsByIdRef.current = new Map(regions.map((region) => [region.territoryId, region]));
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    applySurfacePaint(map, regionMode, regions, evidenceFocusActiveRef.current);
+    regionMarkersRef.current = syncRegionLabels(map, regionMarkersRef.current, regionMode, regions);
+    if (!regionMode) popupRef.current?.remove();
+  }, [regionMode, regions]);
 
   useEffect(() => {
     const previousSelectedZip = selectedZipRef.current;
@@ -538,7 +700,7 @@ export function OpportunityMap({
   useEffect(() => {
     evidenceFocusActiveRef.current = evidenceFocusActive;
     const map = mapRef.current;
-    if (!map?.getLayer(FILL_LAYER_ID)) return;
+    if (!map?.getLayer(FILL_LAYER_ID) || regionModeRef.current) return;
     map.setPaintProperty(
       FILL_LAYER_ID,
       'fill-opacity',
