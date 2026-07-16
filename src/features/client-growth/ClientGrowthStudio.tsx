@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ProductViewContext } from '../../app/ProductViewContext';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import {
   CLIENT_STRATEGIES,
@@ -14,6 +15,7 @@ import { OpportunityMap } from '../../map/OpportunityMap';
 interface ClientGrowthStudioProps {
   data: OpportunityMarket;
   resetVersion: number;
+  view: ProductViewContext;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -64,24 +66,51 @@ function MetricComparison({
   );
 }
 
-export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioProps) {
+export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStudioProps) {
   const [selectedStrategies, setSelectedStrategies] = useState<ClientStrategyId[]>([]);
-  const [selectedZip, setSelectedZip] = useState<string | null>('44122');
+  const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'complete'>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('Choose strategies to test');
   const [result, setResult] = useState<ClientSimulationResult | null>(null);
   const [showArchitect, setShowArchitect] = useState(false);
   const runIdRef = useRef(0);
 
+  const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
+  const territoryRanked = useMemo(
+    () =>
+      data.opportunities
+        .filter((opportunity) => territoryZipSet.has(opportunity.zip))
+        .sort((a, b) => b.score - a.score),
+    [data.opportunities, territoryZipSet],
+  );
+  const isCanonicalMarket = view.selectedTerritory?.id === 'cleveland-akron';
+  const currentCampaignZips = useMemo(() => {
+    if (isCanonicalMarket) {
+      return LAKEFRONT_CAMPAIGN_ZIPS.filter((zip) => territoryZipSet.has(zip));
+    }
+    return territoryRanked.slice(0, 14).map(({ zip }) => zip);
+  }, [isCanonicalMarket, territoryRanked, territoryZipSet]);
+  const recommendedZipExpansions = useMemo(() => {
+    if (!result) return [];
+    if (isCanonicalMarket) {
+      return result.recommendedZipExpansions.filter((zip) => territoryZipSet.has(zip));
+    }
+    const campaignSet = new Set(currentCampaignZips);
+    return territoryRanked
+      .filter(({ zip }) => !campaignSet.has(zip))
+      .slice(0, Math.max(3, result.recommendedZipExpansions.length))
+      .map(({ zip }) => zip);
+  }, [currentCampaignZips, isCanonicalMarket, result, territoryRanked, territoryZipSet]);
+
   useEffect(() => {
     runIdRef.current += 1;
     setSelectedStrategies([]);
-    setSelectedZip('44122');
+    setSelectedZip(currentCampaignZips[0] ?? territoryRanked[0]?.zip ?? null);
     setStatus('idle');
     setStatusMessage('Choose strategies to test');
     setResult(null);
     setShowArchitect(false);
-  }, [resetVersion]);
+  }, [currentCampaignZips, resetVersion, territoryRanked, view.selectedTerritoryId]);
 
   const toggleStrategy = (strategyId: ClientStrategyId) => {
     if (status === 'running') return;
@@ -104,7 +133,7 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
     for (const step of SIMULATION_STEPS) {
       if (runIdRef.current !== runId) return;
       setStatusMessage(step);
-      await delay(520);
+      await delay(420);
     }
 
     if (runIdRef.current !== runId) return;
@@ -114,44 +143,41 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
   };
 
   const campaignZips = useMemo(
-    () =>
-      result
-        ? [...LAKEFRONT_CAMPAIGN_ZIPS, ...result.recommendedZipExpansions]
-        : [...LAKEFRONT_CAMPAIGN_ZIPS],
-    [result],
+    () => (result ? [...currentCampaignZips, ...recommendedZipExpansions] : currentCampaignZips),
+    [currentCampaignZips, recommendedZipExpansions, result],
   );
 
   const displayScores = useMemo(() => {
     if (!result) return undefined;
-    const expansionSet = new Set(result.recommendedZipExpansions);
+    const currentSet = new Set(currentCampaignZips);
+    const expansionSet = new Set(recommendedZipExpansions);
     return Object.fromEntries(
       data.opportunities.map((opportunity) => [
         opportunity.zip,
         Math.min(
           100,
-          opportunity.score +
-            (LAKEFRONT_CAMPAIGN_ZIPS.includes(opportunity.zip as (typeof LAKEFRONT_CAMPAIGN_ZIPS)[number]) ? 5 : 0) +
-            (expansionSet.has(opportunity.zip) ? 9 : 0),
+          opportunity.score + (currentSet.has(opportunity.zip) ? 5 : 0) + (expansionSet.has(opportunity.zip) ? 9 : 0),
         ),
       ]),
     );
-  }, [data.opportunities, result]);
+  }, [currentCampaignZips, data.opportunities, recommendedZipExpansions, result]);
 
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
+  const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
 
   return (
-    <main className="studio-grid">
+    <main className="studio-grid product-grid">
       <aside className="panel panel--left client-controls">
         <div className="panel__heading">
           <span className="eyebrow">Client Growth Studio</span>
           <h1>Lakefront Automotive Group</h1>
-          <p>Fictional automotive advertiser · qualified lead growth</p>
+          <p>Fictional advertiser · {territoryName} qualified lead growth</p>
         </div>
 
         <section className="client-profile-card">
           <div><span>Annual budget</span><strong>{moneyFormatter.format(75000)}</strong></div>
           <div><span>Current media</span><strong>TV + Streaming</strong></div>
-          <div><span>Campaign ZIPs</span><strong>{LAKEFRONT_CAMPAIGN_ZIPS.length}</strong></div>
+          <div><span>Campaign ZIPs</span><strong>{currentCampaignZips.length}</strong></div>
           <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
         </section>
 
@@ -190,7 +216,7 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
         </button>
         <div className="synthetic-notice">
           <span className="synthetic-notice__dot" />
-          Fictional advertiser and deterministic demonstration model
+          Fictional advertiser and deterministic statewide demonstration model
         </div>
       </aside>
 
@@ -202,10 +228,13 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
           onSelectZip={handleSelectZip}
           campaignZips={campaignZips}
           displayScores={displayScores}
+          territoryZips={view.territoryZips}
+          viewportBounds={view.viewportBounds}
+          layoutVersion={view.panelLayoutVersion}
         />
         <div className="map-stage__caption">
-          <span>{result ? 'Projected campaign opportunity' : 'Current campaign footprint'}</span>
-          <strong>{result ? 'Recommended ZIP expansion is highlighted' : '14 active ZIPs outlined in cyan'}</strong>
+          <span>{result ? 'Projected campaign opportunity' : `${territoryName} campaign footprint`}</span>
+          <strong>{result ? 'Recommended expansion ZIPs are highlighted' : `${currentCampaignZips.length} active ZIPs outlined in cyan`}</strong>
         </div>
         {status === 'running' && (
           <div className="simulation-overlay" role="status" aria-live="polite">
@@ -220,7 +249,7 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
         <div className="result-heading">
           <span className="eyebrow">Scenario comparison</span>
           <h2>{result ? 'Modeled improvement' : 'Current campaign baseline'}</h2>
-          <p>{result ? 'Illustrative results based on the strategies selected.' : 'Choose a strategy combination to model a stronger plan.'}</p>
+          <p>{result ? `Illustrative results for ${territoryName}.` : 'Choose a strategy combination to model a stronger plan.'}</p>
         </div>
 
         {result ? (
@@ -241,7 +270,7 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
             <section className="recommendation-card">
               <span>Why this recommendation?</span>
               <p>{result.explanation}</p>
-              <small>Modeled leads: {numberFormatter.format(result.leadRange.minimum)}–{numberFormatter.format(result.leadRange.maximum)} · Cost per lead: ${result.costPerLeadRange.minimum}–${result.costPerLeadRange.maximum}</small>
+              <small>Expansion ZIPs: {recommendedZipExpansions.join(', ') || 'No additional ZIPs'} · Modeled leads: {numberFormatter.format(result.leadRange.minimum)}–{numberFormatter.format(result.leadRange.maximum)}</small>
             </section>
 
             <button className="architect-action" type="button" onClick={() => setShowArchitect(true)}>
@@ -269,9 +298,9 @@ export function ClientGrowthStudio({ data, resetVersion }: ClientGrowthStudioPro
             <h2 id="architect-title">Recommended plan prepared for Architect</h2>
             <p>This prototype prepares the intelligence and scenario recommendation. Architect remains the campaign-planning and activation destination.</p>
             <dl className="handoff-grid">
+              <div><dt>Territory</dt><dd>{territoryName}</dd></div>
               <div><dt>Objective</dt><dd>Qualified lead growth</dd></div>
-              <div><dt>Audience</dt><dd>High-intent automotive households</dd></div>
-              <div><dt>Priority ZIPs</dt><dd>{result.recommendedZipExpansions.join(', ')}</dd></div>
+              <div><dt>Priority ZIPs</dt><dd>{recommendedZipExpansions.join(', ')}</dd></div>
               <div><dt>Media mix</dt><dd>Television + Streaming + Search</dd></div>
               <div><dt>Budget range</dt><dd>$82K–$88K</dd></div>
               <div><dt>Measurement</dt><dd>Qualified leads and cost per lead</dd></div>
