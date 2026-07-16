@@ -8,7 +8,7 @@ This document defines the technical boundaries for Reach Opportunity Lab. The cu
 2. Keep domain logic independent from React, MapLibre, browser storage, network access, and deployment.
 3. Make synthetic data replaceable without rewriting product features.
 4. Keep client-facing and internal-only models separated.
-5. Preserve deterministic, explainable scoring, simulation, and seller-action behavior.
+5. Preserve deterministic, explainable scoring, client planning, simulation, and seller-action behavior.
 6. Represent geography and operating territories through explicit typed contracts.
 7. Keep local development, GitHub Pages, releases, and offline review as adapters over one product.
 8. Preserve statewide interaction performance as features and overlays grow.
@@ -33,7 +33,7 @@ public statewide geography + deterministic synthetic fixtures
         ↓
 repository / geometry-source adapters
         ↓
-pure opportunity, territory, seller-action, scoring, and simulation domain
+pure opportunity, territory, client-planning, seller-action, scoring, and simulation domain
         ↓
 shared application territory / viewport / panel state
         ↓
@@ -56,6 +56,7 @@ Responsibilities:
 - score components, confidence, and priority bands
 - exact territory definitions and ZIP coverage validation
 - deterministic client strategies and simulations
+- deterministic client geographic diagnostics and expansion recommendations
 - internal objective score transforms
 - deterministic synthetic seller opportunity/action items
 - recommendations and explanations
@@ -66,9 +67,12 @@ Important modules:
 - `opportunity.ts`
 - `territory.ts`
 - `clientScenario.ts`
+- `clientGeography.ts`
 - `marketMode.ts`
 - `sellerOpportunity.ts`
 - `mapOverlay.ts`
+
+`clientScenario.ts` owns the advertiser strategy effects and modeled campaign metrics. `clientGeography.ts` owns current-footprint diagnostics, reach-gap detection, competitor intersections, expansion-candidate scoring, candidate explanations, and recommendation count. React and MapLibre do not decide recommended ZIPs.
 
 ### Data access
 
@@ -106,7 +110,7 @@ Generated files are never edited manually.
 
 `ProductViewContext` supplies territory ZIPs, viewport bounds, panel-layout version, and viewport mode to all features.
 
-Features own their own workflow state: selected ZIP, filters, strategies, seller objective, simulation, and result theater.
+Features own their workflow state: selected ZIP, filters, selected client strategies, Client Growth plan view, seller objective, simulation, and result theater.
 
 Do not add an external state library until React state/reducers become measurably insufficient.
 
@@ -117,16 +121,17 @@ MapLibre integration remains isolated under `src/map/`.
 Responsibilities:
 
 - render statewide ZCTA geometry
-- consume domain-provided scores
+- consume domain-provided scores and ZIP sets
 - apply `displayScore` presentation overrides through feature state
 - keep inactive territories visible in neutral gray
-- render hover, selection, filter dimming, campaign emphasis, and territory dimming
+- render hover, selection, filter dimming, current-campaign, recommended-expansion, and territory dimming
 - render typed reach-gap and competitor evidence layers over the shared statewide source
+- accept feature-owned dynamic reach-gap filters without choosing diagnostic ZIPs
 - fit territory, statewide, and selected-ZIP geometry bounds
 - resize/refit after panel and viewport-mode changes
 - preserve attribution
 
-The map does not calculate business scores, generate seller actions, assign territories, or own product truth.
+The map does not calculate business scores, recommend client ZIPs, generate seller actions, assign territories, or own product truth.
 
 MapLibre feature state is presentation-only:
 
@@ -135,7 +140,8 @@ MapLibre feature state is presentation-only:
 | `hover` | transient hover emphasis |
 | `selected` | gold selected ZIP outline |
 | `dim` | filter-based fading |
-| `campaign` | current/recommended campaign emphasis |
+| `campaign` | cyan current-campaign footprint emphasis |
+| `recommended` | green proposed client-expansion emphasis |
 | `territoryDim` | neutral gray inactive territory context |
 | `displayScore` | objective/simulation presentation score |
 
@@ -145,6 +151,7 @@ Performance laws:
 - diff feature-state sets before writing;
 - use Sets for interaction membership checks;
 - keep overlays as filtered layers over `zip-opportunities` rather than duplicate sources;
+- update reach-gap filters rather than creating replacement geometry sources;
 - reset applied-state tracking whenever a map instance is recreated;
 - keep the standard MapLibre vendor chunk cache-stable;
 - keep offline-review output as one inlinable script.
@@ -168,13 +175,22 @@ Selecting a competitor in ZIP details toggles the same typed map layer. Competit
 
 #### Client Growth Studio
 
-Owns one fictional advertiser scenario:
+Owns one fictional advertiser scenario and a three-step geographic-planning story:
 
-- baseline campaign footprint
+1. **Current plan** — active campaign ZIPs use cyan `campaign` state.
+2. **Diagnose gaps** — dynamic reach-gap ZIPs and typed competitor footprints become visible.
+3. **Recommended plan** — current ZIPs remain cyan while deterministic expansion ZIPs use green `recommended` state.
+
+Additional ownership:
+
 - selectable deterministic strategies
 - current-versus-modeled results
-- territory-aware expansion ZIPs
+- selected-ZIP campaign role and diagnostic context
+- recommended ZIP explanations
+- strategy trade-offs
 - conceptual Architect handoff
+
+The simulation automatically advances to Recommended plan when complete. Current, diagnostic, and recommended states remain visually and semantically distinct.
 
 #### Seller Growth Studio
 
@@ -227,7 +243,7 @@ Two responsive modes exist:
 - safe-area insets are respected
 - no user-agent/device detection
 
-Every new product surface must render correctly in both modes.
+Every new product surface and every Client Growth plan view must render correctly in both modes.
 
 ## Visual map rules
 
@@ -235,17 +251,19 @@ Every new product surface must render correctly in both modes.
 - active opportunity scale: pastel cool-to-hot progression
 - inactive territories: neutral gray with very subtle boundaries
 - selection: prominent gold outline
-- campaign/current-action emphasis: prominent cyan outline
+- current campaign: prominent cyan outline
+- recommended client expansion: prominent green outline
 - enabled reach-gap and competitor layers: higher-contrast typed fills and outlines
 - business overlay colors remain fixture-owned
 
-Paint expressions display values; they never calculate opportunity logic.
+Paint expressions display values; they never calculate opportunity or recommendation logic.
 
 ## Demonstration data rules
 
 - All opportunity, territory, advertiser, campaign, account, prospect, seller, coverage, recommendation, and simulation values are deterministic synthetic data.
 - Curated Cleveland–Akron records remain distinguishable from statewide baseline records.
 - Competitor footprints are illustrative ZIP memberships, not provider service-area claims.
+- Client reach-gap and expansion recommendations are illustrative deterministic outputs, not production media plans.
 - No company exports, credentials, internal reports, or real client data enter the repository.
 - Every modeled screen includes an appropriate disclosure.
 - Geographic source provenance is preserved.
@@ -292,11 +310,11 @@ Offline packaging is a distribution adapter, not a duplicate product implementat
 ```text
 src/
   app/                 composition root and shared view state
-  domain/              opportunities, territories, seller actions, simulations, overlays
+  domain/              opportunities, territories, client planning, seller actions, simulations, overlays
   data/                repositories, public-asset, and geometry adapters
   features/            Explorer, Client Growth, Seller Growth workflows
-  map/                 MapLibre lifecycle, feature-state, expressions, adapters
-  components/          reusable controls
+  map/                 MapLibre lifecycle, feature-state, filters, expressions, adapters
+  components/          reusable controls, including Client plan-view controls
   styles/              tokens, responsive layout, product and map polish
 scripts/
   build-ohio-market.mjs
@@ -316,9 +334,9 @@ public/data/
 - monolithic HTML/JavaScript business implementation
 - business rules in JSX event handlers
 - scattered direct fixture imports
-- score calculation inside map paint expressions
+- score or recommendation calculation inside map paint expressions
 - full statewide source re-upload for presentation recolors
-- map-owned territory or seller-action generation
+- map-owned territory, client-recommendation, or seller-action generation
 - hard-coded business overlays in rendering code
 - document-level desktop scrolling
 - device/user-agent detection
@@ -337,6 +355,7 @@ The production evolution should add the following without replacing the foundati
 - additional state/major-city market packages
 - governed territory and coverage definitions
 - authenticated API adapters
+- multiple governed advertiser/client profiles
 - server-side scoring and model versioning
 - role-based client/internal authorization
 - persisted scenarios and seller queues
