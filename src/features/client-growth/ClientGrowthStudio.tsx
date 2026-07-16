@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { ExperienceGuide } from '../../components/ExperienceGuide';
 import { ClientPlanControls, type ClientPlanView } from '../../components/ClientPlanControls';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { buildClientGeographyPlan } from '../../domain/clientGeography';
@@ -198,7 +199,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     <main className="studio-grid product-grid">
       <aside className="panel panel--left client-controls">
         <div className="panel__heading">
-          <span className="eyebrow">Client Growth Studio</span>
+          <span className="eyebrow">Client Campaign Planner</span>
           <h1>Lakefront Automotive Group</h1>
           <p>Fictional advertiser · {territoryName} qualified lead growth</p>
         </div>
@@ -295,6 +296,13 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
       </section>
 
       <aside className="panel panel--right client-results">
+        <ExperienceGuide
+          tone="client"
+          title="Client Campaign Planner"
+          audience="Account executives and advertiser teams"
+          purpose="Diagnose a current campaign footprint, test growth strategies, and build an explained ZIP expansion plan."
+          nextStep="Review Current plan, open Diagnose gaps, select strategies, then run the simulation."
+        />
         <div className="result-heading">
           <span className="eyebrow">Scenario comparison</span>
           <h2>{result ? 'Modeled improvement' : 'Current campaign baseline'}</h2>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { ExperienceGuide } from '../../components/ExperienceGuide';
 import { MapLayerControls } from '../../components/MapLayerControls';
 import { ScoreRing } from '../../components/ScoreRing';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
@@ -203,6 +204,13 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
       </section>
 
       <aside className="panel panel--right">
+        <ExperienceGuide
+          tone="market"
+          title="Market Opportunity Map"
+          audience="Market strategists, sellers, and sales leaders"
+          purpose="Find the strongest ZIP-level opportunities and understand the audience, coverage, and competitive signals behind them."
+          nextStep="Select a territory, then choose a ZIP to inspect its drivers and modeled competitive landscape."
+        />
         {selected ? (
           <>
             <div className="detail-hero">

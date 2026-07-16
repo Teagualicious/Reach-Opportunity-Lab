@@ -46,6 +46,23 @@ export const zipFillOpacityExpression: ExpressionSpecification = [
   0.78,
 ];
 
+// When any supporting evidence layer is enabled, the base opportunity surface
+// remains visible but recedes so reach gaps and competitor footprints read first.
+export const zipFillOpacityEvidenceExpression: ExpressionSpecification = [
+  'case',
+  ['boolean', ['feature-state', 'dim'], false],
+  0.05,
+  ['boolean', ['feature-state', 'territoryDim'], false],
+  0.14,
+  ['boolean', ['feature-state', 'selected'], false],
+  0.66,
+  ['boolean', ['feature-state', 'recommended'], false],
+  0.62,
+  ['boolean', ['feature-state', 'campaign'], false],
+  0.58,
+  0.34,
+];
+
 export const zipLineColorExpression: ExpressionSpecification = [
   'case',
   ['boolean', ['feature-state', 'selected'], false],
