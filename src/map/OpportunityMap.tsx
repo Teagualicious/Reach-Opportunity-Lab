@@ -7,6 +7,7 @@ import maplibregl, {
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { OpportunityMarket } from '../data/OpportunityRepository';
 import type { GeographicBounds } from '../domain/territory';
+import { getGeometryBounds } from './geometryBounds';
 import {
   opportunityColorExpression,
   zipFillOpacityExpression,
@@ -59,6 +60,12 @@ function selectGeometryByZip(
   };
 }
 
+function getZipBounds(data: OpportunityMarket, zip: string | null): GeographicBounds | null {
+  if (!zip) return null;
+  const feature = data.geometry.features.find((candidate) => candidate.properties.zip === zip);
+  return feature ? getGeometryBounds(feature.geometry) : null;
+}
+
 function buildPopupContent(properties: Record<string, unknown>): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'map-tooltip';
@@ -104,6 +111,14 @@ function fitViewport(map: MapLibreMap, bounds: GeographicBounds, duration: numbe
     padding: { top: 34, right: 34, bottom: 34, left: 34 },
     duration,
     maxZoom: 10.5,
+  });
+}
+
+function fitZipViewport(map: MapLibreMap, bounds: GeographicBounds, duration: number) {
+  map.fitBounds(bounds, {
+    padding: { top: 72, right: 72, bottom: 72, left: 72 },
+    duration,
+    maxZoom: 12.6,
   });
 }
 
@@ -348,13 +363,22 @@ export function OpportunityMap({
   }, [allZips, data, onSelectZip]);
 
   useEffect(() => {
+    const previousSelectedZip = selectedZipRef.current;
     selectedZipRef.current = selectedZip;
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
+
     for (const zip of allZips) {
       map.setFeatureState({ source: SOURCE_ID, id: zip }, { selected: zip === selectedZip });
     }
-  }, [allZips, selectedZip]);
+
+    const selectedBounds = getZipBounds(data, selectedZip);
+    if (selectedBounds) {
+      fitZipViewport(map, selectedBounds, 520);
+    } else if (previousSelectedZip) {
+      fitViewport(map, viewportBoundsRef.current, 420);
+    }
+  }, [allZips, data, selectedZip]);
 
   useEffect(() => {
     const nextActiveZips = activeZips ?? allZips;
@@ -403,7 +427,7 @@ export function OpportunityMap({
   useEffect(() => {
     viewportBoundsRef.current = viewportBounds ?? data.market.bounds;
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || selectedZipRef.current) return;
     fitViewport(map, viewportBoundsRef.current, 520);
   }, [data.market.bounds, resetVersion, viewportBounds]);
 
@@ -412,10 +436,15 @@ export function OpportunityMap({
     if (!map) return;
     const frame = window.requestAnimationFrame(() => {
       map.resize();
-      fitViewport(map, viewportBoundsRef.current, 260);
+      const selectedBounds = getZipBounds(data, selectedZipRef.current);
+      if (selectedBounds) {
+        fitZipViewport(map, selectedBounds, 260);
+      } else {
+        fitViewport(map, viewportBoundsRef.current, 260);
+      }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [layoutVersion]);
+  }, [data, layoutVersion]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE_ID) as GeoJSONSource | undefined;
