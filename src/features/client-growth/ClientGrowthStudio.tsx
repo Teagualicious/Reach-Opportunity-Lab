@@ -173,6 +173,10 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
   const growthVisible = mapView === 'growth' && Boolean(result);
 
   useEffect(() => {
+    setSelectedAdvertiserId(DEFAULT_CLIENT_ADVERTISER.id);
+  }, [resetVersion]);
+
+  useEffect(() => {
     runIdRef.current += 1;
     setSelectedStrategies([]);
     setSelectedZip(currentCampaignZips[0] ?? territoryRanked[0]?.zip ?? null);
