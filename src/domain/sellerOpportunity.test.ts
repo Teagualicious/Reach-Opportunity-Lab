@@ -32,6 +32,16 @@ describe('seller opportunity actions', () => {
     expect(first.entityKind).toBe('Prospect');
     expect(first.priorityScore).toBe(91);
     expect(first.zip).toBe('44122');
+    expect(first.leadWith).toBe('Streaming + Search support');
+    expect(first.opportunityRange.minimum).toBeGreaterThan(0);
+    expect(first.opportunityRange.maximum).toBeGreaterThan(first.opportunityRange.minimum);
+    expect(first.opportunityRange.minimum % 500).toBe(0);
+    expect(first.opportunityRange.maximum % 500).toBe(0);
+  });
+
+  it('leads category-opportunity briefs with the vertical package', () => {
+    const vertical = buildSellerOpportunity(opportunity, 'category-opportunity', 82, 0);
+    expect(vertical.leadWith).toBe('Automotive vertical package');
   });
 
   it('changes the seller workflow language by objective', () => {

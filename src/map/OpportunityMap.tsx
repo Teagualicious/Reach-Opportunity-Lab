@@ -31,6 +31,8 @@ interface OpportunityMapProps {
   territoryZips?: readonly string[];
   viewportBounds?: GeographicBounds;
   layoutVersion?: number;
+  /** Optional domain-supplied hover text replacing the default score line. */
+  popupValueText?: (zip: string) => string | null;
 }
 
 const SOURCE_ID = 'zip-opportunities';
@@ -59,7 +61,11 @@ function getZipBounds(data: OpportunityMarket, zip: string | null): GeographicBo
   return feature ? getGeometryBounds(feature.geometry) : null;
 }
 
-function buildPopupContent(properties: Record<string, unknown>, displayScore?: number): HTMLElement {
+function buildPopupContent(
+  properties: Record<string, unknown>,
+  displayScore?: number,
+  valueText?: string | null,
+): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'map-tooltip';
 
@@ -72,7 +78,7 @@ function buildPopupContent(properties: Record<string, unknown>, displayScore?: n
 
   const score = document.createElement('span');
   score.className = 'map-tooltip__score';
-  score.textContent = `${String(displayScore ?? properties.score ?? '—')}/100 opportunity`;
+  score.textContent = valueText ?? `${String(displayScore ?? properties.score ?? '—')}/100 opportunity`;
 
   wrapper.append(eyebrow, name, score);
   return wrapper;
@@ -152,6 +158,7 @@ export function OpportunityMap({
   territoryZips,
   viewportBounds,
   layoutVersion = 0,
+  popupValueText,
 }: OpportunityMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -188,6 +195,7 @@ export function OpportunityMap({
   const showReachGapRef = useRef(showReachGap);
   const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
   const evidenceFocusActiveRef = useRef(evidenceFocusActive);
+  const popupValueTextRef = useRef(popupValueText);
 
   // Feature state already written to the current map instance, so updates only
   // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
@@ -380,7 +388,13 @@ export function OpportunityMap({
       map.setFeatureState({ source: SOURCE_ID, id: zip }, { hover: true });
       popupRef.current
         ?.setLngLat(event.lngLat)
-        .setDOMContent(buildPopupContent(feature.properties ?? {}, displayScoresRef.current?.[zip]))
+        .setDOMContent(
+          buildPopupContent(
+            feature.properties ?? {},
+            displayScoresRef.current?.[zip],
+            popupValueTextRef.current?.(zip),
+          ),
+        )
         .addTo(map);
     };
 
@@ -435,6 +449,10 @@ export function OpportunityMap({
       fitViewport(map, viewportBoundsRef.current, 420);
     }
   }, [data, selectedZip]);
+
+  useEffect(() => {
+    popupValueTextRef.current = popupValueText;
+  }, [popupValueText]);
 
   useEffect(() => {
     dimmedZipsRef.current = dimmedZips;

@@ -114,13 +114,13 @@ export function ProductShell({ data }: ProductShellProps) {
     <div
       className={`explorer-shell ${leftCollapsed ? 'is-left-collapsed' : ''} ${
         rightCollapsed ? 'is-right-collapsed' : ''
-      }`}
+      } ${mode === 'client-growth' ? 'is-client-mode' : ''}`}
     >
       <header className="app-header">
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
           <div>
-            <span className="brand-kicker">Reach</span>
+            <span className="brand-kicker">Spectrum Reach</span>
             <strong>Opportunity Lab</strong>
           </div>
         </div>

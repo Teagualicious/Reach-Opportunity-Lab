@@ -15,6 +15,10 @@ export interface SellerOpportunityItem {
   urgencyLabel: string;
   headline: string;
   recommendedAction: string;
+  /** The product story the seller should open with. */
+  leadWith: string;
+  /** Modeled annual opportunity range in dollars, minimum and maximum. */
+  opportunityRange: { minimum: number; maximum: number };
   evidence: readonly string[];
 }
 
@@ -38,6 +42,7 @@ const MODE_COPY: Readonly<
       urgencyLabel: string;
       headline: (opportunity: ZipOpportunity) => string;
       action: string;
+      leadWith: (opportunity: ZipOpportunity) => string;
     }
   >
 > = {
@@ -48,6 +53,7 @@ const MODE_COPY: Readonly<
     headline: (opportunity) =>
       `${opportunity.categoryStrength} demand and audience signals make this ZIP a strong prospecting window.`,
     action: 'Open a category-led prospecting conversation and build a short target list.',
+    leadWith: () => 'Streaming + Search support',
   },
   'account-growth': {
     entityKind: 'Existing account',
@@ -56,6 +62,7 @@ const MODE_COPY: Readonly<
     headline: (opportunity) =>
       `Audience scale and search activity support a larger footprint around ${opportunity.name}.`,
     action: 'Prepare an account expansion brief with adjacent ZIP and product recommendations.',
+    leadWith: () => 'TV + Streaming expansion',
   },
   'retention-risk': {
     entityKind: 'At-risk account',
@@ -64,6 +71,7 @@ const MODE_COPY: Readonly<
     headline: (opportunity) =>
       `Competitive pressure and coverage signals suggest a proactive save conversation in ${opportunity.name}.`,
     action: 'Compare save strategies and schedule an account-health conversation.',
+    leadWith: () => 'Retention bundle + added streaming value',
   },
   'category-opportunity': {
     entityKind: 'Vertical lead',
@@ -72,6 +80,7 @@ const MODE_COPY: Readonly<
     headline: (opportunity) =>
       `${opportunity.categoryStrength} is the strongest modeled vertical signal for this ZIP.`,
     action: 'Create a vertical market brief and identify matching local businesses.',
+    leadWith: (opportunity) => `${opportunity.categoryStrength} vertical package`,
   },
 };
 
@@ -96,6 +105,7 @@ export function buildSellerOpportunity(
   index: number,
 ): SellerOpportunityItem {
   const copy = MODE_COPY[mode];
+  const modeledOpportunity = opportunity.householdCount * (0.9 + priorityScore / 100);
   return {
     id: `${mode}-${opportunity.zip}`,
     zip: opportunity.zip,
@@ -107,6 +117,11 @@ export function buildSellerOpportunity(
     urgencyLabel: copy.urgencyLabel,
     headline: copy.headline(opportunity),
     recommendedAction: copy.action,
+    leadWith: copy.leadWith(opportunity),
+    opportunityRange: {
+      minimum: Math.round((modeledOpportunity * 0.8) / 500) * 500,
+      maximum: Math.round((modeledOpportunity * 1.25) / 500) * 500,
+    },
     evidence: [
       `${COMPONENT_LABELS[opportunity.topDriver]} is the leading modeled signal.`,
       `${opportunity.householdCount.toLocaleString('en-US')} households are represented in the synthetic market profile.`,

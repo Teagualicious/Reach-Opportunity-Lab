@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import maplibregl, { type MapOptions } from 'maplibre-gl';
 import { App } from './app/App';
 import { createOfflineBasemapStyle, loadOfflinePlaceLabels } from './map/offlineBasemapStyle';
+import '@fontsource-variable/inter/opsz.css';
 import './styles/index.css';
 
 const OriginalMap = maplibregl.Map;

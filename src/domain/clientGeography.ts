@@ -40,6 +40,8 @@ function competitorIdsForZip(competitors: readonly CompetitorFootprint[], zip: s
     .sort();
 }
 
+// Reason language is client-facing: internal signals (competitor footprints,
+// penetration) may inform the score but must never be exposed in the text.
 function recommendationReason(
   opportunity: ZipOpportunity,
   reachGap: boolean,
@@ -47,17 +49,17 @@ function recommendationReason(
   selectedStrategyIds: readonly ClientStrategyId[],
 ): string {
   const reasons: string[] = [];
-  if (reachGap) reasons.push('underexposed audience potential');
-  if (selectedStrategyIds.includes('geography-expansion')) reasons.push('strong adjacent-market fit');
+  if (reachGap) reasons.push('audience your campaign has not reached yet');
+  if (selectedStrategyIds.includes('geography-expansion')) reasons.push('looks like your strongest current areas');
   if (selectedStrategyIds.includes('search-support') && opportunity.components.searchOpportunity >= 10) {
-    reasons.push('high search intent');
+    reasons.push('high search interest');
   }
   if (selectedStrategyIds.includes('high-value-services') && opportunity.components.categoryPotential >= 10) {
-    reasons.push('strong high-value category fit');
+    reasons.push('strong fit for premium services');
   }
-  if (competitorCount === 0) reasons.push('lighter modeled competitor pressure');
-  if (reasons.length === 0) reasons.push('balanced audience and category opportunity');
-  return reasons.slice(0, 2).join(' with ');
+  if (competitorCount === 0) reasons.push('clear room to grow visibility');
+  if (reasons.length === 0) reasons.push('balanced audience and category fit');
+  return reasons.slice(0, 2).join(' · ');
 }
 
 export function buildClientGeographyPlan({
