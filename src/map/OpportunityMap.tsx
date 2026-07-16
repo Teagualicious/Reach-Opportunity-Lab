@@ -6,6 +6,7 @@ import maplibregl, {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { OpportunityMarket } from '../data/OpportunityRepository';
+import type { GeographicBounds } from '../domain/territory';
 import {
   opportunityColorExpression,
   zipFillOpacityExpression,
@@ -23,6 +24,9 @@ interface OpportunityMapProps {
   displayScores?: Readonly<Record<string, number>>;
   showReachGap?: boolean;
   visibleCompetitorIds?: readonly string[];
+  territoryZips?: readonly string[];
+  viewportBounds?: GeographicBounds;
+  layoutVersion?: number;
 }
 
 const SOURCE_ID = 'zip-opportunities';
@@ -78,7 +82,7 @@ function setBooleanFeatureState(
   map: MapLibreMap,
   allZips: readonly string[],
   enabledZips: ReadonlySet<string>,
-  stateKey: 'dim' | 'campaign',
+  stateKey: 'dim' | 'campaign' | 'territoryDim',
   invert = false,
 ) {
   for (const zip of allZips) {
@@ -95,6 +99,14 @@ function setLayerVisibility(map: MapLibreMap, layerIds: readonly string[], visib
   }
 }
 
+function fitViewport(map: MapLibreMap, bounds: GeographicBounds, duration: number) {
+  map.fitBounds(bounds, {
+    padding: { top: 34, right: 34, bottom: 34, left: 34 },
+    duration,
+    maxZoom: 10.5,
+  });
+}
+
 export function OpportunityMap({
   data,
   selectedZip,
@@ -105,17 +117,22 @@ export function OpportunityMap({
   displayScores,
   showReachGap = false,
   visibleCompetitorIds = [],
+  territoryZips,
+  viewportBounds,
+  layoutVersion = 0,
 }: OpportunityMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const hoveredZipRef = useRef<string | null>(null);
   const selectedZipRef = useRef<string | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
-  const activeZipsRef = useRef<readonly string[]>(activeZips ?? data.opportunities.map(({ zip }) => zip));
+  const allZips = useMemo(() => data.opportunities.map(({ zip }) => zip), [data.opportunities]);
+  const activeZipsRef = useRef<readonly string[]>(activeZips ?? allZips);
   const campaignZipsRef = useRef<readonly string[]>(campaignZips);
+  const territoryZipsRef = useRef<readonly string[]>(territoryZips ?? allZips);
+  const viewportBoundsRef = useRef<GeographicBounds>(viewportBounds ?? data.market.bounds);
   const showReachGapRef = useRef(showReachGap);
   const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
-  const allZips = useMemo(() => data.opportunities.map(({ zip }) => zip), [data.opportunities]);
 
   const renderedGeometry = useMemo(() => {
     if (!displayScores) return data.geometry;
@@ -154,21 +171,27 @@ export function OpportunityMap({
         },
         layers: [
           {
+            id: 'page-background',
+            type: 'background',
+            paint: { 'background-color': '#eef1f3' },
+          },
+          {
             id: 'openstreetmap-basemap',
             type: 'raster',
             source: 'openstreetmap-basemap',
             paint: {
-              'raster-saturation': -0.78,
-              'raster-contrast': -0.08,
-              'raster-brightness-min': 0.16,
-              'raster-brightness-max': 0.95,
+              'raster-saturation': -1,
+              'raster-contrast': -0.18,
+              'raster-brightness-min': 0.72,
+              'raster-brightness-max': 1,
+              'raster-opacity': 0.82,
             },
           },
         ],
       },
       center: data.market.center,
-      zoom: 8.35,
-      minZoom: 7,
+      zoom: 6.2,
+      minZoom: 5.2,
       maxZoom: 14,
       attributionControl: false,
     });
@@ -207,8 +230,8 @@ export function OpportunityMap({
         source: REACH_GAP_SOURCE_ID,
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
-          'fill-color': '#d946ef',
-          'fill-opacity': 0.12,
+          'fill-color': '#8b5cf6',
+          'fill-opacity': 0.1,
         },
       });
       map.addLayer({
@@ -217,8 +240,8 @@ export function OpportunityMap({
         source: REACH_GAP_SOURCE_ID,
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
-          'line-color': '#c026d3',
-          'line-width': 2.4,
+          'line-color': '#7c3aed',
+          'line-width': 2.2,
           'line-dasharray': [2, 1.5],
         },
       });
@@ -238,7 +261,7 @@ export function OpportunityMap({
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'fill-color': competitor.color,
-            'fill-opacity': competitor.wide ? 0.035 : 0.09,
+            'fill-opacity': competitor.wide ? 0.035 : 0.08,
           },
         });
         map.addLayer({
@@ -248,7 +271,7 @@ export function OpportunityMap({
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'line-color': competitor.color,
-            'line-width': competitor.wide ? 1.2 : 2,
+            'line-width': competitor.wide ? 1.1 : 1.9,
             ...(competitor.wide ? { 'line-dasharray': [4, 3] as [number, number] } : {}),
           },
         });
@@ -266,20 +289,24 @@ export function OpportunityMap({
 
       setBooleanFeatureState(map, allZips, new Set(activeZipsRef.current), 'dim', true);
       setBooleanFeatureState(map, allZips, new Set(campaignZipsRef.current), 'campaign');
+      setBooleanFeatureState(map, allZips, new Set(territoryZipsRef.current), 'territoryDim', true);
       if (selectedZipRef.current) {
         map.setFeatureState({ source: SOURCE_ID, id: selectedZipRef.current }, { selected: true });
       }
-      map.fitBounds(data.market.bounds, { padding: 42, duration: 0 });
+      fitViewport(map, viewportBoundsRef.current, 0);
     });
 
     const handleMouseMove = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       if (!feature) return;
       const zip = typeof feature.properties?.zip === 'string' ? feature.properties.zip : null;
-      if (!zip) return;
+      if (!zip || !territoryZipsRef.current.includes(zip)) {
+        map.getCanvas().style.cursor = '';
+        popupRef.current?.remove();
+        return;
+      }
 
       map.getCanvas().style.cursor = 'pointer';
-
       if (hoveredZipRef.current && hoveredZipRef.current !== zip) {
         map.setFeatureState({ source: SOURCE_ID, id: hoveredZipRef.current }, { hover: false });
       }
@@ -301,7 +328,7 @@ export function OpportunityMap({
     const handleZipClick = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       const zip = typeof feature?.properties?.zip === 'string' ? feature.properties.zip : null;
-      if (zip) onSelectZip(zip);
+      if (zip && territoryZipsRef.current.includes(zip)) onSelectZip(zip);
     };
 
     map.on('mousemove', FILL_LAYER_ID, handleMouseMove);
@@ -324,7 +351,6 @@ export function OpportunityMap({
     selectedZipRef.current = selectedZip;
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
-
     for (const zip of allZips) {
       map.setFeatureState({ source: SOURCE_ID, id: zip }, { selected: zip === selectedZip });
     }
@@ -346,21 +372,24 @@ export function OpportunityMap({
   }, [allZips, campaignZips]);
 
   useEffect(() => {
+    const nextTerritoryZips = territoryZips ?? allZips;
+    territoryZipsRef.current = nextTerritoryZips;
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    setBooleanFeatureState(map, allZips, new Set(nextTerritoryZips), 'territoryDim', true);
+  }, [allZips, territoryZips]);
+
+  useEffect(() => {
     showReachGapRef.current = showReachGap;
     const map = mapRef.current;
     if (!map) return;
-    setLayerVisibility(
-      map,
-      [REACH_GAP_FILL_LAYER_ID, REACH_GAP_LINE_LAYER_ID],
-      showReachGap,
-    );
+    setLayerVisibility(map, [REACH_GAP_FILL_LAYER_ID, REACH_GAP_LINE_LAYER_ID], showReachGap);
   }, [showReachGap]);
 
   useEffect(() => {
     visibleCompetitorIdsRef.current = visibleCompetitorIds;
     const map = mapRef.current;
     if (!map) return;
-
     const visible = new Set(visibleCompetitorIds);
     for (const competitor of data.overlays.competitors) {
       setLayerVisibility(
@@ -372,15 +401,26 @@ export function OpportunityMap({
   }, [data.overlays.competitors, visibleCompetitorIds]);
 
   useEffect(() => {
+    viewportBoundsRef.current = viewportBounds ?? data.market.bounds;
     const map = mapRef.current;
     if (!map) return;
-    map.fitBounds(data.market.bounds, { padding: 42, duration: 650 });
-  }, [data.market.bounds, resetVersion]);
+    fitViewport(map, viewportBoundsRef.current, 520);
+  }, [data.market.bounds, resetVersion, viewportBounds]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const frame = window.requestAnimationFrame(() => {
+      map.resize();
+      fitViewport(map, viewportBoundsRef.current, 260);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [layoutVersion]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE_ID) as GeoJSONSource | undefined;
     source?.setData(renderedGeometry);
   }, [renderedGeometry]);
 
-  return <div ref={containerRef} className="opportunity-map" aria-label="Cleveland ZIP opportunity heat map" />;
+  return <div ref={containerRef} className="opportunity-map" aria-label="Ohio ZIP opportunity map" />;
 }
