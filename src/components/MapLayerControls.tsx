@@ -23,7 +23,10 @@ export function MapLayerControls({
         <small>Synthetic overlays</small>
       </div>
 
-      <label className="layer-toggle">
+      <label
+        className="layer-toggle"
+        style={{ '--layer-color': '#d946ef' } as CSSProperties}
+      >
         <input
           type="checkbox"
           checked={showReachGap}
@@ -41,7 +44,11 @@ export function MapLayerControls({
       {overlays.competitors.map((competitor) => {
         const visible = visibleCompetitorIds.includes(competitor.id);
         return (
-          <label className="layer-toggle" key={competitor.id}>
+          <label
+            className="layer-toggle"
+            key={competitor.id}
+            style={{ '--layer-color': competitor.color } as CSSProperties}
+          >
             <input
               type="checkbox"
               checked={visible}
@@ -51,7 +58,6 @@ export function MapLayerControls({
             />
             <span
               className={`layer-swatch ${competitor.wide ? 'is-wide' : ''}`}
-              style={{ '--layer-color': competitor.color } as CSSProperties}
               aria-hidden="true"
             />
             <span>
