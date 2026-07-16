@@ -1,5 +1,6 @@
 export type ConfidenceLevel = 'Low' | 'Moderate' | 'High';
 export type PriorityBand = 'Emerging' | 'Qualified' | 'High' | 'Priority';
+export type OpportunityDetailLevel = 'curated-demo' | 'statewide-baseline';
 
 export interface OpportunityComponents {
   audiencePotential: number;
@@ -13,6 +14,9 @@ export interface OpportunityComponents {
 export interface ZipOpportunity {
   zip: string;
   name: string;
+  territoryId?: string;
+  detailLevel?: OpportunityDetailLevel;
+  centroid?: [longitude: number, latitude: number];
   score: number;
   confidence: ConfidenceLevel;
   components: OpportunityComponents;
@@ -56,6 +60,27 @@ export function totalOpportunityPoints(components: OpportunityComponents): numbe
 export function assertZipOpportunity(value: ZipOpportunity): void {
   if (!/^\d{5}$/.test(value.zip)) {
     throw new Error(`Invalid ZIP identifier: ${value.zip}`);
+  }
+
+  if (value.territoryId !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.territoryId)) {
+    throw new Error(`Invalid territory identifier for ZIP ${value.zip}`);
+  }
+
+  if (
+    value.detailLevel !== undefined &&
+    value.detailLevel !== 'curated-demo' &&
+    value.detailLevel !== 'statewide-baseline'
+  ) {
+    throw new Error(`Invalid opportunity detail level for ZIP ${value.zip}`);
+  }
+
+  if (
+    value.centroid !== undefined &&
+    (!Array.isArray(value.centroid) ||
+      value.centroid.length !== 2 ||
+      !value.centroid.every(Number.isFinite))
+  ) {
+    throw new Error(`Invalid centroid for ZIP ${value.zip}`);
   }
 
   if (!Number.isFinite(value.score) || value.score < 0 || value.score > 100) {
