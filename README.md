@@ -17,7 +17,7 @@ https://teagualicious.github.io/Reach-Opportunity-Lab/
 The application uses one shared Ohio ZIP/ZCTA intelligence layer across three distinct experiences:
 
 - **Opportunity Explorer** — neutral market diagnosis: where opportunity exists, why a ZIP scores the way it does, whether a modeled reach gap exists, and which synthetic competitor footprints intersect the selected ZIP.
-- **Client Growth Studio** — advertiser strategy workspace: fictional Lakefront Automotive footprint, selectable strategies, deterministic simulation, territory-specific expansion ZIPs, current-versus-modeled results, and conceptual Architect handoff.
+- **Client Growth Studio** — advertiser geographic-planning workspace: a three-step **Current plan → Diagnose gaps → Recommended plan** flow with current footprint, modeled reach gaps, competitor pressure, deterministic strategy simulation, explained expansion ZIPs, trade-offs, and conceptual Architect handoff.
 - **Seller Growth Studio** — internal seller action workspace: New Business, Account Growth, Retention Risk, and Category Opportunity queues that turn ZIP intelligence into prioritized synthetic prospects/accounts, evidence, and recommended next actions.
 
 The intended product split is explicit:
@@ -58,7 +58,7 @@ The runtime uses checked-in statewide Ohio ZCTA geometry generated from a docume
 
 Do not edit generated geographic or statewide opportunity fixtures manually. Change the builder and regenerate them.
 
-The standard application uses a light grayscale OpenStreetMap raster basemap. Active opportunity scores use a pastel cool-to-hot progression; inactive territories use neutral gray; selection remains gold and campaign emphasis remains cyan. Supporting reach-gap and competitor overlays use stronger fills and outlines so enabled layers remain legible over the opportunity surface.
+The standard application uses a light grayscale OpenStreetMap raster basemap. Active opportunity scores use a pastel cool-to-hot progression; inactive territories use neutral gray; selection remains gold, current campaign ZIPs remain cyan, and recommended client expansion ZIPs use green. Supporting reach-gap and competitor overlays use stronger fills and outlines so enabled layers remain legible over the opportunity surface.
 
 ## All-offline visual review
 
@@ -126,7 +126,7 @@ public statewide geography + deterministic synthetic fixtures
         ↓
 DemoOpportunityRepository / ZipGeometrySource
         ↓
-pure TypeScript opportunity, territory, scoring, seller-action, and simulation domain
+pure TypeScript opportunity, territory, scoring, client-geography, seller-action, and simulation domain
         ↓
 shared React territory, viewport, and panel state
         ↓
@@ -137,7 +137,7 @@ MapLibre standard or all-offline presentation adapter
 
 Primary boundaries:
 
-- `src/domain/` — pure scoring, simulation, seller-action, territory, recommendation, and overlay contracts
+- `src/domain/` — pure scoring, simulation, client-geography, seller-action, territory, recommendation, and overlay contracts
 - `src/data/` — repository, public-asset, and geometry-source adapters
 - `src/app/` — composition root, shared territory selection, viewport mode, product navigation, and panel state
 - `src/map/` — MapLibre sources, filtered overlays, diffed feature state, viewport fitting, and basemap adapters
