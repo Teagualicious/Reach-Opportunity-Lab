@@ -1,7 +1,7 @@
 import { publicAssetUrl } from './publicAssetUrl';
 import { normalizeZipGeometry, type RawZipGeometry, type ZipGeometrySource } from './ZipGeometrySource';
 
-export const DEFAULT_STATIC_ZCTA_PATH = 'data/cleveland-akron-zcta-2020.geojson';
+export const DEFAULT_STATIC_ZCTA_PATH = 'data/ohio-zcta-2020.geojson';
 
 export class StaticZctaGeometrySource implements ZipGeometrySource {
   constructor(private readonly path = DEFAULT_STATIC_ZCTA_PATH) {}
@@ -16,6 +16,6 @@ export class StaticZctaGeometrySource implements ZipGeometrySource {
     }
 
     const geometry: unknown = await response.json();
-    return normalizeZipGeometry(geometry, zips, 'Checked-in Census-derived ZCTA fixture');
+    return normalizeZipGeometry(geometry, zips, 'Checked-in statewide Ohio ZCTA fixture');
   }
 }
