@@ -54,9 +54,39 @@ All business, opportunity, territory, campaign, account, prospect, competitor, r
 - selected territory definition;
 - selected territory ZIPs;
 - territory/statewide viewport bounds;
-- panel-layout version.
+- panel-layout version;
+- viewport mode (`expanded` or `compact`).
 
-Desktop layout laws:
+### Responsive layout modes
+
+The shell renders in exactly two layout modes. The mode is derived from the live
+viewport with `matchMedia`, exposed to React through `useViewportMode` and
+`ProductViewContext.viewportMode`, and mirrored by the CSS breakpoint in
+`src/styles/layout.css`. **Never detect devices via user-agent strings** — media
+queries follow rotation, resize, and split-screen; UA sniffing does not.
+
+- `expanded` (>900px): the desktop executive layout described below.
+- `compact` (≤900px, phones and portrait tablets): the map is the full-bleed
+  primary surface; the left/right panels become bottom sheets (opened one at a
+  time via the "Controls"/"Details" pills); the product-mode switch becomes a
+  fixed bottom bar; the header stacks brand, reset, and territory selector.
+
+Compact layout laws:
+
+- the map is never hidden by default; sheets start closed and open one at a time;
+- all three product modes stay reachable from the fixed bottom bar;
+- selects render at 16px in compact mode so iOS Safari does not zoom on focus;
+- fixed bottom chrome respects `env(safe-area-inset-bottom)` (`viewport-fit=cover`
+  is set in both HTML entries);
+- the bottom mode bar lives inside the header's stacking context, so the header
+  keeps a z-index above the sheets;
+- keep `COMPACT_VIEWPORT_QUERY` and the layout.css breakpoint in sync.
+
+**Every new product surface must render correctly in both modes before it is
+considered complete.** Features adapt through `view.viewportMode`, not their own
+media queries or UA checks.
+
+Desktop (`expanded`) layout laws:
 
 - the product fits one browser viewport;
 - the page itself never scrolls;
