@@ -40,6 +40,7 @@ Read [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) for product scope, [`BUILD
 
 - Domain scoring, simulation, recommendations, and overlay validation are pure TypeScript.
 - React features consume typed repositories and domain services.
+- Every product surface must render correctly in both layout modes: `expanded` (desktop) and `compact` (≤900px phones/portrait tablets). Adapt through the shared viewport-mode contract (`useViewportMode`, `ProductViewContext.viewportMode`, and the matching CSS breakpoint) — never through user-agent or device detection.
 - MapLibre renders geometry and domain-provided values; it does not own business truth.
 - Network and local-file access live behind repository or source interfaces.
 - Keep client-facing and internal-only data separated.

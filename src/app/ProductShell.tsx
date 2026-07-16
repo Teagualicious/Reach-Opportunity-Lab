@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TerritorySelector } from '../components/TerritorySelector';
 import type { OpportunityMarket } from '../data/OpportunityRepository';
 import {
@@ -10,6 +10,7 @@ import { ClientGrowthStudio } from '../features/client-growth/ClientGrowthStudio
 import { MarketGrowthStudio } from '../features/market-growth/MarketGrowthStudio';
 import { ZipExplorer } from '../features/zip-explorer/ZipExplorer';
 import type { ProductViewContext } from './ProductViewContext';
+import { useViewportMode } from './useViewportMode';
 
 export type ProductMode = 'explorer' | 'client-growth' | 'market-growth';
 
@@ -26,11 +27,20 @@ const MODE_LABELS: Readonly<Record<ProductMode, string>> = {
 export function ProductShell({ data }: ProductShellProps) {
   const territories = data.market.territories ?? [];
   const defaultTerritoryId = data.market.defaultTerritoryId ?? ALL_TERRITORIES_ID;
+  const viewportMode = useViewportMode();
+  const isCompact = viewportMode === 'compact';
   const [mode, setMode] = useState<ProductMode>('explorer');
   const [resetVersion, setResetVersion] = useState(0);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState(defaultTerritoryId);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(isCompact);
+  const [rightCollapsed, setRightCollapsed] = useState(isCompact);
+
+  // Compact mode is map-first: crossing the breakpoint closes both bottom
+  // sheets; returning to the expanded layout restores both sidebars.
+  useEffect(() => {
+    setLeftCollapsed(isCompact);
+    setRightCollapsed(isCompact);
+  }, [isCompact]);
 
   const allZips = useMemo(() => data.opportunities.map(({ zip }) => zip), [data.opportunities]);
   const selectedTerritory = useMemo(
@@ -47,23 +57,41 @@ export function ProductShell({ data }: ProductShellProps) {
       selectedTerritory,
       territoryZips,
       viewportBounds: selectedTerritory?.bounds ?? data.market.bounds,
-      panelLayoutVersion: (leftCollapsed ? 1 : 0) + (rightCollapsed ? 2 : 0),
+      panelLayoutVersion:
+        (leftCollapsed ? 1 : 0) + (rightCollapsed ? 2 : 0) + (isCompact ? 4 : 0),
+      viewportMode,
     }),
     [
       data.market.bounds,
+      isCompact,
       leftCollapsed,
       rightCollapsed,
       selectedTerritory,
       selectedTerritoryId,
       territoryZips,
+      viewportMode,
     ],
   );
 
   const resetReview = () => {
     setSelectedTerritoryId(defaultTerritoryId);
-    setLeftCollapsed(false);
-    setRightCollapsed(false);
+    setLeftCollapsed(isCompact);
+    setRightCollapsed(isCompact);
     setResetVersion((version) => version + 1);
+  };
+
+  // Compact bottom sheets open one at a time so the map keeps context.
+  const toggleLeftPanel = () => {
+    setLeftCollapsed((collapsed) => {
+      if (collapsed && isCompact) setRightCollapsed(true);
+      return !collapsed;
+    });
+  };
+  const toggleRightPanel = () => {
+    setRightCollapsed((collapsed) => {
+      if (collapsed && isCompact) setLeftCollapsed(true);
+      return !collapsed;
+    });
   };
 
   return (
@@ -108,20 +136,44 @@ export function ProductShell({ data }: ProductShellProps) {
       <button
         className="panel-toggle panel-toggle--left"
         type="button"
-        aria-label={leftCollapsed ? 'Expand left sidebar' : 'Collapse left sidebar'}
-        aria-pressed={leftCollapsed}
-        onClick={() => setLeftCollapsed((collapsed) => !collapsed)}
+        aria-label={
+          isCompact
+            ? leftCollapsed
+              ? 'Open controls panel'
+              : 'Close controls panel'
+            : leftCollapsed
+              ? 'Expand left sidebar'
+              : 'Collapse left sidebar'
+        }
+        aria-expanded={!leftCollapsed}
+        onClick={toggleLeftPanel}
       >
-        <span aria-hidden="true">{leftCollapsed ? '›' : '‹'}</span>
+        {isCompact ? (
+          <span className="panel-toggle__label">{leftCollapsed ? 'Controls' : 'Close'}</span>
+        ) : (
+          <span aria-hidden="true">{leftCollapsed ? '›' : '‹'}</span>
+        )}
       </button>
       <button
         className="panel-toggle panel-toggle--right"
         type="button"
-        aria-label={rightCollapsed ? 'Expand right sidebar' : 'Collapse right sidebar'}
-        aria-pressed={rightCollapsed}
-        onClick={() => setRightCollapsed((collapsed) => !collapsed)}
+        aria-label={
+          isCompact
+            ? rightCollapsed
+              ? 'Open details panel'
+              : 'Close details panel'
+            : rightCollapsed
+              ? 'Expand right sidebar'
+              : 'Collapse right sidebar'
+        }
+        aria-expanded={!rightCollapsed}
+        onClick={toggleRightPanel}
       >
-        <span aria-hidden="true">{rightCollapsed ? '‹' : '›'}</span>
+        {isCompact ? (
+          <span className="panel-toggle__label">{rightCollapsed ? 'Details' : 'Close'}</span>
+        ) : (
+          <span aria-hidden="true">{rightCollapsed ? '‹' : '›'}</span>
+        )}
       </button>
 
       {mode === 'explorer' && <ZipExplorer data={data} resetVersion={resetVersion} view={view} />}

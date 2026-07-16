@@ -37,10 +37,12 @@ Phase 2 — Statewide map foundation and first product journeys
 - Split MapLibre into its own cache-stable vendor chunk for standard builds (app chunk 242 KB / MapLibre 1,053 KB, previously one 1,301 KB chunk); the offline-review build still emits a single inlinable script.
 - Exposed `opportunitiesByZip` on `OpportunityMarket` so features look up ZIPs without linear scans; overlay validation now happens once inside `buildOpportunityMarket`; the Lakefront canonical territory id moved into the client-scenario domain module.
 - Checked in `package-lock.json` for reproducible installs.
+- Added a responsive compact layout mode (≤900px, phones and portrait tablets): full-bleed map, left/right panels as one-at-a-time bottom sheets with "Controls"/"Details" pills, the product-mode switch as a fixed bottom bar, stacked header, safe-area insets, and 16px compact selects to prevent iOS focus zoom. Fixed the previous ≤900px layout, which covered the map with both panel overlays and hid the mode switch and reset entirely.
+- Added the shared viewport-mode contract: `useViewportMode` (matchMedia-driven), `ProductViewContext.viewportMode`, and a matching CSS breakpoint; documented in `BUILD_HANDOFF.md` and `CLAUDE.md` that all future surfaces must render in both modes and must not use user-agent detection.
 - Current validation:
   - standard CI run 299 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
   - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload;
-  - this session: typecheck, statewide validation + 25 Vitest tests, production build, offline-review Vite build (single chunk confirmed), and a headless SwiftShader browser walkthrough of all three product modes (selection zoom, score-filter dimming, reach-gap overlay, territory switch, objective recolors, client simulation) all passed locally.
+  - this session: typecheck, statewide validation + 25 Vitest tests, production build, offline-review Vite build (single chunk confirmed), and headless SwiftShader browser walkthroughs at desktop (1440×850) and emulated iPhone (393×852, touch) sizes — selection zoom, score-filter dimming, reach-gap overlay, territory switch, objective recolors, client simulation, bottom-sheet open/close, and bottom-bar mode switching all passed locally. Software WebGL needs ~9 s to paint the first frame after each map mount; screenshot tooling must wait for it.
 
 ## Next up
 
@@ -49,7 +51,7 @@ Phase 2 — Statewide map foundation and first product journeys
 3. Extend reach-gap, competitor, current-campaign, and recommended-expansion controls throughout Client Growth Studio.
 4. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
 5. Add additional state/major-city market packages behind the same territory/market contracts.
-6. Add the guided executive tour and mobile bottom-sheet interaction.
+6. Add the guided executive tour. (The mobile bottom-sheet interaction shipped with the compact layout mode; remaining mobile polish: swipe-to-dismiss sheets, auto-opening the Details sheet when a simulation completes, and compact typography scaling.)
 7. Add WebGL-capable visual regression coverage for standard and offline adapters.
 
 ## Decisions log
@@ -123,6 +125,11 @@ Phase 2 — Statewide map foundation and first product journeys
   Considered: keeping the serial payload-then-geometry load, fetching geometry directly in the repository, and a separate prefetch method
   Rejected because: serial loading delays the largest download by a full round trip, direct fetches bypass the source boundary, and a prefetch method splits one responsibility across two calls
   Must preserve: `ZipGeometrySource.load` still validates and normalizes against the resolved ZIP list; adapters whose request URL depends on ZIPs (Census) simply await the list first
+
+- 2026-07-16 | DECISION: mobile support is a responsive compact layout mode driven by a shared matchMedia contract, not device detection
+  Considered: user-agent/device detection, a separate mobile build target, and per-feature ad-hoc media queries
+  Rejected because: UA sniffing misclassifies tablets and desktop-narrow windows and ignores rotation/resize; a separate target duplicates every feature; scattered per-feature queries drift apart
+  Must preserve: exactly two layout modes (`expanded`, `compact`); `useViewportMode`/`ProductViewContext.viewportMode` and the layout.css breakpoint stay in sync at 900px; compact keeps the map visible by default with bottom sheets opening one at a time; all product modes remain reachable from the fixed bottom bar
 
 - 2026-07-16 | DECISION: selecting a ZIP changes both detail state and map camera focus
   Considered: updating the detail panel without moving the map
