@@ -1,0 +1,59 @@
+name: Generate Ohio statewide market
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/build-ohio-market.mjs
+      - scripts/validate-ohio-market.mjs
+      - public/data/zip-opportunities.json
+      - .github/workflows/generate-ohio-market.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build statewide Ohio geometry and opportunities
+        run: node scripts/build-ohio-market.mjs
+
+      - name: Validate statewide Ohio fixtures
+        run: node scripts/validate-ohio-market.mjs
+
+      - name: Upload generated fixtures for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohio-statewide-market
+          path: |
+            public/data/ohio-zcta-2020.geojson
+            public/data/ohio-opportunities.json
+            public/data/ohio-market.provenance.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit generated fixtures to pull-request branch
+        run: |
+          if [ -z "$(git status --porcelain -- public/data/ohio-zcta-2020.geojson public/data/ohio-opportunities.json public/data/ohio-market.provenance.json)" ]; then
+            echo "Ohio statewide fixtures are already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/ohio-zcta-2020.geojson public/data/ohio-opportunities.json public/data/ohio-market.provenance.json
+          git commit -m "Generate statewide Ohio market fixtures"
+          git push origin HEAD:${{ github.head_ref }}
