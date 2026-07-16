@@ -196,17 +196,17 @@ The map does not calculate scores, choose client recommendations, generate selle
 | `territoryDim` | neutral inactive territory context |
 | `displayScore` | objective/simulation presentation score |
 
-### Layer-focus law
+### Supporting-layer focus law
 
-Whenever any emphasized layer is active—reach gap, competitor footprint, current campaign, recommended expansion, or seller focus—the base opportunity surface remains visible but mutes.
+Whenever a reach-gap or competitor evidence layer is active, the base opportunity surface remains visible but mutes.
 
 Requirements:
 
 - never hide all non-layer ZIPs;
 - preserve orientation and territory context;
-- keep selected/current/recommended ZIPs stronger than the muted base;
-- render colored evidence outlines above ordinary ZIP boundaries;
-- switch the fill-opacity expression with one paint-property update rather than writing state to every feature.
+- keep selected/current/recommended states distinct from the muted base;
+- switch the fill-opacity expression with one paint-property update rather than writing state to every feature;
+- ordinary current-plan, recommended-plan, and seller-focus views retain the normal heat-map opacity when no supporting evidence layer is active.
 
 ### Performance laws
 
@@ -298,7 +298,7 @@ The offline target generates statewide Census context, embeds all application as
 - full statewide source re-upload for presentation changes
 - map-owned territory, client recommendation, or seller-action generation
 - duplicate overlay geometry sources
-- hiding all non-layer geography when evidence is active
+- hiding all non-layer geography when supporting evidence is active
 - document-level desktop scrolling
 - device/user-agent detection
 - uncontrolled randomness
