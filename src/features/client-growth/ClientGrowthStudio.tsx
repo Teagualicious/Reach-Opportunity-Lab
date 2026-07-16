@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
-import { ClientPlanControls, type ClientPlanView } from '../../components/ClientPlanControls';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { buildClientGeographyPlan } from '../../domain/clientGeography';
 import {
@@ -10,7 +9,6 @@ import {
   LAKEFRONT_CAMPAIGN_TERRITORY_ID,
   LAKEFRONT_CAMPAIGN_ZIPS,
   simulateClientScenario,
-  type ClientMetrics,
   type ClientSimulationResult,
   type ClientStrategyId,
 } from '../../domain/clientScenario';
@@ -23,49 +21,77 @@ interface ClientGrowthStudioProps {
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
-const moneyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
+const compactFormatter = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
+
+/** Client-facing growth-idea language for the shared strategy definitions. */
+const GROWTH_IDEA_COPY: Readonly<
+  Record<ClientStrategyId, { name: string; description: string; benefit: string }>
+> = {
+  'streaming-reach': {
+    name: 'Add Streaming',
+    description: 'Reach more of your audience across every screen they watch.',
+    benefit: 'More qualified reach',
+  },
+  'search-support': {
+    name: 'Add Search',
+    description: 'Capture people searching for you right after they see your ads.',
+    benefit: 'More leads from the same reach',
+  },
+  'geography-expansion': {
+    name: 'Expand Geography',
+    description: 'Add nearby areas that look like your strongest current ones.',
+    benefit: 'Larger addressable market',
+  },
+  'high-value-services': {
+    name: 'Feature premium services',
+    description: 'Shift creative toward your higher-value service lines.',
+    benefit: 'More value per customer',
+  },
+};
+
+/** Display order per the redesign proposal: streaming, search, geography, premium. */
+const GROWTH_IDEA_ORDER: readonly ClientStrategyId[] = [
+  'streaming-reach',
+  'search-support',
+  'geography-expansion',
+  'high-value-services',
+];
 
 const SIMULATION_STEPS = [
-  'Analyzing the current footprint…',
-  'Locating underexposed audiences…',
-  'Testing competitor pressure…',
-  'Modeling ZIP-level expansion…',
-  'Generating the recommended plan…',
+  'Reviewing where your campaign reaches today…',
+  'Finding audiences you have not reached yet…',
+  'Modeling your growth ideas…',
+  'Preparing your growth view…',
 ] as const;
+
+type ClientMapView = 'current' | 'growth';
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-function formatMetric(metric: keyof ClientMetrics, value: number): string {
-  if (metric === 'qualifiedReach' || metric === 'modeledLeads') return numberFormatter.format(value);
-  if (metric === 'costPerLead') return `$${value.toFixed(2)}`;
-  if (metric === 'effectiveFrequency') return value.toFixed(1);
-  return String(value);
+function percentChange(baseline: number, simulated: number): number {
+  if (baseline === 0) return 0;
+  return Math.round(((simulated - baseline) / baseline) * 100);
 }
 
-function MetricComparison({
+function ComparisonRow({
   label,
-  metric,
-  baseline,
+  current,
   simulated,
+  improved,
 }: {
   label: string;
-  metric: keyof ClientMetrics;
-  baseline: number;
-  simulated: number;
+  current: string;
+  simulated: string;
+  improved: boolean;
 }) {
-  const isBetter = metric === 'costPerLead' ? simulated < baseline : simulated > baseline;
   return (
-    <div className="comparison-row">
+    <div className="client-compare-row">
       <span>{label}</span>
-      <div><small>Current</small><strong>{formatMetric(metric, baseline)}</strong></div>
+      <div><small>Today</small><strong>{current}</strong></div>
       <i aria-hidden="true">→</i>
-      <div className={isBetter ? 'is-improved' : ''}><small>Simulated</small><strong>{formatMetric(metric, simulated)}</strong></div>
+      <div className={improved ? 'is-improved' : ''}><small>With growth</small><strong>{simulated}</strong></div>
     </div>
   );
 }
@@ -73,11 +99,11 @@ function MetricComparison({
 export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStudioProps) {
   const [selectedStrategies, setSelectedStrategies] = useState<ClientStrategyId[]>([]);
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
-  const [planView, setPlanView] = useState<ClientPlanView>('current');
+  const [mapView, setMapView] = useState<ClientMapView>('current');
   const [status, setStatus] = useState<'idle' | 'running' | 'complete'>('idle');
-  const [statusMessage, setStatusMessage] = useState<string>('Choose strategies to test');
+  const [statusMessage, setStatusMessage] = useState<string>('Choose growth ideas');
   const [result, setResult] = useState<ClientSimulationResult | null>(null);
-  const [showArchitect, setShowArchitect] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const runIdRef = useRef(0);
 
   const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
@@ -102,6 +128,8 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
       ),
     [data.overlays.competitors, territoryZipSet],
   );
+  // Internal footprints inform the ranking only; the client view never
+  // renders or names them (client-safe boundary).
   const geographyPlan = useMemo(
     () =>
       buildClientGeographyPlan({
@@ -113,16 +141,17 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     [currentCampaignZips, selectedStrategies, territoryCompetitors, territoryRanked],
   );
   const recommendedZipExpansions = result ? geographyPlan.recommendedZips : [];
+  const growthVisible = mapView === 'growth' && Boolean(result);
 
   useEffect(() => {
     runIdRef.current += 1;
     setSelectedStrategies([]);
     setSelectedZip(currentCampaignZips[0] ?? territoryRanked[0]?.zip ?? null);
-    setPlanView('current');
+    setMapView('current');
     setStatus('idle');
-    setStatusMessage('Choose strategies to test');
+    setStatusMessage('Choose growth ideas');
     setResult(null);
-    setShowArchitect(false);
+    setShowContact(false);
   }, [currentCampaignZips, resetVersion, territoryRanked, view.selectedTerritoryId]);
 
   const toggleStrategy = (strategyId: ClientStrategyId) => {
@@ -134,7 +163,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     );
     setResult(null);
     setStatus('idle');
-    if (planView === 'recommended') setPlanView('diagnostic');
+    setMapView('current');
   };
 
   const runSimulation = async () => {
@@ -143,7 +172,6 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     runIdRef.current = runId;
     setStatus('running');
     setResult(null);
-    setPlanView('diagnostic');
 
     for (const step of SIMULATION_STEPS) {
       if (runIdRef.current !== runId) return;
@@ -154,12 +182,12 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     if (runIdRef.current !== runId) return;
     setResult(simulateClientScenario(selectedStrategies));
     setStatus('complete');
-    setStatusMessage('Recommended plan ready');
-    setPlanView('recommended');
+    setStatusMessage('Growth view ready');
+    setMapView('growth');
   };
 
   const displayScores = useMemo(() => {
-    if (!result) return undefined;
+    if (!growthVisible) return undefined;
     const currentSet = new Set(currentCampaignZips);
     const expansionSet = new Set(recommendedZipExpansions);
     return Object.fromEntries(
@@ -171,78 +199,100 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         ),
       ]),
     );
-  }, [currentCampaignZips, data.opportunities, recommendedZipExpansions, result]);
+  }, [currentCampaignZips, data.opportunities, growthVisible, recommendedZipExpansions]);
 
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
   const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
   const selectedOpportunity = selectedZip ? data.opportunitiesByZip.get(selectedZip) : undefined;
-  const selectedCandidate = geographyPlan.candidates.find((candidate) => candidate.zip === selectedZip);
   const selectedRole = selectedZip
     ? currentCampaignZips.includes(selectedZip)
-      ? 'Current campaign ZIP'
+      ? 'In today’s plan'
       : recommendedZipExpansions.includes(selectedZip)
-        ? 'Recommended expansion ZIP'
-        : geographyPlan.reachGapZips.includes(selectedZip)
-          ? 'Reach-gap opportunity'
-          : 'Market context ZIP'
+        ? 'Added reach'
+        : 'Market context'
     : null;
-  const selectedStrategyDefinitions = CLIENT_STRATEGIES.filter((strategy) =>
-    selectedStrategies.includes(strategy.id),
-  );
-  const diagnosticMode = planView === 'diagnostic';
-  const recommendedMode = planView === 'recommended' && Boolean(result);
-  const visibleCompetitorIds = diagnosticMode
-    ? territoryCompetitors.map((competitor) => competitor.id)
-    : [];
+
+  const reachChange = result ? percentChange(LAKEFRONT_BASELINE.qualifiedReach, result.metrics.qualifiedReach) : 0;
+  const addedCustomers = result ? result.metrics.modeledLeads - LAKEFRONT_BASELINE.modeledLeads : 0;
+  const leadsChange = result ? percentChange(LAKEFRONT_BASELINE.modeledLeads, result.metrics.modeledLeads) : 0;
+  const lowerCostPerLead = result ? result.metrics.costPerLead < LAKEFRONT_BASELINE.costPerLead : false;
 
   return (
     <main className="studio-grid product-grid">
-      <aside className="panel panel--left client-controls">
+      <aside className="panel panel--left client-rail">
         <div className="panel__heading">
           <span className="eyebrow">Client Campaign Planner</span>
           <h1>Lakefront Automotive Group</h1>
           <p>Fictional advertiser · {territoryName} qualified lead growth</p>
         </div>
 
-        <section className="client-profile-card">
-          <div><span>Annual budget</span><strong>{moneyFormatter.format(75000)}</strong></div>
-          <div><span>Current media</span><strong>TV + Streaming</strong></div>
-          <div><span>Campaign ZIPs</span><strong>{currentCampaignZips.length}</strong></div>
-          <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
+        <section className="client-section">
+          <div className="client-section__heading">
+            <span>Your campaign today</span>
+          </div>
+          <div className="client-today">
+            <div><span>Current reach</span><strong>{compactFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
+            <div><span>Frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
+            <div><span>Campaign ZIPs</span><strong>{currentCampaignZips.length}</strong></div>
+            <div><span>Estimated leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
+          </div>
         </section>
 
-        <ClientPlanControls
-          value={planView}
-          currentCount={geographyPlan.summary.currentCount}
-          reachGapCount={geographyPlan.summary.reachGapCount}
-          competitorCount={geographyPlan.summary.competitorPressureCount}
-          recommendedCount={result ? geographyPlan.summary.recommendedCount : 0}
-          recommendedDisabled={!result}
-          onChange={setPlanView}
-        />
-
-        <section className="panel-section panel-section--grow">
-          <div className="section-heading">
-            <span>Strategies to test</span>
+        <section className="client-section client-section--grow">
+          <div className="client-section__heading">
+            <span>Growth ideas</span>
             <strong>{selectedStrategies.length} selected</strong>
           </div>
-          <div className="strategy-list">
-            {CLIENT_STRATEGIES.map((strategy) => {
+          <div className="growth-idea-list">
+            {[...CLIENT_STRATEGIES]
+              .sort((a, b) => GROWTH_IDEA_ORDER.indexOf(a.id) - GROWTH_IDEA_ORDER.indexOf(b.id))
+              .map((strategy) => {
+              const copy = GROWTH_IDEA_COPY[strategy.id];
               const selected = selectedStrategies.includes(strategy.id);
               return (
                 <button
                   key={strategy.id}
-                  className={`strategy-card ${selected ? 'is-selected' : ''}`}
+                  className={`growth-idea ${selected ? 'is-selected' : ''}`}
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggleStrategy(strategy.id)}
                 >
-                  <span className="strategy-card__check">{selected ? '✓' : '+'}</span>
-                  <span><strong>{strategy.name}</strong><small>{strategy.description}</small></span>
-                  <em>{strategy.benefit}</em>
+                  <span className="growth-idea__check" aria-hidden="true">{selected ? '✓' : '+'}</span>
+                  <span className="growth-idea__body">
+                    <strong>{copy.name}</strong>
+                    <small>{copy.description}</small>
+                    <em>{copy.benefit}</em>
+                  </span>
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section className="client-section">
+          <div className="client-section__heading">
+            <span>Map view</span>
+          </div>
+          <div className="client-view-toggle" role="tablist" aria-label="Campaign map view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mapView === 'current'}
+              className={mapView === 'current' ? 'is-active' : ''}
+              onClick={() => setMapView('current')}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mapView === 'growth'}
+              className={mapView === 'growth' ? 'is-active' : ''}
+              disabled={!result}
+              onClick={() => setMapView('growth')}
+            >
+              With growth
+            </button>
           </div>
         </section>
 
@@ -252,11 +302,11 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           disabled={selectedStrategies.length === 0 || status === 'running'}
           onClick={runSimulation}
         >
-          {status === 'running' ? statusMessage : result ? 'Run another simulation' : 'Run simulation'}
+          {status === 'running' ? statusMessage : result ? 'Model different ideas' : 'See my growth plan'}
         </button>
-        <div className="synthetic-notice">
+        <div className="synthetic-notice synthetic-notice--light">
           <span className="synthetic-notice__dot" />
-          Fictional advertiser and deterministic statewide demonstration model
+          Fictional advertiser with modeled demonstration results — not a performance forecast.
         </div>
       </aside>
 
@@ -267,30 +317,29 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           resetVersion={resetVersion}
           onSelectZip={handleSelectZip}
           campaignZips={currentCampaignZips}
-          recommendedZips={recommendedMode ? recommendedZipExpansions : []}
-          reachGapZips={geographyPlan.reachGapZips}
+          recommendedZips={growthVisible ? recommendedZipExpansions : []}
           displayScores={displayScores}
-          showReachGap={diagnosticMode}
-          visibleCompetitorIds={visibleCompetitorIds}
           territoryZips={view.territoryZips}
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
         />
         <div className="map-stage__caption client-map-caption">
-          <span>{planView === 'current' ? 'Current campaign footprint' : planView === 'diagnostic' ? 'Campaign diagnostics' : 'Recommended plan'}</span>
+          <span>{growthVisible ? 'Current reach + growth' : 'Your campaign today'}</span>
           <strong>
-            {planView === 'current'
-              ? `${currentCampaignZips.length} active ZIPs outlined in cyan`
-              : planView === 'diagnostic'
-                ? 'Reach gaps and modeled competitor pressure are visible'
-                : `${recommendedZipExpansions.length} expansion ZIPs outlined in green`}
+            {growthVisible
+              ? `${recommendedZipExpansions.length} added ${recommendedZipExpansions.length === 1 ? 'area appears' : 'areas appear'} in growth green`
+              : `${currentCampaignZips.length} campaign ZIPs in Spectrum blue`}
           </strong>
+          <span className="client-map-legend">
+            <i className="is-current" aria-hidden="true" />Current reach
+            <i className="is-added" aria-hidden="true" />Added reach
+          </span>
         </div>
         {status === 'running' && (
           <div className="simulation-overlay" role="status" aria-live="polite">
             <span className="simulation-spinner" />
             <strong>{statusMessage}</strong>
-            <small>Testing deterministic strategy effects across opportunity, reach-gap, and competitor signals</small>
+            <small>Modeling deterministic growth ideas over your campaign geography</small>
           </div>
         )}
       </section>
@@ -299,48 +348,74 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         <ExperienceGuide
           tone="client"
           title="Client Campaign Planner"
-          audience="Account executives and advertiser teams"
-          purpose="Diagnose a current campaign footprint, test growth strategies, and build an explained ZIP expansion plan."
-          nextStep="Review Current plan, open Diagnose gaps, select strategies, then run the simulation."
+          audience="Advertisers with their account executive"
+          purpose="See where your campaign reaches today and what growth adds — in plain language."
+          nextStep="Choose growth ideas, compare the expanded map, then talk to your account executive."
         />
-        <div className="result-heading">
-          <span className="eyebrow">Scenario comparison</span>
-          <h2>{result ? 'Modeled improvement' : 'Current campaign baseline'}</h2>
-          <p>{result ? `Illustrative results for ${territoryName}.` : 'Diagnose the footprint, choose strategies, and model a stronger plan.'}</p>
-        </div>
 
         {selectedOpportunity && selectedRole && (
-          <section className="client-zip-context">
+          <section className="client-zip-card">
             <div>
-              <span>Selected ZIP</span>
+              <span>Selected area</span>
               <strong>{selectedOpportunity.name}</strong>
               <small>ZIP {selectedOpportunity.zip} · {selectedRole}</small>
             </div>
-            <b>{selectedOpportunity.score}</b>
-            <dl>
-              <div><dt>Reach gap</dt><dd>{geographyPlan.reachGapZips.includes(selectedOpportunity.zip) ? 'Modeled gap' : 'Covered'}</dd></div>
-              <div><dt>Competitors</dt><dd>{selectedCandidate?.competitorIds.length ?? territoryCompetitors.filter((competitor) => competitor.zips.includes(selectedOpportunity.zip)).length}</dd></div>
-            </dl>
+            <b>{selectedOpportunity.score}<i>audience fit</i></b>
           </section>
         )}
 
         {result ? (
           <>
-            <div className="result-score-card">
-              <div><span>Campaign effectiveness</span><strong>{result.metrics.effectiveness}</strong><small>from {LAKEFRONT_BASELINE.effectiveness}</small></div>
-              <span className="result-score-card__confidence">{result.confidence} confidence</span>
+            <div className="client-growth-hero">
+              <span className="eyebrow">Modeled result</span>
+              <div className="client-growth-hero__stats">
+                <div>
+                  <strong>{reachChange > 0 ? '+' : ''}{reachChange}%</strong>
+                  <span>Qualified reach</span>
+                </div>
+                <div>
+                  <strong>{addedCustomers > 0 ? '+' : ''}{numberFormatter.format(addedCustomers)}</strong>
+                  <span>Modeled customers</span>
+                </div>
+              </div>
+              <ul className="client-growth-hero__notes">
+                <li>{leadsChange > 0 ? '+' : ''}{leadsChange}% modeled leads</li>
+                <li>{recommendedZipExpansions.length} recommended {recommendedZipExpansions.length === 1 ? 'ZIP' : 'ZIPs'}</li>
+                {lowerCostPerLead && <li>Lower estimated cost per lead</li>}
+              </ul>
             </div>
 
-            <section className="comparison-list">
-              <MetricComparison label="Qualified reach" metric="qualifiedReach" baseline={LAKEFRONT_BASELINE.qualifiedReach} simulated={result.metrics.qualifiedReach} />
-              <MetricComparison label="Effective frequency" metric="effectiveFrequency" baseline={LAKEFRONT_BASELINE.effectiveFrequency} simulated={result.metrics.effectiveFrequency} />
-              <MetricComparison label="Modeled leads" metric="modeledLeads" baseline={LAKEFRONT_BASELINE.modeledLeads} simulated={result.metrics.modeledLeads} />
-              <MetricComparison label="Cost per lead" metric="costPerLead" baseline={LAKEFRONT_BASELINE.costPerLead} simulated={result.metrics.costPerLead} />
-              <MetricComparison label="Priority clusters" metric="priorityClusters" baseline={LAKEFRONT_BASELINE.priorityClusters} simulated={result.metrics.priorityClusters} />
+            <section className="client-compare-list">
+              <ComparisonRow
+                label="Qualified reach"
+                current={numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}
+                simulated={numberFormatter.format(result.metrics.qualifiedReach)}
+                improved={result.metrics.qualifiedReach > LAKEFRONT_BASELINE.qualifiedReach}
+              />
+              <ComparisonRow
+                label="Effective frequency"
+                current={LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}
+                simulated={result.metrics.effectiveFrequency.toFixed(1)}
+                improved={result.metrics.effectiveFrequency > LAKEFRONT_BASELINE.effectiveFrequency}
+              />
+              <ComparisonRow
+                label="Modeled leads"
+                current={numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}
+                simulated={numberFormatter.format(result.metrics.modeledLeads)}
+                improved={result.metrics.modeledLeads > LAKEFRONT_BASELINE.modeledLeads}
+              />
+              <ComparisonRow
+                label="Cost per lead"
+                current={`$${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}`}
+                simulated={`$${result.metrics.costPerLead.toFixed(2)}`}
+                improved={lowerCostPerLead}
+              />
             </section>
 
-            <section className="client-geography-recommendation">
-              <div className="detail-section__label">Recommended ZIP expansion</div>
+            <section className="client-new-zips">
+              <div className="client-section__heading">
+                <span>{geographyPlan.candidates.length} new high-fit {geographyPlan.candidates.length === 1 ? 'ZIP' : 'ZIPs'}</span>
+              </div>
               <div className="client-expansion-list">
                 {geographyPlan.candidates.map((candidate, index) => (
                   <button
@@ -357,62 +432,74 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
               </div>
             </section>
 
-            <section className="client-tradeoff-card">
-              <span>Strategy trade-offs</span>
-              {selectedStrategyDefinitions.map((strategy) => (
-                <div key={strategy.id}><strong>{strategy.name}</strong><small>{strategy.benefit} · Trade-off: {strategy.tradeoff}</small></div>
-              ))}
-            </section>
-
-            <section className="recommendation-card">
-              <span>Why this recommendation?</span>
+            <section className="client-why-card">
+              <span>Why this plan?</span>
               <p>{result.explanation}</p>
-              <small>Expansion ZIPs: {recommendedZipExpansions.join(', ') || 'No additional ZIPs'} · Modeled leads: {numberFormatter.format(result.leadRange.minimum)}–{numberFormatter.format(result.leadRange.maximum)}</small>
+              <small>
+                Modeled leads: {numberFormatter.format(result.leadRange.minimum)}–{numberFormatter.format(result.leadRange.maximum)} · {result.confidence} confidence
+              </small>
             </section>
 
-            <button className="architect-action" type="button" onClick={() => setShowArchitect(true)}>
-              Prepare Architect handoff <span>→</span>
+            <button className="primary-action client-contact-action" type="button" onClick={() => setShowContact(true)}>
+              Talk to your account executive
             </button>
-            <p className="model-disclosure">Illustrative modeled results using synthetic demonstration data. Not a production forecast.</p>
+            <p className="model-disclosure">Modeled ranges from deterministic synthetic demonstration data — not a performance forecast.</p>
           </>
         ) : (
           <>
-            <div className="baseline-metrics">
-              <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
+            <div className="client-story-card">
+              <span className="eyebrow">Current reach + growth</span>
+              <h2>See where you reach today — and what growth adds</h2>
+              <p>
+                Your current campaign ZIPs stay in Spectrum blue. When you model growth ideas, new
+                reach appears in growth green with the customers it could add.
+              </p>
+            </div>
+            <div className="client-baseline-list">
               <div><span>Qualified reach</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
               <div><span>Effective frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
               <div><span>Modeled leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
               <div><span>Cost per lead</span><strong>${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}</strong></div>
-              <div><span>Priority clusters</span><strong>{LAKEFRONT_BASELINE.priorityClusters}</strong></div>
             </div>
-            <section className="client-diagnostic-summary">
-              <span>Footprint diagnostic</span>
-              <div><strong>{geographyPlan.summary.currentCount}</strong><small>current ZIPs</small></div>
-              <div><strong>{geographyPlan.summary.reachGapCount}</strong><small>modeled reach gaps</small></div>
-              <div><strong>{geographyPlan.summary.competitorPressureCount}</strong><small>ZIPs with competitor pressure</small></div>
-              <p>Open <b>Diagnose gaps</b> to reveal the supporting map evidence before choosing a strategy.</p>
-            </section>
+            <div className="client-hint">
+              Pick one or more growth ideas on the left, then choose <b>See my growth plan</b>.
+            </div>
           </>
         )}
       </aside>
 
-      {showArchitect && result && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowArchitect(false)}>
-          <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="architect-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" aria-label="Close Architect handoff" onClick={() => setShowArchitect(false)}>×</button>
-            <span className="eyebrow">Conceptual handoff</span>
-            <h2 id="architect-title">Recommended plan prepared for Architect</h2>
-            <p>This prototype prepares the intelligence and scenario recommendation. Architect remains the campaign-planning and activation destination.</p>
+      {showContact && result && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowContact(false)}>
+          <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="contact-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" aria-label="Close account executive summary" onClick={() => setShowContact(false)}>×</button>
+            <span className="eyebrow">Ready for your account executive</span>
+            <h2 id="contact-title">Your growth plan is ready to discuss</h2>
+            <p>Share this modeled scenario with your Spectrum Reach account executive to review budget, timing, and creative.</p>
             <dl className="handoff-grid">
-              <div><dt>Territory</dt><dd>{territoryName}</dd></div>
-              <div><dt>Objective</dt><dd>Qualified lead growth</dd></div>
-              <div><dt>Priority ZIPs</dt><dd>{recommendedZipExpansions.join(', ')}</dd></div>
-              <div><dt>Media mix</dt><dd>Television + Streaming + Search</dd></div>
-              <div><dt>Budget range</dt><dd>$82K–$88K</dd></div>
-              <div><dt>Measurement</dt><dd>Qualified leads and cost per lead</dd></div>
+              <div><dt>Advertiser</dt><dd>Lakefront Automotive Group</dd></div>
+              <div><dt>Market</dt><dd>{territoryName}</dd></div>
+              <div>
+                <dt>Growth ideas</dt>
+                <dd>
+                  {[...selectedStrategies]
+                    .sort((a, b) => GROWTH_IDEA_ORDER.indexOf(a) - GROWTH_IDEA_ORDER.indexOf(b))
+                    .map((id) => GROWTH_IDEA_COPY[id].name)
+                    .join(' + ') || '—'}
+                </dd>
+              </div>
+              <div><dt>Added areas</dt><dd>{recommendedZipExpansions.join(', ') || 'No additional ZIPs'}</dd></div>
+              <div>
+                <dt>Modeled leads</dt>
+                <dd>{numberFormatter.format(result.leadRange.minimum)}–{numberFormatter.format(result.leadRange.maximum)}</dd>
+              </div>
+              <div><dt>Next step</dt><dd>Plan review with your account executive</dd></div>
             </dl>
-            <button className="primary-action" type="button" onClick={() => setShowArchitect(false)}>Continue in Architect →</button>
-            <small>No live Architect integration is represented in this demonstration.</small>
+            <section className="brief-recommendation">
+              <span>What happens next</span>
+              <p>Your account executive finalizes the recommendation and activates the campaign plan in Architect.</p>
+            </section>
+            <button className="primary-action" type="button" onClick={() => setShowContact(false)}>Done</button>
+            <small>Conceptual contact flow. No live Architect integration or real account team is represented.</small>
           </section>
         </div>
       )}
