@@ -104,7 +104,7 @@ export function ProductShell({ data }: ProductShellProps) {
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
           <div>
-            <span className="brand-kicker">Spectrum Reach</span>
+            <span className="brand-kicker">Reach</span>
             <strong>Opportunity Lab</strong>
           </div>
         </div>

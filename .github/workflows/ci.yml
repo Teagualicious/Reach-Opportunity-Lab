@@ -29,6 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # Release phase prefix. Update in one place when the product graduates
+      # (Alpha -> Beta -> Release Candidate -> General Availability).
+      RELEASE_PHASE: Alpha
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,11 +42,21 @@ jobs:
         run: npm install
       - name: Build application
         run: npm run build
+      - name: Compute release version
+        id: version
+        # Version = <major.minor from package.json>.<monotonic build number>.
+        # Bump package.json's major/minor for milestones; the build number
+        # guarantees every release is unique and ordered.
+        run: |
+          BASE_VERSION="$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")"
+          VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_name=${RELEASE_PHASE} Release ${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Package release files
         id: package
         run: |
-          BUILD_ZIP="${{ github.event.repository.name }}_build-${{ github.run_number }}.zip"
-          SOURCE_ZIP="${{ github.event.repository.name }}_source-${{ github.run_number }}.zip"
+          BUILD_ZIP="${{ github.event.repository.name }}_build-v${{ steps.version.outputs.version }}.zip"
+          SOURCE_ZIP="${{ github.event.repository.name }}_source-v${{ steps.version.outputs.version }}.zip"
           (cd dist && zip -r "../$BUILD_ZIP" .)
           zip -r "$SOURCE_ZIP" . -x '.git/*' 'node_modules/*' 'dist/*' '*.tsbuildinfo' 'tests/*'
           echo "build_zip=$BUILD_ZIP" >> "$GITHUB_OUTPUT"
@@ -50,8 +64,8 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Opportunity Lab build ${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.release_name }}
           generate_release_notes: true
           files: |
             ${{ steps.package.outputs.build_zip }}

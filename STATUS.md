@@ -39,6 +39,8 @@ Phase 2 — Statewide map foundation and first product journeys
 - Checked in `package-lock.json` for reproducible installs.
 - Added a responsive compact layout mode (≤900px, phones and portrait tablets): full-bleed map, left/right panels as one-at-a-time bottom sheets with "Controls"/"Details" pills, the product-mode switch as a fixed bottom bar, stacked header, safe-area insets, and 16px compact selects to prevent iOS focus zoom. Fixed the previous ≤900px layout, which covered the map with both panel overlays and hid the mode switch and reset entirely.
 - Added the shared viewport-mode contract: `useViewportMode` (matchMedia-driven), `ProductViewContext.viewportMode`, and a matching CSS breakpoint; documented in `BUILD_HANDOFF.md` and `CLAUDE.md` that all future surfaces must render in both modes and must not use user-agent detection.
+- Scrubbed all direct company-brand mentions from the repository: the product is now "Reach Opportunity Lab" across the UI header, HTML titles/descriptions, README, CLAUDE.md, BUILD_HANDOFF.md, ARCHITECTURE.md, PRODUCT_BUILD_SPEC.md, and the offline package README; remaining company-specific phrasing became neutral ("real company data", "brand-aligned").
+- Standardized the release format: releases publish as `<Phase> Release <MAJOR.MINOR>.<build>` (e.g. `Alpha Release 0.1.312`) with tag `v<MAJOR.MINOR>.<build>`; phase lives in one `RELEASE_PHASE` env value in `ci.yml`, major/minor comes from `package.json`, and the build number is the monotonic CI run number. Convention documented in `BUILD_HANDOFF.md`.
 - Current validation:
   - standard CI run 299 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
   - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload;
@@ -130,6 +132,11 @@ Phase 2 — Statewide map foundation and first product journeys
   Considered: user-agent/device detection, a separate mobile build target, and per-feature ad-hoc media queries
   Rejected because: UA sniffing misclassifies tablets and desktop-narrow windows and ignores rotation/resize; a separate target duplicates every feature; scattered per-feature queries drift apart
   Must preserve: exactly two layout modes (`expanded`, `compact`); `useViewportMode`/`ProductViewContext.viewportMode` and the layout.css breakpoint stay in sync at 900px; compact keeps the map visible by default with bottom sheets opening one at a time; all product modes remain reachable from the fixed bottom bar
+
+- 2026-07-16 | DECISION: releases are named `<Phase> Release <MAJOR.MINOR>.<build>` and tagged `v<MAJOR.MINOR>.<build>`, generated entirely by CI
+  Considered: keeping `build-<run>` tags, manual semver tagging per release, and letter suffixes (0.1a, 0.1b)
+  Rejected because: `build-<run>` carries no product-maturity signal, manual tagging does not scale with merge-triggered releases, and letter suffixes exhaust and sort poorly
+  Must preserve: phase changes happen only via the single `RELEASE_PHASE` value in `ci.yml`; major/minor milestones bump `package.json`; no hand-created releases or tags; the offline workflow keeps attaching to the latest release regardless of tag format
 
 - 2026-07-16 | DECISION: selecting a ZIP changes both detail state and map camera focus
   Considered: updating the detail panel without moving the map
