@@ -1,41 +1,65 @@
 # Spectrum Reach Opportunity Lab
 
-A local-first, production-shaped executive prototype for ZIP-level market opportunity intelligence and deterministic strategy simulation.
+A production-shaped executive prototype for statewide ZIP-level opportunity intelligence and deterministic strategy simulation.
 
 > **Find the opportunity. Simulate the strategy. Activate through Architect.**
 
+## Stable preview
+
+The latest merged build is published after every merge to `main`:
+
+```text
+https://teagualicious.github.io/Reach-Opportunity-Lab/
+```
+
 ## Current product
 
-The application contains three connected experiences powered by one typed ZIP/ZCTA intelligence layer:
+The application uses one shared Ohio ZIP/ZCTA intelligence layer across three experiences:
 
-- **Opportunity Explorer** — Cleveland–Akron opportunity heat map, filters, ranked ZIPs, explainable score components, confidence, market context, synthetic reach gaps, and competitor footprint controls.
-- **Client Growth Studio** — fictional Lakefront Automotive campaign footprint, four selectable strategies, deterministic simulation theater, current-versus-modeled results, and a conceptual Architect handoff.
-- **Market Growth Studio** — New Business, Account Growth, Retention Risk, and Category Opportunity modes that reweight and recolor the shared market intelligence.
+- **Opportunity Explorer** — statewide ZIP opportunity map, territory focus, score/category filters, ranked ZIPs, explainable components, confidence, synthetic reach gaps, and competitor overlays.
+- **Client Growth Studio** — fictional Lakefront Automotive footprint, selectable strategies, deterministic simulation, territory-specific expansion ZIPs, current-versus-modeled results, and conceptual Architect handoff.
+- **Market Growth Studio** — New Business, Account Growth, Retention Risk, and Category Opportunity modes that reweight the selected territory and generate fictional seller actions.
 
-All advertiser, account, prospect, performance, coverage, recommendation, and opportunity values are synthetic demonstration data.
+The shell is designed for executive review in one browser viewport. The document does not scroll; each sidebar scrolls independently and can be collapsed to expand the map.
+
+## Ohio operating territories
+
+Every Ohio 2020 Census-derived ZCTA is included and assigned to one deterministic synthetic operating territory:
+
+- Northeast Ohio · Cleveland–Akron
+- Eastern Ohio · Youngstown
+- Northwest Ohio · Toledo
+- Central Ohio · Columbus
+- West Central Ohio · Dayton
+- Southwest Ohio · Cincinnati
+- Southeast Ohio · Athens–Marietta
+
+The selector also includes **All Ohio**. Selecting a territory fits the map to that area, keeps its ZIPs vivid, and greys the remaining statewide context.
+
+The existing Cleveland–Akron records retain their curated demonstration narratives and metrics. Remaining Ohio ZIPs receive deterministic synthetic baseline scores so every territory can be explored without claiming production intelligence.
 
 ## Geography and map data
 
-The repository checks in a compact **2020 Census-derived ZIP Code Tabulation Area (ZCTA)** fixture containing exactly the 26 Cleveland–Akron demonstration ZIPs. Runtime geometry is loaded through `StaticZctaGeometrySource`, so polygon rendering does not depend on a browser-time Census service request.
+The runtime uses checked-in statewide Ohio ZCTA geometry generated from a documented simplified 2020 Census-derived source:
 
-Geometry provenance and transformations are documented in:
+- `public/data/ohio-zcta-2020.geojson`
+- `public/data/ohio-opportunities.json`
+- `public/data/ohio-market.provenance.json`
+- `scripts/build-ohio-market.mjs`
+- `scripts/validate-ohio-market.mjs`
 
-- `public/data/cleveland-akron-zcta-2020.provenance.json`
-- `scripts/build-zcta-fixture.mjs`
-- `scripts/validate-zcta-fixture.mjs`
+Do not edit generated geographic or statewide opportunity fixtures manually. Change the builder and regenerate them.
 
-The standard visual basemap uses OpenStreetMap raster tiles through the isolated MapLibre adapter. It requires internet access but no API key. If the checked-in ZCTA fixture cannot be loaded, the application uses a clearly labeled synthetic geometry fallback rather than failing.
+The standard application uses a light grayscale OpenStreetMap raster basemap. The ZIP opportunity scale progresses from light to deep blue; inactive territories use neutral gray; selection remains gold and campaign emphasis remains cyan.
 
 ## All-offline visual review
 
-A separate distribution target provides the same product journeys with no runtime network access. It bundles:
+A separate distribution target renders the same product journeys without runtime network access. It embeds:
 
-- the checked-in Cleveland–Akron ZCTA geometry;
-- Census TIGER/Line primary and secondary roads;
-- Census hydrography and county context;
-- local place labels;
-- all synthetic product fixtures;
-- application JavaScript and CSS in one HTML file.
+- every Ohio ZCTA and statewide synthetic opportunity record;
+- seven major-city territory definitions;
+- Census TIGER/Line roads, hydrography, county context, and major-city labels;
+- all application JavaScript, CSS, and demonstration fixtures in one HTML file.
 
 Build and validate it with:
 
@@ -43,7 +67,7 @@ Build and validate it with:
 npm run offline:all
 ```
 
-The resulting folder is:
+Output:
 
 ```text
 offline-dist/Opportunity-Lab-All-Offline/
@@ -51,33 +75,16 @@ offline-dist/Opportunity-Lab-All-Offline/
 
 `Opportunity-Lab-All-Offline.html` opens directly from disk. Windows and macOS launchers are included. No Node.js, installation, local server, administrator access, or internet connection is required for the packaged review build.
 
-The offline target has a hard request boundary: it serves only explicitly embedded fixture paths and rejects every other runtime request. It is a review/distribution adapter; the normal application retains its online OpenStreetMap basemap.
-
-## Stable GitHub Pages preview
-
-The `Deploy GitHub Pages preview` workflow publishes the current `main` branch to one stable review URL after every merge. The Pages build uses Vite's `/Reach-Opportunity-Lab/` base path and the repository's public-data loaders resolve through `import.meta.env.BASE_URL`, so the same source works locally, in release builds, and under the GitHub Pages project subpath.
-
-Expected project URL:
-
-```text
-https://teagualicious.github.io/Reach-Opportunity-Lab/
-```
-
-The first deployment may require selecting **GitHub Actions** as the Pages source under the repository's Pages settings. Subsequent merges deploy automatically.
-
 ## Run locally
 
-Requirements:
-
-- Node.js 20 or newer
-- npm
+Requirements: Node.js 20 or newer and npm.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite, normally `http://127.0.0.1:5173`.
+Open the URL printed by Vite, normally `http://127.0.0.1:5173`.
 
 ## Validate
 
@@ -88,65 +95,63 @@ npm run build
 npm run preview
 ```
 
-`npm run test` first validates the checked-in ZCTA fixture, then runs the Vitest suite.
+`npm run test` first validates statewide geometry, opportunity records, territory coverage, and provenance, then runs the Vitest suite.
 
-To regenerate and validate the geographic fixture:
+Regenerate and validate the statewide market:
 
 ```bash
 npm run geometry:refresh
 npm run geometry:validate
 ```
 
-To generate the offline map context and package independently:
+The legacy 26-ZIP fixture commands remain available only for historical/reference work:
 
 ```bash
-npm run offline:context
-npm run offline:build
-npm run offline:validate
+npm run legacy-geometry:refresh
+npm run legacy-geometry:validate
 ```
-
-CI performs typechecking, tests, and a production build on every push and pull request. After a successful merge to `main`, the release job publishes static-build and source ZIP files under a `build-<run_number>` tag, the all-offline workflow attaches `Opportunity-Lab-All-Offline.zip` to the latest release, and the Pages workflow updates the stable browser preview.
 
 ## Architecture
 
 ```text
-public geographic + synthetic demonstration fixtures
+public statewide geography + deterministic synthetic fixtures
         ↓
 DemoOpportunityRepository / ZipGeometrySource
         ↓
-pure TypeScript domain scoring and simulation
+pure TypeScript opportunity, territory, scoring, and simulation domain
         ↓
-React product features
+shared React territory and panel state
         ↓
-MapLibre rendering adapter
+Opportunity Explorer / Client Growth Studio / Market Growth Studio
         ↓
-standard online basemap OR dedicated offline-review adapter
+MapLibre standard or all-offline presentation adapter
 ```
 
 Primary boundaries:
 
-- `src/domain/` — pure scoring, simulation, recommendation, and overlay contracts
-- `src/data/` — repository and geometry-source adapters
-- `src/map/` — MapLibre sources, layers, feature state, and basemap adapters
+- `src/domain/` — pure scoring, simulation, territory, recommendation, and overlay contracts
+- `src/data/` — repository, public-asset, and geometry-source adapters
+- `src/app/` — composition root, shared territory selection, product navigation, and panel collapse state
+- `src/map/` — MapLibre sources, layers, feature state, viewport fitting, and basemap adapters
 - `src/features/` — product-owned UI and orchestration
-- `src/components/` — reusable presentation components
-- `public/data/` — public geographic fixtures plus deterministic synthetic demonstration fixtures
-- `scripts/` — reproducible geometry, offline-context, packaging, and validation utilities
+- `public/data/` — public geographic fixtures and deterministic synthetic business fixtures
+- `scripts/` — reproducible market generation, offline context, packaging, and validation
 
 ## Documentation
 
-Read these in order before non-trivial work:
+Read these before non-trivial work:
 
-1. [`STATUS.md`](STATUS.md) — current phase, completed work, next tasks, and decision log
-2. [`ARCHITECTURE.md`](ARCHITECTURE.md) — dependency boundaries and scaling rules
-3. [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — product vision, scenarios, acceptance criteria, and roadmap
-4. [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) — current implementation map and technical handoff
-5. [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md) — agent workflow and repository laws
+1. [`STATUS.md`](STATUS.md)
+2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
+3. [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md)
+4. [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md)
+5. [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md)
 
 ## Trust and data boundaries
 
 - No real Spectrum Reach, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
-- Client-facing and internal-only data must remain separate at model and feature boundaries.
-- Simulation results are illustrative and deterministic, not production forecasts.
-- Geographic boundaries and offline context preserve source provenance; business overlays remain synthetic.
+- All opportunity, territory, coverage, prospect, recommendation, and simulation values are synthetic demonstration data.
+- Client-facing and internal-only fields remain separated at model and feature boundaries.
+- Geographic source provenance is preserved.
+- Simulation outputs are illustrative and deterministic, not production forecasts.
 - Opportunity Lab is the upstream intelligence and scenario-planning layer; Architect remains the activation destination.
