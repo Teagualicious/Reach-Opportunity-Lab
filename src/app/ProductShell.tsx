@@ -18,11 +18,27 @@ interface ProductShellProps {
   data: OpportunityMarket;
 }
 
-const MODE_LABELS: Readonly<Record<ProductMode, string>> = {
-  explorer: 'Opportunity Explorer',
-  'client-growth': 'Client Growth Studio',
-  'market-growth': 'Seller Growth Studio',
-};
+const MODE_DEFINITIONS: readonly {
+  id: ProductMode;
+  label: string;
+  compactLabel: string;
+}[] = [
+  {
+    id: 'explorer',
+    label: 'Market Opportunity Map',
+    compactLabel: 'Market Map',
+  },
+  {
+    id: 'market-growth',
+    label: 'Seller Action Center',
+    compactLabel: 'Seller Actions',
+  },
+  {
+    id: 'client-growth',
+    label: 'Client Campaign Planner',
+    compactLabel: 'Campaign Plan',
+  },
+];
 
 export function ProductShell({ data }: ProductShellProps) {
   const territories = data.market.territories ?? [];
@@ -115,17 +131,18 @@ export function ProductShell({ data }: ProductShellProps) {
           onChange={setSelectedTerritoryId}
         />
 
-        <div className="mode-switch" role="tablist" aria-label="Product mode">
-          {(Object.keys(MODE_LABELS) as ProductMode[]).map((candidate) => (
+        <div className="mode-switch" role="tablist" aria-label="Product workspace">
+          {MODE_DEFINITIONS.map((definition) => (
             <button
-              key={candidate}
-              className={`mode-switch__button ${mode === candidate ? 'is-active' : ''}`}
+              key={definition.id}
+              className={`mode-switch__button ${mode === definition.id ? 'is-active' : ''}`}
               type="button"
               role="tab"
-              aria-selected={mode === candidate}
-              onClick={() => setMode(candidate)}
+              aria-label={definition.label}
+              aria-selected={mode === definition.id}
+              onClick={() => setMode(definition.id)}
             >
-              {MODE_LABELS[candidate]}
+              {isCompact ? definition.compactLabel : definition.label}
             </button>
           ))}
         </div>
@@ -177,8 +194,8 @@ export function ProductShell({ data }: ProductShellProps) {
       </button>
 
       {mode === 'explorer' && <ZipExplorer data={data} resetVersion={resetVersion} view={view} />}
-      {mode === 'client-growth' && <ClientGrowthStudio data={data} resetVersion={resetVersion} view={view} />}
       {mode === 'market-growth' && <MarketGrowthStudio data={data} resetVersion={resetVersion} view={view} />}
+      {mode === 'client-growth' && <ClientGrowthStudio data={data} resetVersion={resetVersion} view={view} />}
     </div>
   );
 }
