@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
 import { MapBreadcrumb } from '../../components/MapBreadcrumb';
 import { RegionPicker } from '../../components/RegionPicker';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
+import { selectClientCampaignZips } from '../../domain/clientAdvertiser';
 import { buildClientGeographyPlan } from '../../domain/clientGeography';
 import { buildRegionSummaries } from '../../domain/regionSummary';
 import {
+  CLIENT_ADVERTISER_PROFILES,
   CLIENT_STRATEGIES,
-  LAKEFRONT_BASELINE,
-  LAKEFRONT_CAMPAIGN_TERRITORY_ID,
-  LAKEFRONT_CAMPAIGN_ZIPS,
+  DEFAULT_CLIENT_ADVERTISER,
+  getClientAdvertiserProfile,
   simulateClientScenario,
+  type ClientAdvertiserId,
+  type ClientGrowthIdeaCopy,
   type ClientSimulationResult,
   type ClientStrategyId,
 } from '../../domain/clientScenario';
@@ -26,10 +29,10 @@ interface ClientGrowthStudioProps {
 const numberFormatter = new Intl.NumberFormat('en-US');
 const compactFormatter = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
 
+type GrowthIdeaCopy = Readonly<Record<ClientStrategyId, ClientGrowthIdeaCopy>>;
+
 /** Client-facing growth-idea language for the shared strategy definitions. */
-const GROWTH_IDEA_COPY: Readonly<
-  Record<ClientStrategyId, { name: string; description: string; benefit: string }>
-> = {
+const BASE_GROWTH_IDEA_COPY: GrowthIdeaCopy = {
   'streaming-reach': {
     name: 'Add Streaming',
     description: 'Reach more of your audience across every screen they watch.',
@@ -100,6 +103,9 @@ function ComparisonRow({
 }
 
 export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStudioProps) {
+  const [selectedAdvertiserId, setSelectedAdvertiserId] = useState<ClientAdvertiserId>(
+    DEFAULT_CLIENT_ADVERTISER.id,
+  );
   const [selectedStrategies, setSelectedStrategies] = useState<ClientStrategyId[]>([]);
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [mapView, setMapView] = useState<ClientMapView>('current');
@@ -109,6 +115,18 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
   const [showContact, setShowContact] = useState(false);
   const runIdRef = useRef(0);
 
+  const advertiser = useMemo(
+    () => getClientAdvertiserProfile(selectedAdvertiserId),
+    [selectedAdvertiserId],
+  );
+  const baseline = advertiser.baseline;
+  const growthIdeaCopy = useMemo<GrowthIdeaCopy>(
+    () => ({
+      ...BASE_GROWTH_IDEA_COPY,
+      'high-value-services': advertiser.premiumGrowthIdea,
+    }),
+    [advertiser],
+  );
   const regionMode = view.regionMode;
   const territories = data.market.territories ?? [];
   const regionSummaries = useMemo(
@@ -123,13 +141,15 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         .sort((a, b) => b.score - a.score),
     [data.opportunities, territoryZipSet],
   );
-  const isCanonicalMarket = view.selectedTerritory?.id === LAKEFRONT_CAMPAIGN_TERRITORY_ID;
-  const currentCampaignZips = useMemo(() => {
-    if (isCanonicalMarket) {
-      return LAKEFRONT_CAMPAIGN_ZIPS.filter((zip) => territoryZipSet.has(zip));
-    }
-    return territoryRanked.slice(0, 14).map(({ zip }) => zip);
-  }, [isCanonicalMarket, territoryRanked, territoryZipSet]);
+  const currentCampaignZips = useMemo(
+    () =>
+      selectClientCampaignZips(
+        territoryRanked,
+        advertiser,
+        view.selectedTerritory?.id ?? null,
+      ),
+    [advertiser, territoryRanked, view.selectedTerritory?.id],
+  );
   const territoryCompetitors = useMemo(
     () =>
       data.overlays.competitors.filter((competitor) =>
@@ -163,6 +183,10 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     setShowContact(false);
   }, [currentCampaignZips, resetVersion, territoryRanked, view.selectedTerritoryId]);
 
+  const handleAdvertiserChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedAdvertiserId(event.target.value as ClientAdvertiserId);
+  };
+
   const toggleStrategy = (strategyId: ClientStrategyId) => {
     if (status === 'running') return;
     setSelectedStrategies((current) =>
@@ -189,7 +213,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     }
 
     if (runIdRef.current !== runId) return;
-    setResult(simulateClientScenario(selectedStrategies));
+    setResult(simulateClientScenario(selectedStrategies, advertiser));
     setStatus('complete');
     setStatusMessage('Growth view ready');
     setMapView('growth');
@@ -221,23 +245,35 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         : 'Market context'
     : null;
 
-  const reachChange = result ? percentChange(LAKEFRONT_BASELINE.qualifiedReach, result.metrics.qualifiedReach) : 0;
-  const addedCustomers = result ? result.metrics.modeledLeads - LAKEFRONT_BASELINE.modeledLeads : 0;
-  const leadsChange = result ? percentChange(LAKEFRONT_BASELINE.modeledLeads, result.metrics.modeledLeads) : 0;
-  const lowerCostPerLead = result ? result.metrics.costPerLead < LAKEFRONT_BASELINE.costPerLead : false;
+  const reachChange = result ? percentChange(baseline.qualifiedReach, result.metrics.qualifiedReach) : 0;
+  const addedCustomers = result ? result.metrics.modeledLeads - baseline.modeledLeads : 0;
+  const leadsChange = result ? percentChange(baseline.modeledLeads, result.metrics.modeledLeads) : 0;
+  const lowerCostPerLead = result ? result.metrics.costPerLead < baseline.costPerLead : false;
 
   return (
     <main className="studio-grid product-grid">
       <aside className="panel panel--left client-rail">
         <div className="panel__heading">
           <span className="eyebrow">Client Campaign Planner</span>
-          <h1>Lakefront Automotive Group</h1>
+          <h1>{advertiser.name}</h1>
           <p>
             {regionMode
-              ? 'Fictional advertiser · choose the campaign market'
-              : `Fictional advertiser · ${territoryName} qualified lead growth`}
+              ? `Fictional ${advertiser.category.toLowerCase()} advertiser · choose the campaign market`
+              : `Fictional ${advertiser.category.toLowerCase()} advertiser · ${territoryName} growth`}
           </p>
         </div>
+
+        <label className="client-profile-picker">
+          <span>Advertiser scenario</span>
+          <select value={selectedAdvertiserId} onChange={handleAdvertiserChange}>
+            {CLIENT_ADVERTISER_PROFILES.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} · {profile.category}
+              </option>
+            ))}
+          </select>
+          <small>{advertiser.summary} Demo home market: {advertiser.homeMarketLabel}.</small>
+        </label>
 
         {regionMode ? (
           <>
@@ -254,10 +290,10 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
             <span>Your campaign today</span>
           </div>
           <div className="client-today">
-            <div><span>Current reach</span><strong>{compactFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
-            <div><span>Frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
+            <div><span>Current reach</span><strong>{compactFormatter.format(baseline.qualifiedReach)}</strong></div>
+            <div><span>Frequency</span><strong>{baseline.effectiveFrequency.toFixed(1)}</strong></div>
             <div><span>Campaign ZIPs</span><strong>{currentCampaignZips.length}</strong></div>
-            <div><span>Estimated leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
+            <div><span>Estimated leads</span><strong>{numberFormatter.format(baseline.modeledLeads)}</strong></div>
           </div>
         </section>
 
@@ -270,7 +306,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
             {[...CLIENT_STRATEGIES]
               .sort((a, b) => GROWTH_IDEA_ORDER.indexOf(a.id) - GROWTH_IDEA_ORDER.indexOf(b.id))
               .map((strategy) => {
-              const copy = GROWTH_IDEA_COPY[strategy.id];
+              const copy = growthIdeaCopy[strategy.id];
               const selected = selectedStrategies.includes(strategy.id);
               return (
                 <button
@@ -388,7 +424,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           purpose="See where your campaign reaches today and what growth adds — in plain language."
           nextStep={
             regionMode
-              ? 'Choose the market where this campaign runs.'
+              ? 'Choose an advertiser scenario and the market where its campaign runs.'
               : 'Choose growth ideas, compare the expanded map, then talk to your account executive.'
           }
         />
@@ -396,10 +432,10 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         {regionMode ? (
           <div className="client-story-card">
             <span className="eyebrow">Getting started</span>
-            <h2>Choose your campaign market</h2>
+            <h2>Choose {advertiser.name}’s campaign market</h2>
             <p>
-              Pick the region where Lakefront Automotive runs its campaign. You will see today’s
-              reach first, then what growth could add.
+              Pick the region where this fictional campaign runs. The profile’s demo home market is
+              {' '}{advertiser.homeMarketLabel}; every market remains available for the executive walkthrough.
             </p>
           </div>
         ) : (
@@ -439,25 +475,25 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
             <section className="client-compare-list">
               <ComparisonRow
                 label="Qualified reach"
-                current={numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}
+                current={numberFormatter.format(baseline.qualifiedReach)}
                 simulated={numberFormatter.format(result.metrics.qualifiedReach)}
-                improved={result.metrics.qualifiedReach > LAKEFRONT_BASELINE.qualifiedReach}
+                improved={result.metrics.qualifiedReach > baseline.qualifiedReach}
               />
               <ComparisonRow
                 label="Effective frequency"
-                current={LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}
+                current={baseline.effectiveFrequency.toFixed(1)}
                 simulated={result.metrics.effectiveFrequency.toFixed(1)}
-                improved={result.metrics.effectiveFrequency > LAKEFRONT_BASELINE.effectiveFrequency}
+                improved={result.metrics.effectiveFrequency > baseline.effectiveFrequency}
               />
               <ComparisonRow
                 label="Modeled leads"
-                current={numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}
+                current={numberFormatter.format(baseline.modeledLeads)}
                 simulated={numberFormatter.format(result.metrics.modeledLeads)}
-                improved={result.metrics.modeledLeads > LAKEFRONT_BASELINE.modeledLeads}
+                improved={result.metrics.modeledLeads > baseline.modeledLeads}
               />
               <ComparisonRow
                 label="Cost per lead"
-                current={`$${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}`}
+                current={`$${baseline.costPerLead.toFixed(2)}`}
                 simulated={`$${result.metrics.costPerLead.toFixed(2)}`}
                 improved={lowerCostPerLead}
               />
@@ -500,17 +536,17 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           <>
             <div className="client-story-card">
               <span className="eyebrow">Current reach + growth</span>
-              <h2>See where you reach today — and what growth adds</h2>
+              <h2>See where {advertiser.name} reaches today — and what growth adds</h2>
               <p>
-                Your current campaign ZIPs stay in Spectrum blue. When you model growth ideas, new
-                reach appears in growth green with the customers it could add.
+                Current campaign ZIPs stay in Spectrum blue. When you model growth ideas, new reach
+                appears in growth green with the customers it could add.
               </p>
             </div>
             <div className="client-baseline-list">
-              <div><span>Qualified reach</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
-              <div><span>Effective frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
-              <div><span>Modeled leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
-              <div><span>Cost per lead</span><strong>${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}</strong></div>
+              <div><span>Qualified reach</span><strong>{numberFormatter.format(baseline.qualifiedReach)}</strong></div>
+              <div><span>Effective frequency</span><strong>{baseline.effectiveFrequency.toFixed(1)}</strong></div>
+              <div><span>Modeled leads</span><strong>{numberFormatter.format(baseline.modeledLeads)}</strong></div>
+              <div><span>Cost per lead</span><strong>${baseline.costPerLead.toFixed(2)}</strong></div>
             </div>
             <div className="client-hint">
               Pick one or more growth ideas on the left, then choose <b>See my growth plan</b>.
@@ -523,20 +559,20 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
 
       {showContact && result && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowContact(false)}>
-          <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="contact-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section className="architect-modal" role="dialog" aria-modal="true" aria-labelledby="contact-title" onMouseDown={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}>
             <button className="modal-close" type="button" aria-label="Close account executive summary" onClick={() => setShowContact(false)}>×</button>
             <span className="eyebrow">Ready for your account executive</span>
             <h2 id="contact-title">Your growth plan is ready to discuss</h2>
             <p>Share this modeled scenario with your Spectrum Reach account executive to review budget, timing, and creative.</p>
             <dl className="handoff-grid">
-              <div><dt>Advertiser</dt><dd>Lakefront Automotive Group</dd></div>
+              <div><dt>Advertiser</dt><dd>{advertiser.name}</dd></div>
               <div><dt>Market</dt><dd>{territoryName}</dd></div>
               <div>
                 <dt>Growth ideas</dt>
                 <dd>
                   {[...selectedStrategies]
                     .sort((a, b) => GROWTH_IDEA_ORDER.indexOf(a) - GROWTH_IDEA_ORDER.indexOf(b))
-                    .map((id) => GROWTH_IDEA_COPY[id].name)
+                    .map((id) => growthIdeaCopy[id].name)
                     .join(' + ') || '—'}
                 </dd>
               </div>
