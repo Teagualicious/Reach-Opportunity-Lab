@@ -22,8 +22,10 @@ interface OpportunityMapProps {
   onSelectZip: (zip: string | null) => void;
   activeZips?: readonly string[];
   campaignZips?: readonly string[];
+  recommendedZips?: readonly string[];
   displayScores?: Readonly<Record<string, number>>;
   showReachGap?: boolean;
+  reachGapZips?: readonly string[];
   visibleCompetitorIds?: readonly string[];
   territoryZips?: readonly string[];
   viewportBounds?: GeographicBounds;
@@ -36,7 +38,7 @@ const LINE_LAYER_ID = 'zip-opportunity-line';
 const REACH_GAP_FILL_LAYER_ID = 'reach-gap-fill';
 const REACH_GAP_LINE_LAYER_ID = 'reach-gap-line';
 
-type ZipFlagStateKey = 'dim' | 'campaign' | 'territoryDim';
+type ZipFlagStateKey = 'dim' | 'campaign' | 'recommended' | 'territoryDim';
 
 function competitorFillLayerId(competitorId: string): string {
   return `competitor-${competitorId}-fill`;
@@ -141,8 +143,10 @@ export function OpportunityMap({
   onSelectZip,
   activeZips,
   campaignZips = [],
+  recommendedZips = [],
   displayScores,
   showReachGap = false,
+  reachGapZips,
   visibleCompetitorIds = [],
   territoryZips,
   viewportBounds,
@@ -161,6 +165,11 @@ export function OpportunityMap({
     return new Set(allZips.filter((zip) => !active.has(zip)));
   }, [activeZips, allZips]);
   const campaignZipSet = useMemo(() => new Set(campaignZips), [campaignZips]);
+  const recommendedZipSet = useMemo(() => new Set(recommendedZips), [recommendedZips]);
+  const effectiveReachGapZips = useMemo(
+    () => reachGapZips ?? data.overlays.reachGapZips,
+    [data.overlays.reachGapZips, reachGapZips],
+  );
   const territoryDimmedZips = useMemo(
     () => new Set(allZips.filter((zip) => !territoryZipSet.has(zip))),
     [allZips, territoryZipSet],
@@ -169,6 +178,8 @@ export function OpportunityMap({
   const territoryZipSetRef = useRef(territoryZipSet);
   const dimmedZipsRef = useRef(dimmedZips);
   const campaignZipSetRef = useRef(campaignZipSet);
+  const recommendedZipSetRef = useRef(recommendedZipSet);
+  const reachGapZipsRef = useRef<readonly string[]>(effectiveReachGapZips);
   const territoryDimmedZipsRef = useRef(territoryDimmedZips);
   const displayScoresRef = useRef(displayScores);
   const viewportBoundsRef = useRef<GeographicBounds>(viewportBounds ?? data.market.bounds);
@@ -179,6 +190,7 @@ export function OpportunityMap({
   // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
   const appliedDimmedRef = useRef<ReadonlySet<string>>(new Set());
   const appliedCampaignRef = useRef<ReadonlySet<string>>(new Set());
+  const appliedRecommendedRef = useRef<ReadonlySet<string>>(new Set());
   const appliedTerritoryDimmedRef = useRef<ReadonlySet<string>>(new Set());
   const appliedDisplayScoresRef = useRef<Readonly<Record<string, number>> | undefined>(undefined);
 
@@ -227,6 +239,7 @@ export function OpportunityMap({
     mapRef.current = map;
     appliedDimmedRef.current = new Set();
     appliedCampaignRef.current = new Set();
+    appliedRecommendedRef.current = new Set();
     appliedTerritoryDimmedRef.current = new Set();
     appliedDisplayScoresRef.current = undefined;
     popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
@@ -256,7 +269,7 @@ export function OpportunityMap({
         id: REACH_GAP_FILL_LAYER_ID,
         type: 'fill',
         source: SOURCE_ID,
-        filter: zipMembershipFilter(data.overlays.reachGapZips),
+        filter: zipMembershipFilter(reachGapZipsRef.current),
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
           'fill-color': '#8b5cf6',
@@ -319,6 +332,12 @@ export function OpportunityMap({
 
       appliedDimmedRef.current = syncZipFlagState(map, appliedDimmedRef.current, dimmedZipsRef.current, 'dim');
       appliedCampaignRef.current = syncZipFlagState(map, appliedCampaignRef.current, campaignZipSetRef.current, 'campaign');
+      appliedRecommendedRef.current = syncZipFlagState(
+        map,
+        appliedRecommendedRef.current,
+        recommendedZipSetRef.current,
+        'recommended',
+      );
       appliedTerritoryDimmedRef.current = syncZipFlagState(
         map,
         appliedTerritoryDimmedRef.current,
@@ -427,6 +446,18 @@ export function OpportunityMap({
   }, [campaignZipSet]);
 
   useEffect(() => {
+    recommendedZipSetRef.current = recommendedZipSet;
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    appliedRecommendedRef.current = syncZipFlagState(
+      map,
+      appliedRecommendedRef.current,
+      recommendedZipSet,
+      'recommended',
+    );
+  }, [recommendedZipSet]);
+
+  useEffect(() => {
     territoryZipSetRef.current = territoryZipSet;
     territoryDimmedZipsRef.current = territoryDimmedZips;
     const map = mapRef.current;
@@ -450,6 +481,15 @@ export function OpportunityMap({
       displayScores,
     );
   }, [allZips, displayScores]);
+
+  useEffect(() => {
+    reachGapZipsRef.current = effectiveReachGapZips;
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    const filter = zipMembershipFilter(effectiveReachGapZips);
+    if (map.getLayer(REACH_GAP_FILL_LAYER_ID)) map.setFilter(REACH_GAP_FILL_LAYER_ID, filter);
+    if (map.getLayer(REACH_GAP_LINE_LAYER_ID)) map.setFilter(REACH_GAP_LINE_LAYER_ID, filter);
+  }, [effectiveReachGapZips]);
 
   useEffect(() => {
     showReachGapRef.current = showReachGap;

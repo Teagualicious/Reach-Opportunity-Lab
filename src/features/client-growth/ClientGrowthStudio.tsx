@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { ClientPlanControls, type ClientPlanView } from '../../components/ClientPlanControls';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
+import { buildClientGeographyPlan } from '../../domain/clientGeography';
 import {
   CLIENT_STRATEGIES,
   LAKEFRONT_BASELINE,
@@ -27,11 +29,11 @@ const moneyFormatter = new Intl.NumberFormat('en-US', {
 });
 
 const SIMULATION_STEPS = [
-  'Analyzing audience opportunity…',
-  'Testing selected strategies…',
-  'Modeling ZIP-level response…',
-  'Estimating campaign impact…',
-  'Generating recommendation…',
+  'Analyzing the current footprint…',
+  'Locating underexposed audiences…',
+  'Testing competitor pressure…',
+  'Modeling ZIP-level expansion…',
+  'Generating the recommended plan…',
 ] as const;
 
 function delay(milliseconds: number): Promise<void> {
@@ -70,6 +72,7 @@ function MetricComparison({
 export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStudioProps) {
   const [selectedStrategies, setSelectedStrategies] = useState<ClientStrategyId[]>([]);
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
+  const [planView, setPlanView] = useState<ClientPlanView>('current');
   const [status, setStatus] = useState<'idle' | 'running' | 'complete'>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('Choose strategies to test');
   const [result, setResult] = useState<ClientSimulationResult | null>(null);
@@ -91,22 +94,30 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     }
     return territoryRanked.slice(0, 14).map(({ zip }) => zip);
   }, [isCanonicalMarket, territoryRanked, territoryZipSet]);
-  const recommendedZipExpansions = useMemo(() => {
-    if (!result) return [];
-    if (isCanonicalMarket) {
-      return result.recommendedZipExpansions.filter((zip) => territoryZipSet.has(zip));
-    }
-    const campaignSet = new Set(currentCampaignZips);
-    return territoryRanked
-      .filter(({ zip }) => !campaignSet.has(zip))
-      .slice(0, Math.max(3, result.recommendedZipExpansions.length))
-      .map(({ zip }) => zip);
-  }, [currentCampaignZips, isCanonicalMarket, result, territoryRanked, territoryZipSet]);
+  const territoryCompetitors = useMemo(
+    () =>
+      data.overlays.competitors.filter((competitor) =>
+        competitor.zips.some((zip) => territoryZipSet.has(zip)),
+      ),
+    [data.overlays.competitors, territoryZipSet],
+  );
+  const geographyPlan = useMemo(
+    () =>
+      buildClientGeographyPlan({
+        opportunities: territoryRanked,
+        currentZips: currentCampaignZips,
+        competitors: territoryCompetitors,
+        selectedStrategyIds: selectedStrategies,
+      }),
+    [currentCampaignZips, selectedStrategies, territoryCompetitors, territoryRanked],
+  );
+  const recommendedZipExpansions = result ? geographyPlan.recommendedZips : [];
 
   useEffect(() => {
     runIdRef.current += 1;
     setSelectedStrategies([]);
     setSelectedZip(currentCampaignZips[0] ?? territoryRanked[0]?.zip ?? null);
+    setPlanView('current');
     setStatus('idle');
     setStatusMessage('Choose strategies to test');
     setResult(null);
@@ -122,6 +133,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     );
     setResult(null);
     setStatus('idle');
+    if (planView === 'recommended') setPlanView('diagnostic');
   };
 
   const runSimulation = async () => {
@@ -130,6 +142,7 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     runIdRef.current = runId;
     setStatus('running');
     setResult(null);
+    setPlanView('diagnostic');
 
     for (const step of SIMULATION_STEPS) {
       if (runIdRef.current !== runId) return;
@@ -141,12 +154,8 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
     setResult(simulateClientScenario(selectedStrategies));
     setStatus('complete');
     setStatusMessage('Recommended plan ready');
+    setPlanView('recommended');
   };
-
-  const campaignZips = useMemo(
-    () => (result ? [...currentCampaignZips, ...recommendedZipExpansions] : currentCampaignZips),
-    [currentCampaignZips, recommendedZipExpansions, result],
-  );
 
   const displayScores = useMemo(() => {
     if (!result) return undefined;
@@ -165,6 +174,25 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
 
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
   const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
+  const selectedOpportunity = selectedZip ? data.opportunitiesByZip.get(selectedZip) : undefined;
+  const selectedCandidate = geographyPlan.candidates.find((candidate) => candidate.zip === selectedZip);
+  const selectedRole = selectedZip
+    ? currentCampaignZips.includes(selectedZip)
+      ? 'Current campaign ZIP'
+      : recommendedZipExpansions.includes(selectedZip)
+        ? 'Recommended expansion ZIP'
+        : geographyPlan.reachGapZips.includes(selectedZip)
+          ? 'Reach-gap opportunity'
+          : 'Market context ZIP'
+    : null;
+  const selectedStrategyDefinitions = CLIENT_STRATEGIES.filter((strategy) =>
+    selectedStrategies.includes(strategy.id),
+  );
+  const diagnosticMode = planView === 'diagnostic';
+  const recommendedMode = planView === 'recommended' && Boolean(result);
+  const visibleCompetitorIds = diagnosticMode
+    ? territoryCompetitors.map((competitor) => competitor.id)
+    : [];
 
   return (
     <main className="studio-grid product-grid">
@@ -181,6 +209,16 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           <div><span>Campaign ZIPs</span><strong>{currentCampaignZips.length}</strong></div>
           <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
         </section>
+
+        <ClientPlanControls
+          value={planView}
+          currentCount={geographyPlan.summary.currentCount}
+          reachGapCount={geographyPlan.summary.reachGapCount}
+          competitorCount={geographyPlan.summary.competitorPressureCount}
+          recommendedCount={result ? geographyPlan.summary.recommendedCount : 0}
+          recommendedDisabled={!result}
+          onChange={setPlanView}
+        />
 
         <section className="panel-section panel-section--grow">
           <div className="section-heading">
@@ -227,21 +265,31 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           selectedZip={selectedZip}
           resetVersion={resetVersion}
           onSelectZip={handleSelectZip}
-          campaignZips={campaignZips}
+          campaignZips={currentCampaignZips}
+          recommendedZips={recommendedMode ? recommendedZipExpansions : []}
+          reachGapZips={geographyPlan.reachGapZips}
           displayScores={displayScores}
+          showReachGap={diagnosticMode}
+          visibleCompetitorIds={visibleCompetitorIds}
           territoryZips={view.territoryZips}
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
         />
-        <div className="map-stage__caption">
-          <span>{result ? 'Projected campaign opportunity' : `${territoryName} campaign footprint`}</span>
-          <strong>{result ? 'Recommended expansion ZIPs are highlighted' : `${currentCampaignZips.length} active ZIPs outlined in cyan`}</strong>
+        <div className="map-stage__caption client-map-caption">
+          <span>{planView === 'current' ? 'Current campaign footprint' : planView === 'diagnostic' ? 'Campaign diagnostics' : 'Recommended plan'}</span>
+          <strong>
+            {planView === 'current'
+              ? `${currentCampaignZips.length} active ZIPs outlined in cyan`
+              : planView === 'diagnostic'
+                ? 'Reach gaps and modeled competitor pressure are visible'
+                : `${recommendedZipExpansions.length} expansion ZIPs outlined in green`}
+          </strong>
         </div>
         {status === 'running' && (
           <div className="simulation-overlay" role="status" aria-live="polite">
             <span className="simulation-spinner" />
             <strong>{statusMessage}</strong>
-            <small>Testing deterministic strategy effects across ZIP opportunity signals</small>
+            <small>Testing deterministic strategy effects across opportunity, reach-gap, and competitor signals</small>
           </div>
         )}
       </section>
@@ -250,8 +298,23 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
         <div className="result-heading">
           <span className="eyebrow">Scenario comparison</span>
           <h2>{result ? 'Modeled improvement' : 'Current campaign baseline'}</h2>
-          <p>{result ? `Illustrative results for ${territoryName}.` : 'Choose a strategy combination to model a stronger plan.'}</p>
+          <p>{result ? `Illustrative results for ${territoryName}.` : 'Diagnose the footprint, choose strategies, and model a stronger plan.'}</p>
         </div>
+
+        {selectedOpportunity && selectedRole && (
+          <section className="client-zip-context">
+            <div>
+              <span>Selected ZIP</span>
+              <strong>{selectedOpportunity.name}</strong>
+              <small>ZIP {selectedOpportunity.zip} · {selectedRole}</small>
+            </div>
+            <b>{selectedOpportunity.score}</b>
+            <dl>
+              <div><dt>Reach gap</dt><dd>{geographyPlan.reachGapZips.includes(selectedOpportunity.zip) ? 'Modeled gap' : 'Covered'}</dd></div>
+              <div><dt>Competitors</dt><dd>{selectedCandidate?.competitorIds.length ?? territoryCompetitors.filter((competitor) => competitor.zips.includes(selectedOpportunity.zip)).length}</dd></div>
+            </dl>
+          </section>
+        )}
 
         {result ? (
           <>
@@ -268,6 +331,31 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
               <MetricComparison label="Priority clusters" metric="priorityClusters" baseline={LAKEFRONT_BASELINE.priorityClusters} simulated={result.metrics.priorityClusters} />
             </section>
 
+            <section className="client-geography-recommendation">
+              <div className="detail-section__label">Recommended ZIP expansion</div>
+              <div className="client-expansion-list">
+                {geographyPlan.candidates.map((candidate, index) => (
+                  <button
+                    key={candidate.zip}
+                    className={selectedZip === candidate.zip ? 'is-selected' : ''}
+                    type="button"
+                    onClick={() => setSelectedZip(candidate.zip)}
+                  >
+                    <span>{index + 1}</span>
+                    <div><strong>{candidate.name}</strong><small>ZIP {candidate.zip} · {candidate.reason}</small></div>
+                    <b>{candidate.opportunityScore}</b>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="client-tradeoff-card">
+              <span>Strategy trade-offs</span>
+              {selectedStrategyDefinitions.map((strategy) => (
+                <div key={strategy.id}><strong>{strategy.name}</strong><small>{strategy.benefit} · Trade-off: {strategy.tradeoff}</small></div>
+              ))}
+            </section>
+
             <section className="recommendation-card">
               <span>Why this recommendation?</span>
               <p>{result.explanation}</p>
@@ -280,14 +368,23 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
             <p className="model-disclosure">Illustrative modeled results using synthetic demonstration data. Not a production forecast.</p>
           </>
         ) : (
-          <div className="baseline-metrics">
-            <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
-            <div><span>Qualified reach</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
-            <div><span>Effective frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
-            <div><span>Modeled leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
-            <div><span>Cost per lead</span><strong>${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}</strong></div>
-            <div><span>Priority clusters</span><strong>{LAKEFRONT_BASELINE.priorityClusters}</strong></div>
-          </div>
+          <>
+            <div className="baseline-metrics">
+              <div><span>Effectiveness</span><strong>{LAKEFRONT_BASELINE.effectiveness}/100</strong></div>
+              <div><span>Qualified reach</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.qualifiedReach)}</strong></div>
+              <div><span>Effective frequency</span><strong>{LAKEFRONT_BASELINE.effectiveFrequency.toFixed(1)}</strong></div>
+              <div><span>Modeled leads</span><strong>{numberFormatter.format(LAKEFRONT_BASELINE.modeledLeads)}</strong></div>
+              <div><span>Cost per lead</span><strong>${LAKEFRONT_BASELINE.costPerLead.toFixed(2)}</strong></div>
+              <div><span>Priority clusters</span><strong>{LAKEFRONT_BASELINE.priorityClusters}</strong></div>
+            </div>
+            <section className="client-diagnostic-summary">
+              <span>Footprint diagnostic</span>
+              <div><strong>{geographyPlan.summary.currentCount}</strong><small>current ZIPs</small></div>
+              <div><strong>{geographyPlan.summary.reachGapCount}</strong><small>modeled reach gaps</small></div>
+              <div><strong>{geographyPlan.summary.competitorPressureCount}</strong><small>ZIPs with competitor pressure</small></div>
+              <p>Open <b>Diagnose gaps</b> to reveal the supporting map evidence before choosing a strategy.</p>
+            </section>
+          </>
         )}
       </aside>
 
