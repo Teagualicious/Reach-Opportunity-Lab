@@ -5,6 +5,7 @@ import {
   type MarketOverlayData,
 } from '../domain/mapOverlay';
 import { assertZipOpportunity, getPriorityBand, type ZipOpportunity } from '../domain/opportunity';
+import { assertTerritoryDefinitions } from '../domain/territory';
 import type {
   GeometryMetadata,
   MarketDefinition,
@@ -23,8 +24,8 @@ interface DemoMarketPayload {
 
 const CHECKED_IN_GEOMETRY_METADATA: GeometryMetadata = {
   kind: 'official-zcta',
-  label: 'Checked-in 2020 Census-derived ZCTA boundaries',
-  source: 'Simplified 2020 Census ZCTA fixture · see provenance file',
+  label: 'Checked-in statewide 2020 Census-derived ZCTA boundaries',
+  source: 'Simplified 2020 Census Ohio ZCTA fixture · see provenance file',
   vintage: '2020 Census',
 };
 
@@ -51,7 +52,11 @@ export function buildOpportunityMarket(
     opportunitiesByZip.set(opportunity.zip, opportunity);
   }
 
-  assertMarketOverlayData(overlays, [...opportunitiesByZip.keys()]);
+  const marketZips = [...opportunitiesByZip.keys()];
+  assertMarketOverlayData(overlays, marketZips);
+  if (payload.market.territories) {
+    assertTerritoryDefinitions(payload.market.territories, marketZips);
+  }
 
   const enrichedFeatures = geometry.features.map((feature, index) => {
     const rawZip = feature.properties?.zip ?? feature.properties?.ZCTA5 ?? feature.properties?.GEOID;
@@ -65,9 +70,16 @@ export function buildOpportunityMarket(
       throw new Error(`Geometry has no opportunity record for ZIP ${zip}`);
     }
 
+    const territoryId =
+      opportunity.territoryId ??
+      (typeof feature.properties?.territoryId === 'string'
+        ? feature.properties.territoryId
+        : payload.market.defaultTerritoryId ?? 'unassigned');
+
     const properties: ZipFeatureProperties = {
       zip,
       name: opportunity.name,
+      territoryId,
       score: opportunity.score,
       priority: getPriorityBand(opportunity.score),
       confidence: opportunity.confidence,
@@ -109,32 +121,23 @@ export class DemoOpportunityRepository implements OpportunityRepository {
   constructor(private readonly geometrySource: ZipGeometrySource = new StaticZctaGeometrySource()) {}
 
   async loadMarket(marketId: string): Promise<OpportunityMarket> {
-    if (marketId !== 'cleveland-akron') {
+    if (marketId !== 'ohio') {
       throw new Error(`Unknown demonstration market: ${marketId}`);
     }
 
     const [payload, rawOverlays] = await Promise.all([
-      readJson<DemoMarketPayload>('data/zip-opportunities.json'),
+      readJson<DemoMarketPayload>('data/ohio-opportunities.json'),
       readJson<unknown>('data/market-overlays.json'),
     ]);
     const zips = payload.opportunities.map((opportunity) => opportunity.zip);
     assertMarketOverlayData(rawOverlays, zips);
 
-    try {
-      const checkedInGeometry = await this.geometrySource.load(zips);
-      return buildOpportunityMarket(
-        payload,
-        checkedInGeometry,
-        CHECKED_IN_GEOMETRY_METADATA,
-        rawOverlays,
-      );
-    } catch (checkedInGeometryError) {
-      console.warn(
-        'Checked-in Census-derived geometry unavailable; using the synthetic fallback.',
-        checkedInGeometryError,
-      );
-      const fallbackGeometry = await readJson<RawZipGeometry>('data/cleveland-zips.geojson');
-      return buildOpportunityMarket(payload, fallbackGeometry, FALLBACK_GEOMETRY_METADATA, rawOverlays);
-    }
+    const checkedInGeometry = await this.geometrySource.load(zips);
+    return buildOpportunityMarket(
+      payload,
+      checkedInGeometry,
+      CHECKED_IN_GEOMETRY_METADATA,
+      rawOverlays,
+    );
   }
 }
