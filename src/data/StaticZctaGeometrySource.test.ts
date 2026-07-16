@@ -57,7 +57,7 @@ describe('Static ZCTA geometry source', () => {
     );
 
     await expect(new StaticZctaGeometrySource().load(['44122', '44022'])).rejects.toThrow(
-      'Checked-in Census-derived ZCTA fixture is missing ZIPs: 44022',
+      'Checked-in statewide Ohio ZCTA fixture is missing ZIPs: 44022',
     );
   });
 });
