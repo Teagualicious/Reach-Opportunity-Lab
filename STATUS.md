@@ -23,19 +23,22 @@ Phase 2 — Statewide map foundation and first product journeys
 - Rebuilt the universal shell to fit one browser viewport with no page-level scrolling.
 - Made left and right sidebars independently scrollable and collapsible across all product modes.
 - Added MapLibre resize/refit behavior when panels collapse or territories change.
-- Replaced the hot multicolor scale with a light-to-deep blue opportunity scale, neutral gray inactive territories, stronger ZIP boundaries, gold selection, and cyan campaign emphasis.
+- Restored a pastel cool-to-hot opportunity scale, neutral gray inactive territories, strong active ZIP boundaries, gold selection, and cyan campaign emphasis.
+- Reduced inactive-territory fill opacity and boundary weight so statewide context remains visible without visual clutter.
+- Added ZIP-level camera focus: selecting a ZIP from the map or ranked list zooms to its geometry; clearing selection returns to the active territory frame.
+- Added polygon and multipolygon viewport-bound tests.
 - Lightened and desaturated the standard OpenStreetMap basemap.
 - Expanded the all-offline context generator to statewide Ohio using tiled TIGERweb requests and feature deduplication.
+- Expanded the offline workflow path filter so shared `src/` changes always rebuild and validate the offline artifact.
 - Added territory domain tests and statewide fixture validation.
 - Current validation:
-  - statewide market generation workflow run 26 passed;
-  - standard CI run 280 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
-  - all-offline workflow run 52 passed generation, validation, packaging, artifact upload, and release upload.
+  - standard CI run 299 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
+  - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload.
 
 ## Next up
 
-1. Merge the statewide foundation and visually review it through the stable GitHub Pages URL on a 1366×768 laptop.
-2. Refine spacing, typography, map fit, panel widths, and territory labels based on that real-browser review.
+1. Merge the map-polish follow-up and review the updated pastel palette, inactive context, and ZIP focus through the stable GitHub Pages URL.
+2. Refine spacing, typography, map fit, panel widths, and territory labels based on real-browser screenshots.
 3. Extend reach-gap, competitor, current-campaign, and recommended-expansion controls throughout Client Growth Studio.
 4. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
 5. Add additional state/major-city market packages behind the same territory/market contracts.
@@ -99,10 +102,15 @@ Phase 2 — Statewide map foundation and first product journeys
   Rejected because: scrolling breaks the dashboard metaphor and fixed panels consume too much map space on executive laptops
   Must preserve: no page scroll; map resizes/refits after panel changes; behavior is universal across all three tabs
 
-- 2026-07-15 | DECISION: use a restrained light-to-deep blue opportunity palette
-  Considered: the previous blue/cyan/yellow/orange/red heat scale
-  Rejected because: the multicolor map competed with the basemap and looked less coherent than the reference design
-  Must preserve: inactive territories are neutral gray, active scores use blue, selection is gold, and campaign emphasis is cyan
+- 2026-07-16 | DECISION: active opportunity values use a pastel heat-map progression
+  Considered: monochromatic light-to-deep blue and a highly saturated hot scale
+  Rejected because: monochromatic blue weakens heat-map storytelling while saturated colors overpower the neutral basemap
+  Must preserve: the progression remains soft and readable; inactive territories remain neutral gray; selection remains gold; campaign emphasis remains cyan
+
+- 2026-07-16 | DECISION: selecting a ZIP changes both detail state and map camera focus
+  Considered: updating the detail panel without moving the map
+  Rejected because: spatial focus is part of the executive explanation and makes small ZIPs easier to understand
+  Must preserve: map/list selection zooms to official geometry; clearing selection and territory reset return to territory bounds; sidebar resize preserves the current focus
 
 ## Noticed
 
