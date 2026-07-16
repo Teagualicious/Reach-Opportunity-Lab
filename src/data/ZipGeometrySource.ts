@@ -12,7 +12,11 @@ export interface RawZipGeometryProperties {
 export type RawZipGeometry = FeatureCollection<Geometry, RawZipGeometryProperties>;
 
 export interface ZipGeometrySource {
-  load(zips: readonly string[]): Promise<RawZipGeometry>;
+  /**
+   * Accepts a pending ZIP list so adapters whose fetch does not depend on the
+   * ZIPs (the static fixture) can start downloading before the list resolves.
+   */
+  load(zips: readonly string[] | Promise<readonly string[]>): Promise<RawZipGeometry>;
 }
 
 const ZIP_PATTERN = /^\d{5}$/;

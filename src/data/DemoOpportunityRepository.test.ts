@@ -65,7 +65,17 @@ describe('demo repository adapter', () => {
     const result = buildOpportunityMarket({ market, opportunities: [opportunity] }, geometry);
     expect(result.geometryMetadata.kind).toBe('synthetic-fallback');
     expect(result.geometry.features[0]?.properties.score).toBe(84);
+    expect(result.opportunitiesByZip.get('44122')?.name).toBe('Beachwood');
     expect(result.overlays.competitors).toEqual([]);
+  });
+
+  it('rejects malformed overlay payloads', () => {
+    expect(() =>
+      buildOpportunityMarket({ market, opportunities: [opportunity] }, geometry, undefined, {
+        reachGapZips: ['99999'],
+        competitors: [],
+      }),
+    ).toThrow('references ZIP 99999');
   });
 
   it('joins validated supporting overlays to the market', () => {

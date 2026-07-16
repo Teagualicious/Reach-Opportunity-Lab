@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import maplibregl, {
-  type GeoJSONSource,
+  type ExpressionSpecification,
   type Map as MapLibreMap,
   type MapLayerMouseEvent,
 } from 'maplibre-gl';
@@ -33,31 +33,21 @@ interface OpportunityMapProps {
 const SOURCE_ID = 'zip-opportunities';
 const FILL_LAYER_ID = 'zip-opportunity-fill';
 const LINE_LAYER_ID = 'zip-opportunity-line';
-const REACH_GAP_SOURCE_ID = 'reach-gap-zips';
 const REACH_GAP_FILL_LAYER_ID = 'reach-gap-fill';
 const REACH_GAP_LINE_LAYER_ID = 'reach-gap-line';
 
-function competitorSourceId(competitorId: string): string {
-  return `competitor-${competitorId}`;
-}
+type ZipFlagStateKey = 'dim' | 'campaign' | 'territoryDim';
 
 function competitorFillLayerId(competitorId: string): string {
-  return `${competitorSourceId(competitorId)}-fill`;
+  return `competitor-${competitorId}-fill`;
 }
 
 function competitorLineLayerId(competitorId: string): string {
-  return `${competitorSourceId(competitorId)}-line`;
+  return `competitor-${competitorId}-line`;
 }
 
-function selectGeometryByZip(
-  geometry: OpportunityMarket['geometry'],
-  zips: readonly string[],
-): OpportunityMarket['geometry'] {
-  const selectedZips = new Set(zips);
-  return {
-    ...geometry,
-    features: geometry.features.filter((feature) => selectedZips.has(feature.properties.zip)),
-  };
+function zipMembershipFilter(zips: readonly string[]): ExpressionSpecification {
+  return ['in', ['get', 'zip'], ['literal', [...zips]]];
 }
 
 function getZipBounds(data: OpportunityMarket, zip: string | null): GeographicBounds | null {
@@ -66,7 +56,7 @@ function getZipBounds(data: OpportunityMarket, zip: string | null): GeographicBo
   return feature ? getGeometryBounds(feature.geometry) : null;
 }
 
-function buildPopupContent(properties: Record<string, unknown>): HTMLElement {
+function buildPopupContent(properties: Record<string, unknown>, displayScore?: number): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'map-tooltip';
 
@@ -79,23 +69,45 @@ function buildPopupContent(properties: Record<string, unknown>): HTMLElement {
 
   const score = document.createElement('span');
   score.className = 'map-tooltip__score';
-  score.textContent = `${String(properties.score ?? '—')}/100 opportunity`;
+  score.textContent = `${String(displayScore ?? properties.score ?? '—')}/100 opportunity`;
 
   wrapper.append(eyebrow, name, score);
   return wrapper;
 }
 
-function setBooleanFeatureState(
+function syncZipFlagState(
+  map: MapLibreMap,
+  applied: ReadonlySet<string>,
+  next: ReadonlySet<string>,
+  stateKey: ZipFlagStateKey,
+): ReadonlySet<string> {
+  for (const zip of applied) {
+    if (!next.has(zip)) {
+      map.setFeatureState({ source: SOURCE_ID, id: zip }, { [stateKey]: false });
+    }
+  }
+  for (const zip of next) {
+    if (!applied.has(zip)) {
+      map.setFeatureState({ source: SOURCE_ID, id: zip }, { [stateKey]: true });
+    }
+  }
+  return next;
+}
+
+function syncDisplayScoreState(
   map: MapLibreMap,
   allZips: readonly string[],
-  enabledZips: ReadonlySet<string>,
-  stateKey: 'dim' | 'campaign' | 'territoryDim',
-  invert = false,
-) {
+  applied: Readonly<Record<string, number>> | undefined,
+  next: Readonly<Record<string, number>> | undefined,
+): Readonly<Record<string, number>> | undefined {
   for (const zip of allZips) {
-    const enabled = enabledZips.has(zip);
-    map.setFeatureState({ source: SOURCE_ID, id: zip }, { [stateKey]: invert ? !enabled : enabled });
+    const appliedScore = applied?.[zip];
+    const nextScore = next?.[zip];
+    if (appliedScore !== nextScore) {
+      map.setFeatureState({ source: SOURCE_ID, id: zip }, { displayScore: nextScore ?? null });
+    }
   }
+  return next;
 }
 
 function setLayerVisibility(map: MapLibreMap, layerIds: readonly string[], visible: boolean) {
@@ -142,32 +154,33 @@ export function OpportunityMap({
   const selectedZipRef = useRef<string | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const allZips = useMemo(() => data.opportunities.map(({ zip }) => zip), [data.opportunities]);
-  const activeZipsRef = useRef<readonly string[]>(activeZips ?? allZips);
-  const campaignZipsRef = useRef<readonly string[]>(campaignZips);
-  const territoryZipsRef = useRef<readonly string[]>(territoryZips ?? allZips);
+
+  const territoryZipSet = useMemo(() => new Set(territoryZips ?? allZips), [allZips, territoryZips]);
+  const dimmedZips = useMemo(() => {
+    const active = new Set(activeZips ?? allZips);
+    return new Set(allZips.filter((zip) => !active.has(zip)));
+  }, [activeZips, allZips]);
+  const campaignZipSet = useMemo(() => new Set(campaignZips), [campaignZips]);
+  const territoryDimmedZips = useMemo(
+    () => new Set(allZips.filter((zip) => !territoryZipSet.has(zip))),
+    [allZips, territoryZipSet],
+  );
+
+  const territoryZipSetRef = useRef(territoryZipSet);
+  const dimmedZipsRef = useRef(dimmedZips);
+  const campaignZipSetRef = useRef(campaignZipSet);
+  const territoryDimmedZipsRef = useRef(territoryDimmedZips);
+  const displayScoresRef = useRef(displayScores);
   const viewportBoundsRef = useRef<GeographicBounds>(viewportBounds ?? data.market.bounds);
   const showReachGapRef = useRef(showReachGap);
   const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
 
-  const renderedGeometry = useMemo(() => {
-    if (!displayScores) return data.geometry;
-    return {
-      ...data.geometry,
-      features: data.geometry.features.map((feature) => {
-        const zip = feature.properties.zip;
-        const score = displayScores[zip];
-        return score === undefined
-          ? feature
-          : {
-              ...feature,
-              properties: {
-                ...feature.properties,
-                score,
-              },
-            };
-      }),
-    };
-  }, [data.geometry, displayScores]);
+  // Feature state already written to the current map instance, so updates only
+  // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
+  const appliedDimmedRef = useRef<ReadonlySet<string>>(new Set());
+  const appliedCampaignRef = useRef<ReadonlySet<string>>(new Set());
+  const appliedTerritoryDimmedRef = useRef<ReadonlySet<string>>(new Set());
+  const appliedDisplayScoresRef = useRef<Readonly<Record<string, number>> | undefined>(undefined);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -212,6 +225,10 @@ export function OpportunityMap({
     });
 
     mapRef.current = map;
+    appliedDimmedRef.current = new Set();
+    appliedCampaignRef.current = new Set();
+    appliedTerritoryDimmedRef.current = new Set();
+    appliedDisplayScoresRef.current = undefined;
     popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
@@ -235,14 +252,11 @@ export function OpportunityMap({
         },
       });
 
-      map.addSource(REACH_GAP_SOURCE_ID, {
-        type: 'geojson',
-        data: selectGeometryByZip(data.geometry, data.overlays.reachGapZips),
-      });
       map.addLayer({
         id: REACH_GAP_FILL_LAYER_ID,
         type: 'fill',
-        source: REACH_GAP_SOURCE_ID,
+        source: SOURCE_ID,
+        filter: zipMembershipFilter(data.overlays.reachGapZips),
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
           'fill-color': '#8b5cf6',
@@ -252,7 +266,8 @@ export function OpportunityMap({
       map.addLayer({
         id: REACH_GAP_LINE_LAYER_ID,
         type: 'line',
-        source: REACH_GAP_SOURCE_ID,
+        source: SOURCE_ID,
+        filter: zipMembershipFilter(data.overlays.reachGapZips),
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
           'line-color': '#7c3aed',
@@ -263,16 +278,13 @@ export function OpportunityMap({
 
       const visibleCompetitors = new Set(visibleCompetitorIdsRef.current);
       for (const competitor of data.overlays.competitors) {
-        const sourceId = competitorSourceId(competitor.id);
         const visible = visibleCompetitors.has(competitor.id);
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: selectGeometryByZip(data.geometry, competitor.zips),
-        });
+        const competitorFilter = zipMembershipFilter(competitor.zips);
         map.addLayer({
           id: competitorFillLayerId(competitor.id),
           type: 'fill',
-          source: sourceId,
+          source: SOURCE_ID,
+          filter: competitorFilter,
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'fill-color': competitor.color,
@@ -282,7 +294,8 @@ export function OpportunityMap({
         map.addLayer({
           id: competitorLineLayerId(competitor.id),
           type: 'line',
-          source: sourceId,
+          source: SOURCE_ID,
+          filter: competitorFilter,
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'line-color': competitor.color,
@@ -302,9 +315,20 @@ export function OpportunityMap({
         },
       });
 
-      setBooleanFeatureState(map, allZips, new Set(activeZipsRef.current), 'dim', true);
-      setBooleanFeatureState(map, allZips, new Set(campaignZipsRef.current), 'campaign');
-      setBooleanFeatureState(map, allZips, new Set(territoryZipsRef.current), 'territoryDim', true);
+      appliedDimmedRef.current = syncZipFlagState(map, appliedDimmedRef.current, dimmedZipsRef.current, 'dim');
+      appliedCampaignRef.current = syncZipFlagState(map, appliedCampaignRef.current, campaignZipSetRef.current, 'campaign');
+      appliedTerritoryDimmedRef.current = syncZipFlagState(
+        map,
+        appliedTerritoryDimmedRef.current,
+        territoryDimmedZipsRef.current,
+        'territoryDim',
+      );
+      appliedDisplayScoresRef.current = syncDisplayScoreState(
+        map,
+        allZips,
+        appliedDisplayScoresRef.current,
+        displayScoresRef.current,
+      );
       if (selectedZipRef.current) {
         map.setFeatureState({ source: SOURCE_ID, id: selectedZipRef.current }, { selected: true });
       }
@@ -315,7 +339,7 @@ export function OpportunityMap({
       const feature = event.features?.[0];
       if (!feature) return;
       const zip = typeof feature.properties?.zip === 'string' ? feature.properties.zip : null;
-      if (!zip || !territoryZipsRef.current.includes(zip)) {
+      if (!zip || !territoryZipSetRef.current.has(zip)) {
         map.getCanvas().style.cursor = '';
         popupRef.current?.remove();
         return;
@@ -328,7 +352,10 @@ export function OpportunityMap({
 
       hoveredZipRef.current = zip;
       map.setFeatureState({ source: SOURCE_ID, id: zip }, { hover: true });
-      popupRef.current?.setLngLat(event.lngLat).setDOMContent(buildPopupContent(feature.properties ?? {})).addTo(map);
+      popupRef.current
+        ?.setLngLat(event.lngLat)
+        .setDOMContent(buildPopupContent(feature.properties ?? {}, displayScoresRef.current?.[zip]))
+        .addTo(map);
     };
 
     const handleMouseLeave = () => {
@@ -343,7 +370,7 @@ export function OpportunityMap({
     const handleZipClick = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       const zip = typeof feature?.properties?.zip === 'string' ? feature.properties.zip : null;
-      if (zip && territoryZipsRef.current.includes(zip)) onSelectZip(zip);
+      if (zip && territoryZipSetRef.current.has(zip)) onSelectZip(zip);
     };
 
     map.on('mousemove', FILL_LAYER_ID, handleMouseMove);
@@ -368,8 +395,11 @@ export function OpportunityMap({
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
 
-    for (const zip of allZips) {
-      map.setFeatureState({ source: SOURCE_ID, id: zip }, { selected: zip === selectedZip });
+    if (previousSelectedZip && previousSelectedZip !== selectedZip) {
+      map.setFeatureState({ source: SOURCE_ID, id: previousSelectedZip }, { selected: false });
+    }
+    if (selectedZip && selectedZip !== previousSelectedZip) {
+      map.setFeatureState({ source: SOURCE_ID, id: selectedZip }, { selected: true });
     }
 
     const selectedBounds = getZipBounds(data, selectedZip);
@@ -378,30 +408,46 @@ export function OpportunityMap({
     } else if (previousSelectedZip) {
       fitViewport(map, viewportBoundsRef.current, 420);
     }
-  }, [allZips, data, selectedZip]);
+  }, [data, selectedZip]);
 
   useEffect(() => {
-    const nextActiveZips = activeZips ?? allZips;
-    activeZipsRef.current = nextActiveZips;
+    dimmedZipsRef.current = dimmedZips;
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
-    setBooleanFeatureState(map, allZips, new Set(nextActiveZips), 'dim', true);
-  }, [activeZips, allZips]);
+    appliedDimmedRef.current = syncZipFlagState(map, appliedDimmedRef.current, dimmedZips, 'dim');
+  }, [dimmedZips]);
 
   useEffect(() => {
-    campaignZipsRef.current = campaignZips;
+    campaignZipSetRef.current = campaignZipSet;
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
-    setBooleanFeatureState(map, allZips, new Set(campaignZips), 'campaign');
-  }, [allZips, campaignZips]);
+    appliedCampaignRef.current = syncZipFlagState(map, appliedCampaignRef.current, campaignZipSet, 'campaign');
+  }, [campaignZipSet]);
 
   useEffect(() => {
-    const nextTerritoryZips = territoryZips ?? allZips;
-    territoryZipsRef.current = nextTerritoryZips;
+    territoryZipSetRef.current = territoryZipSet;
+    territoryDimmedZipsRef.current = territoryDimmedZips;
     const map = mapRef.current;
     if (!map?.getSource(SOURCE_ID)) return;
-    setBooleanFeatureState(map, allZips, new Set(nextTerritoryZips), 'territoryDim', true);
-  }, [allZips, territoryZips]);
+    appliedTerritoryDimmedRef.current = syncZipFlagState(
+      map,
+      appliedTerritoryDimmedRef.current,
+      territoryDimmedZips,
+      'territoryDim',
+    );
+  }, [territoryDimmedZips, territoryZipSet]);
+
+  useEffect(() => {
+    displayScoresRef.current = displayScores;
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    appliedDisplayScoresRef.current = syncDisplayScoreState(
+      map,
+      allZips,
+      appliedDisplayScoresRef.current,
+      displayScores,
+    );
+  }, [allZips, displayScores]);
 
   useEffect(() => {
     showReachGapRef.current = showReachGap;
@@ -445,11 +491,6 @@ export function OpportunityMap({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [data, layoutVersion]);
-
-  useEffect(() => {
-    const source = mapRef.current?.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-    source?.setData(renderedGeometry);
-  }, [renderedGeometry]);
 
   return <div ref={containerRef} className="opportunity-map" aria-label="Ohio ZIP opportunity map" />;
 }

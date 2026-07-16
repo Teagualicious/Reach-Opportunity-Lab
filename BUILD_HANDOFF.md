@@ -206,6 +206,11 @@ Feature state:
 | `dim` | fades ZIPs outside active score/category filters |
 | `campaign` | current or recommended campaign emphasis |
 | `territoryDim` | neutral gray statewide context outside selected territory |
+| `displayScore` | objective/simulation recolor value; `null` falls through to the base `score` property |
+
+Feature-state updates are diffed against the previously applied ZIP sets so filter, territory, campaign, and recolor changes only touch changed features instead of rewriting all 1,200+ statewide features or re-uploading the GeoJSON source.
+
+Reach-gap and competitor overlays are filtered fill/line layers over the same `zip-opportunities` source (ZIP-membership `filter` expressions), not duplicated GeoJSON sources.
 
 Map rules:
 

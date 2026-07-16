@@ -45,6 +45,28 @@ describe('Static ZCTA geometry source', () => {
     expect(geometry.features[0]?.id).toBe('44122');
   });
 
+  it('starts the geometry download before a pending ZIP list resolves', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(fixture), {
+        status: 200,
+        headers: { 'Content-Type': 'application/geo+json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    let resolveZips: (zips: readonly string[]) => void = () => undefined;
+    const pendingZips = new Promise<readonly string[]>((resolve) => {
+      resolveZips = resolve;
+    });
+
+    const loadPromise = new StaticZctaGeometrySource('/data/test-zcta.geojson').load(pendingZips);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveZips(['44122', '44308']);
+    const geometry = await loadPromise;
+    expect(geometry.features.map((feature) => feature.properties.zip)).toEqual(['44122', '44308']);
+  });
+
   it('rejects a checked-in fixture that is missing a requested ZIP', async () => {
     vi.stubGlobal(
       'fetch',

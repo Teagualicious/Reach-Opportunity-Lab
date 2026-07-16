@@ -32,6 +32,7 @@ export interface ZipFeatureProperties {
 export interface OpportunityMarket {
   market: MarketDefinition;
   opportunities: ZipOpportunity[];
+  opportunitiesByZip: ReadonlyMap<string, ZipOpportunity>;
   geometry: FeatureCollection<Geometry, ZipFeatureProperties>;
   geometryMetadata: GeometryMetadata;
   overlays: MarketOverlayData;
