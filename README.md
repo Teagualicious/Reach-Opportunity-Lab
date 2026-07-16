@@ -14,13 +14,21 @@ https://teagualicious.github.io/Reach-Opportunity-Lab/
 
 ## Current product
 
-The application uses one shared Ohio ZIP/ZCTA intelligence layer across three experiences:
+The application uses one shared Ohio ZIP/ZCTA intelligence layer across three distinct experiences:
 
-- **Opportunity Explorer** — statewide ZIP opportunity map, territory focus, score/category filters, ranked ZIPs, explainable components, confidence, synthetic reach gaps, and competitor overlays.
-- **Client Growth Studio** — fictional Lakefront Automotive footprint, selectable strategies, deterministic simulation, territory-specific expansion ZIPs, current-versus-modeled results, and conceptual Architect handoff.
-- **Market Growth Studio** — New Business, Account Growth, Retention Risk, and Category Opportunity modes that reweight the selected territory and generate fictional seller actions.
+- **Opportunity Explorer** — neutral market diagnosis: where opportunity exists, why a ZIP scores the way it does, whether a modeled reach gap exists, and which synthetic competitor footprints intersect the selected ZIP.
+- **Client Growth Studio** — advertiser strategy workspace: fictional Lakefront Automotive footprint, selectable strategies, deterministic simulation, territory-specific expansion ZIPs, current-versus-modeled results, and conceptual Architect handoff.
+- **Seller Growth Studio** — internal seller action workspace: New Business, Account Growth, Retention Risk, and Category Opportunity queues that turn ZIP intelligence into prioritized synthetic prospects/accounts, evidence, and recommended next actions.
 
-The shell is designed for executive review in one browser viewport. The document does not scroll; each sidebar scrolls independently and can be collapsed to expand the map.
+The intended product split is explicit:
+
+```text
+Opportunity Explorer  → Where is opportunity and what explains it?
+Client Growth Studio  → How could a specific advertiser improve its plan?
+Seller Growth Studio  → Who should a seller pursue, grow, or save next?
+```
+
+The shell is designed for executive review in one browser viewport. The document does not scroll; each sidebar scrolls independently and can be collapsed. Expanded desktop panels are deliberately narrow so the map remains the dominant surface. Compact mode keeps the map full-bleed and presents controls/details as one-at-a-time bottom sheets.
 
 ## Ohio operating territories
 
@@ -50,7 +58,7 @@ The runtime uses checked-in statewide Ohio ZCTA geometry generated from a docume
 
 Do not edit generated geographic or statewide opportunity fixtures manually. Change the builder and regenerate them.
 
-The standard application uses a light grayscale OpenStreetMap raster basemap. The ZIP opportunity scale progresses from light to deep blue; inactive territories use neutral gray; selection remains gold and campaign emphasis remains cyan.
+The standard application uses a light grayscale OpenStreetMap raster basemap. Active opportunity scores use a pastel cool-to-hot progression; inactive territories use neutral gray; selection remains gold and campaign emphasis remains cyan. Supporting reach-gap and competitor overlays use stronger fills and outlines so enabled layers remain legible over the opportunity surface.
 
 ## All-offline visual review
 
@@ -118,21 +126,21 @@ public statewide geography + deterministic synthetic fixtures
         ↓
 DemoOpportunityRepository / ZipGeometrySource
         ↓
-pure TypeScript opportunity, territory, scoring, and simulation domain
+pure TypeScript opportunity, territory, scoring, seller-action, and simulation domain
         ↓
-shared React territory and panel state
+shared React territory, viewport, and panel state
         ↓
-Opportunity Explorer / Client Growth Studio / Market Growth Studio
+Opportunity Explorer / Client Growth Studio / Seller Growth Studio
         ↓
 MapLibre standard or all-offline presentation adapter
 ```
 
 Primary boundaries:
 
-- `src/domain/` — pure scoring, simulation, territory, recommendation, and overlay contracts
+- `src/domain/` — pure scoring, simulation, seller-action, territory, recommendation, and overlay contracts
 - `src/data/` — repository, public-asset, and geometry-source adapters
-- `src/app/` — composition root, shared territory selection, product navigation, and panel collapse state
-- `src/map/` — MapLibre sources, layers, feature state, viewport fitting, and basemap adapters
+- `src/app/` — composition root, shared territory selection, viewport mode, product navigation, and panel state
+- `src/map/` — MapLibre sources, filtered overlays, diffed feature state, viewport fitting, and basemap adapters
 - `src/features/` — product-owned UI and orchestration
 - `public/data/` — public geographic fixtures and deterministic synthetic business fixtures
 - `scripts/` — reproducible market generation, offline context, packaging, and validation
@@ -149,8 +157,9 @@ Read these before non-trivial work:
 
 ## Trust and data boundaries
 
-- No real company, advertiser, campaign, account, revenue, or proprietary data belongs in this repository.
-- All opportunity, territory, coverage, prospect, recommendation, and simulation values are synthetic demonstration data.
+- No real company, advertiser, campaign, account, revenue, seller, or proprietary data belongs in this repository.
+- All opportunity, territory, coverage, prospect/account, recommendation, and simulation values are deterministic synthetic demonstration data.
+- Competitor footprints are illustrative ZIP memberships, not provider service-area claims.
 - Client-facing and internal-only fields remain separated at model and feature boundaries.
 - Geographic source provenance is preserved.
 - Simulation outputs are illustrative and deterministic, not production forecasts.

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { MARKET_MODES, getMarketModeScore, type MarketModeId } from '../../domain/marketMode';
+import { buildSellerOpportunity } from '../../domain/sellerOpportunity';
 import { OpportunityMap } from '../../map/OpportunityMap';
 
 interface MarketGrowthStudioProps {
@@ -11,17 +12,6 @@ interface MarketGrowthStudioProps {
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
-
-const FICTIONAL_PROSPECTS: Readonly<Record<string, string>> = {
-  Automotive: 'Lakeside European Auto',
-  Healthcare: 'Greenline Family Dental',
-  'Home Services': 'North Coast Home Renovation',
-  Legal: 'Summit Legal Partners',
-  Restaurants: 'Harbor Table Group',
-  Retail: 'Lakefront Home Market',
-  'Financial Services': 'Summit Financial Partners',
-  Recruitment: 'Northstar Talent Solutions',
-};
 
 export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStudioProps) {
   const [mode, setMode] = useState<MarketModeId>('new-business');
@@ -50,6 +40,10 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     () => [...territoryOpportunities].sort((a, b) => scores[b.zip] - scores[a.zip]).slice(0, 8),
     [scores, territoryOpportunities],
   );
+  const actionQueue = useMemo(
+    () => ranked.map((opportunity, index) => buildSellerOpportunity(opportunity, mode, scores[opportunity.zip], index)),
+    [mode, ranked, scores],
+  );
 
   useEffect(() => {
     setSelectedZip(ranked[0]?.zip ?? null);
@@ -57,21 +51,25 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   }, [ranked, view.selectedTerritoryId]);
 
   const selected = (selectedZip ? data.opportunitiesByZip.get(selectedZip) : undefined) ?? ranked[0];
-  const selectedScore = selected ? scores[selected.zip] : 0;
+  const selectedIndex = selected ? Math.max(0, ranked.findIndex((opportunity) => opportunity.zip === selected.zip)) : 0;
+  const selectedItem = selected
+    ? buildSellerOpportunity(selected, mode, scores[selected.zip], selectedIndex)
+    : null;
+  const selectedScore = selectedItem?.priorityScore ?? 0;
   const projectedScore = simulated ? Math.min(100, selectedScore + 9) : selectedScore;
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
   const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
 
   return (
     <main className="studio-grid market-studio product-grid">
-      <aside className="panel panel--left">
+      <aside className="panel panel--left seller-workspace-controls">
         <div className="panel__heading">
-          <span className="eyebrow">Market Growth Studio</span>
+          <span className="eyebrow">Seller Growth Studio</span>
           <h1>{territoryName}</h1>
-          <p>Find, protect, and grow local business using objective-specific ZIP intelligence.</p>
+          <p>Turn ZIP intelligence into a prioritized prospect, growth, and retention action queue.</p>
         </div>
 
-        <div className="internal-mode-list" role="tablist" aria-label="Market growth objective">
+        <div className="internal-mode-list" role="tablist" aria-label="Seller growth objective">
           {MARKET_MODES.map((candidate) => (
             <button
               key={candidate.id}
@@ -92,24 +90,25 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
         </section>
 
         <section className="panel-section panel-section--grow">
-          <div className="section-heading"><span>Priority ZIPs</span><small>{territoryName}</small></div>
-          <div className="ranked-list">
-            {ranked.map((opportunity, index) => (
+          <div className="section-heading"><span>Seller action queue</span><small>{territoryName}</small></div>
+          <div className="seller-queue">
+            {actionQueue.map((item) => (
               <button
-                className={`ranked-item ${selected?.zip === opportunity.zip ? 'is-selected' : ''}`}
-                key={opportunity.zip}
+                className={`seller-queue-item seller-queue-item--${item.tone} ${selected?.zip === item.zip ? 'is-selected' : ''}`}
+                key={item.id}
                 type="button"
-                onClick={() => setSelectedZip(opportunity.zip)}
+                onClick={() => setSelectedZip(item.zip)}
               >
-                <span className="ranked-item__rank">{index + 1}</span>
-                <span className="ranked-item__body"><strong>{opportunity.name}</strong><small>ZIP {opportunity.zip} · {opportunity.categoryStrength}</small></span>
-                <span className="ranked-item__score">{scores[opportunity.zip]}</span>
+                <span className={`seller-status seller-status--${item.tone}`}>{item.entityKind}</span>
+                <strong>{item.entityName}</strong>
+                <small>{item.urgencyLabel} · ZIP {item.zip}</small>
+                <b>{item.priorityScore}</b>
               </button>
             ))}
           </div>
         </section>
 
-        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Internal scenarios, territories, prospects, and performance signals are synthetic.</div>
+        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
       </aside>
 
       <section className="map-stage">
@@ -124,45 +123,54 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
         />
-        <div className="map-stage__caption"><span>{definition.label}</span><strong>{territoryName} is recolored for this internal objective</strong></div>
+        <div className="map-stage__caption"><span>Geographic evidence</span><strong>{selectedItem ? `${selectedItem.entityName} · ${definition.label}` : definition.label}</strong></div>
       </section>
 
-      <aside className="panel panel--right internal-detail">
-        {selected && (
+      <aside className="panel panel--right seller-action-detail">
+        {selected && selectedItem && (
           <>
-            <div className="internal-score-hero">
-              <span className="eyebrow">{definition.scoreLabel}</span>
-              <h2>{selected.name}</h2>
-              <p>ZIP {selected.zip} · {selected.categoryStrength}</p>
-              <strong>{projectedScore}<small>/100</small></strong>
-              {simulated && <em>+{projectedScore - selectedScore} modeled improvement</em>}
+            <div className="seller-action-hero">
+              <div className="seller-action-hero__meta">
+                <span className={`seller-status seller-status--${selectedItem.tone}`}>{selectedItem.entityKind}</span>
+                <em>{selectedItem.urgencyLabel}</em>
+              </div>
+              <span className="eyebrow">Seller action brief</span>
+              <h2>{selectedItem.entityName}</h2>
+              <p>{selected.name} · ZIP {selected.zip} · {selected.categoryStrength}</p>
+              <div className="seller-priority-score">
+                <strong>{projectedScore}</strong>
+                <span>Seller priority / 100</span>
+              </div>
+              {simulated && <small>+{projectedScore - selectedScore} modeled action lift</small>}
             </div>
 
             <section className="detail-section">
-              <span className="detail-section__label">Market signals</span>
+              <span className="detail-section__label">Why now</span>
+              <p className="detail-summary">{selectedItem.headline}</p>
+              <ul className="seller-evidence-list">
+                {selectedItem.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}
+              </ul>
+            </section>
+
+            <section className="detail-section">
+              <span className="detail-section__label">Supporting market signals</span>
               <dl className="metric-grid">
                 <div><dt>Households</dt><dd>{numberFormatter.format(selected.householdCount)}</dd></div>
-                <div><dt>Base opportunity</dt><dd>{selected.score}/100</dd></div>
+                <div><dt>ZIP opportunity</dt><dd>{selected.score}/100</dd></div>
                 <div><dt>Strongest category</dt><dd>{selected.categoryStrength}</dd></div>
               </dl>
             </section>
 
-            <section className="fictional-prospect-card">
-              <span>Fictional example</span>
-              <strong>{FICTIONAL_PROSPECTS[selected.categoryStrength] ?? 'Ohio Local Business'}</strong>
-              <p>{mode === 'retention-risk' ? 'Spend and reach signals suggest a proactive save conversation.' : 'Category and audience signals suggest a timely seller conversation.'}</p>
-            </section>
-
             <section className="recommended-action">
-              <span>Recommended action</span>
-              <strong>{definition.action}</strong>
-              <p>{simulated ? `The illustrative action improves the modeled score within ${territoryName}.` : 'Run a simple action simulation to compare the current and recommended state.'}</p>
+              <span>Recommended next step</span>
+              <strong>{selectedItem.recommendedAction}</strong>
+              <p>{simulated ? `The illustrative action improves the seller priority within ${territoryName}.` : 'Model the recommended action to compare the current and potential seller state.'}</p>
             </section>
 
             <button className="primary-action" type="button" onClick={() => setSimulated((value) => !value)}>
-              {simulated ? 'Return to current state' : 'Simulate recommended action'}
+              {simulated ? 'Return to current state' : 'Model seller action'}
             </button>
-            <p className="model-disclosure">Illustrative synthetic results. No real account, prospect, or revenue data is shown.</p>
+            <p className="model-disclosure">Illustrative synthetic results. No real account, prospect, seller, or revenue data is shown.</p>
           </>
         )}
       </aside>

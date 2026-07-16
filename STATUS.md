@@ -4,57 +4,57 @@
 
 ## Current phase
 
-Phase 2 — Statewide map foundation and first product journeys
+Phase 2 — Statewide map foundation and differentiated product journeys
 
 ## Done
 
 - Established repository governance and production-shaped boundaries in `AGENTS.md`, `CLAUDE.md`, `ARCHITECTURE.md`, `PRODUCT_BUILD_SPEC.md`, and `BUILD_HANDOFF.md`.
-- Migrated the repository to Vite + React + strict TypeScript with MapLibre and Vitest.
-- Added Node CI, main-branch releases, a validated all-offline review package, and a stable GitHub Pages preview after every merge.
-- Added base-aware public asset resolution for local, release, offline, and GitHub Pages builds.
-- Added deterministic opportunity scoring, confidence, priority bands, client simulation, market-mode score transforms, recommendations, and disclosures.
+- Migrated the application to Vite + React + strict TypeScript with MapLibre and Vitest.
+- Added Node CI, reproducible npm installs, standardized merge-triggered releases, a validated all-offline review package, and a stable GitHub Pages preview.
+- Added base-aware public asset resolution for local, Pages, release, and offline builds.
 - Added a reproducible statewide Ohio market generator using documented 2020 Census-derived ZCTA geometry.
-- Included every Ohio ZCTA from the source fixture and validated exact geometry/opportunity/territory coverage.
-- Preserved the existing curated Cleveland–Akron opportunity records.
-- Generated deterministic synthetic baseline metrics for every remaining Ohio ZCTA.
-- Added seven major-city operating territories plus an All Ohio view.
-- Added one shared territory selector across Opportunity Explorer, Client Growth Studio, and Market Growth Studio.
-- Added territory-aware rankings, campaign footprints, expansion recommendations, and internal objective views.
-- Rebuilt the universal shell to fit one browser viewport with no page-level scrolling.
-- Made left and right sidebars independently scrollable and collapsible across all product modes.
-- Added MapLibre resize/refit behavior when panels collapse or territories change.
-- Restored a pastel cool-to-hot opportunity scale, neutral gray inactive territories, strong active ZIP boundaries, gold selection, and cyan campaign emphasis.
-- Reduced inactive-territory fill opacity and boundary weight so statewide context remains visible without visual clutter.
-- Added ZIP-level camera focus: selecting a ZIP from the map or ranked list zooms to its geometry; clearing selection returns to the active territory frame.
-- Added polygon and multipolygon viewport-bound tests.
-- Lightened and desaturated the standard OpenStreetMap basemap.
-- Expanded the all-offline context generator to statewide Ohio using tiled TIGERweb requests and feature deduplication.
-- Expanded the offline workflow path filter so shared `src/` changes always rebuild and validate the offline artifact.
-- Added territory domain tests and statewide fixture validation.
-- Optimized statewide map interaction hot paths: objective/simulation recolors now use `displayScore` feature state with a `coalesce` paint expression instead of re-uploading the 2.7 MB GeoJSON source; dim/campaign/territory feature-state updates are diffed against the previously applied ZIP sets; hover/click territory membership checks use Sets; selection updates touch two features instead of all 1,233.
-- Replaced duplicated reach-gap and per-competitor GeoJSON sources with filtered layers over the shared statewide source.
-- Parallelized startup data loading: opportunities, overlays, and ZCTA geometry download concurrently (`ZipGeometrySource.load` now accepts a pending ZIP list).
-- Split MapLibre into its own cache-stable vendor chunk for standard builds (app chunk 242 KB / MapLibre 1,053 KB, previously one 1,301 KB chunk); the offline-review build still emits a single inlinable script.
-- Exposed `opportunitiesByZip` on `OpportunityMarket` so features look up ZIPs without linear scans; overlay validation now happens once inside `buildOpportunityMarket`; the Lakefront canonical territory id moved into the client-scenario domain module.
-- Checked in `package-lock.json` for reproducible installs.
-- Added a responsive compact layout mode (≤900px, phones and portrait tablets): full-bleed map, left/right panels as one-at-a-time bottom sheets with "Controls"/"Details" pills, the product-mode switch as a fixed bottom bar, stacked header, safe-area insets, and 16px compact selects to prevent iOS focus zoom. Fixed the previous ≤900px layout, which covered the map with both panel overlays and hid the mode switch and reset entirely.
-- Added the shared viewport-mode contract: `useViewportMode` (matchMedia-driven), `ProductViewContext.viewportMode`, and a matching CSS breakpoint; documented in `BUILD_HANDOFF.md` and `CLAUDE.md` that all future surfaces must render in both modes and must not use user-agent detection.
-- Scrubbed all direct company-brand mentions from the repository: the product is now "Reach Opportunity Lab" across the UI header, HTML titles/descriptions, README, CLAUDE.md, BUILD_HANDOFF.md, ARCHITECTURE.md, PRODUCT_BUILD_SPEC.md, and the offline package README; remaining company-specific phrasing became neutral ("real company data", "brand-aligned").
-- Standardized the release format: releases publish as `<Phase> Release <MAJOR.MINOR>.<build>` (e.g. `Alpha Release 0.1.312`) with tag `v<MAJOR.MINOR>.<build>`; phase lives in one `RELEASE_PHASE` env value in `ci.yml`, major/minor comes from `package.json`, and the build number is the monotonic CI run number. Convention documented in `BUILD_HANDOFF.md`.
-- Current validation:
-  - standard CI run 299 passed typecheck, statewide validation, Vitest, production build, and GitHub Pages build;
-  - all-offline workflow run 57 passed generation, validation, packaging, artifact upload, and release upload;
-  - this session: typecheck, statewide validation + 25 Vitest tests, production build, offline-review Vite build (single chunk confirmed), and headless SwiftShader browser walkthroughs at desktop (1440×850) and emulated iPhone (393×852, touch) sizes — selection zoom, score-filter dimming, reach-gap overlay, territory switch, objective recolors, client simulation, bottom-sheet open/close, and bottom-bar mode switching all passed locally. Software WebGL needs ~9 s to paint the first frame after each map mount; screenshot tooling must wait for it.
+- Included every source Ohio ZCTA and validated exact geometry, opportunity-record, territory, and provenance coverage.
+- Preserved curated Cleveland–Akron records and generated deterministic synthetic baseline metrics for every remaining Ohio ZCTA.
+- Added seven deterministic synthetic major-city territories plus an All Ohio view.
+- Added one shared territory selector across Opportunity Explorer, Client Growth Studio, and Seller Growth Studio.
+- Built a fixed one-viewport expanded layout with independently scrollable/collapsible sidebars.
+- Built a responsive compact mode at 900px and below: full-bleed map, one-at-a-time bottom sheets, fixed bottom product navigation, safe-area support, and no device detection.
+- Restored a pastel cool-to-hot opportunity palette with neutral gray inactive territories, gold selection, and cyan campaign emphasis.
+- Added ZIP geometry camera focus: map/list selection zooms to official geometry; clearing selection returns to territory bounds; panel changes preserve current focus.
+- Added stronger reach-gap and competitor fills/outlines plus more prominent layer controls.
+- Added ZIP-level competitive intelligence to Opportunity Explorer: modeled competitor intersections, reach-gap status, and competitor detail cards that toggle typed map footprint layers.
+- Built Client Growth Studio with a fictional advertiser, selectable deterministic strategies, territory-aware campaign/expansion ZIPs, modeled results, and conceptual Architect handoff.
+- Differentiated the internal workflow as Seller Growth Studio rather than a second Explorer.
+- Added `sellerOpportunity.ts`, which deterministically converts ZIP/objective signals into synthetic prospects/accounts, urgency, evidence, and recommended seller actions.
+- Replaced Seller Growth Studio's duplicate ZIP ranking with a prospect/account action queue and seller action brief; the map is now supporting geographic evidence.
+- Optimized statewide map hot paths:
+  - objective/simulation recolors use `displayScore` feature state instead of re-uploading the 2.7 MB GeoJSON source;
+  - `dim`, `campaign`, and `territoryDim` writes are diffed against applied state;
+  - hover/click territory checks use Sets;
+  - selection touches only previous/current features;
+  - overlays are filtered layers over one shared statewide source.
+- Parallelized opportunity, overlay, and geometry startup loading while preserving the `ZipGeometrySource` boundary.
+- Exposed `opportunitiesByZip` for O(1) feature lookups.
+- Split MapLibre into a cache-stable vendor chunk for standard builds while preserving the offline target's single inlinable script.
+- Scrubbed direct company-brand mentions; the product name is Reach Opportunity Lab.
+
+## Product boundaries
+
+- **Opportunity Explorer:** neutral market diagnosis — where opportunity exists, why a ZIP scores as it does, and which modeled coverage/competitor signals intersect it.
+- **Client Growth Studio:** advertiser strategy — how a specific fictional campaign could improve through selected deterministic strategies.
+- **Seller Growth Studio:** internal seller action — who to pursue, grow, or save next and what action to take.
+
+Shared geography and score signals do not make these the same product. Each feature owns a different question and workflow.
 
 ## Next up
 
-1. Merge the map-polish follow-up and review the updated pastel palette, inactive context, and ZIP focus through the stable GitHub Pages URL.
-2. Refine spacing, typography, map fit, panel widths, and territory labels based on real-browser screenshots.
-3. Extend reach-gap, competitor, current-campaign, and recommended-expansion controls throughout Client Growth Studio.
-4. Expand Market Growth Studio with richer synthetic account/prospect datasets and complete retention-save comparisons.
-5. Add additional state/major-city market packages behind the same territory/market contracts.
-6. Add the guided executive tour. (The mobile bottom-sheet interaction shipped with the compact layout mode; remaining mobile polish: swipe-to-dismiss sheets, auto-opening the Details sheet when a simulation completes, and compact typography scaling.)
-7. Add WebGL-capable visual regression coverage for standard and offline adapters.
+1. Merge this map-clarity and Seller Growth Studio differentiation pass, then review the stable Pages build on the target laptop.
+2. Tune panel widths and typography only if the real-browser review still feels crowded.
+3. Extend current-campaign, reach-gap, competitor, and recommended-expansion comparison controls through Client Growth Studio.
+4. Expand Seller Growth Studio with richer deterministic synthetic account histories, prospect lists, and retention-save comparisons.
+5. Add additional state/major-city market packages behind the same market/territory contracts.
+6. Add the guided executive tour and remaining compact-mode polish.
+7. Add automated WebGL visual-regression coverage for standard and offline adapters.
 
 ## Decisions log
 
@@ -64,94 +64,59 @@ Phase 2 — Statewide map foundation and first product journeys
   Must preserve: business logic remains pure TypeScript; React and MapLibre stay at the edges
 
 - 2026-07-15 | DECISION: synthetic data is delivered through typed repositories
-  Considered: importing JSON directly in components or waiting for production APIs
+  Considered: direct JSON imports in components and waiting for production APIs
   Rejected because: direct imports make demo plumbing permanent while waiting blocks the prototype
-  Must preserve: future APIs replace repository composition, not screens and domain logic
+  Must preserve: future APIs replace composition, not screens or domain logic
 
 - 2026-07-15 | DECISION: ZIP/ZCTA polygons are the primary selectable and scored geography
-  Considered: large sales zones or a non-geographic dashboard
-  Rejected because: the intended product gives each ZIP its own opportunity score
-  Must preserve: regions and territories group ZIPs but do not replace ZIP-level truth
+  Considered: large sales zones and a non-geographic dashboard
+  Rejected because: the product promise is ZIP-level explainable opportunity
+  Must preserve: territories group ZIPs but do not replace ZIP truth
 
-- 2026-07-15 | DECISION: client simulations are deterministic domain functions with staged UI theater
-  Considered: random outputs, hard-coded result cards, and live AI calls
-  Rejected because: randomness damages repeatability, hard-coded screens do not scale, and live AI is out of prototype scope
-  Must preserve: identical strategy inputs produce identical outputs and all results remain labeled illustrative
-
-- 2026-07-15 | DECISION: supporting map layers use typed ZIP-membership definitions
-  Considered: hard-coded MapLibre polygons, runtime polygon intersection, and config-driven ZIP memberships
-  Rejected because: hard-coded layers mix business data with rendering and polygon intersection is unnecessary for deterministic demo coverage
-  Must preserve: validate overlay ZIPs against the market; MapLibre renders selected definitions but does not own them
-
-- 2026-07-15 | DECISION: generated checked-in Census-derived geometry is the runtime default
-  Considered: browser-time TIGERweb requests, synthetic polygons, and manually copied geometry
-  Rejected because: runtime requests are unreliable, synthetic polygons miss product intent, and manual copies lose reproducibility
-  Must preserve: geometry remains behind `ZipGeometrySource`; generated files retain provenance and are validated before tests
+- 2026-07-15 | DECISION: include every Ohio ZCTA and assign each ZIP to exactly one synthetic major-city territory
+  Considered: 26 curated ZIPs only, unscored statewide context, and arbitrary grids
+  Rejected because: fragmented geography looked like a mockup and neutral context did not make major territories explorable
+  Must preserve: curated records remain distinguishable from generated baselines; production territory membership must later use governed definitions
 
 - 2026-07-15 | DECISION: standard and all-offline maps are separate presentation adapters over one product
-  Considered: bundling raster tiles into the standard app, replacing OpenStreetMap everywhere, or maintaining a dedicated offline target
-  Rejected because: tile packaging creates licensing/size concerns and replacing the standard map sacrifices detail
-  Must preserve: business and feature logic is shared; the offline target embeds Census context and blocks external requests
+  Considered: bundled raster tiles in the standard app and replacing the online basemap everywhere
+  Rejected because: tile packaging creates licensing/size concerns and a single reduced-detail basemap weakens normal review
+  Must preserve: business/feature logic is shared; offline blocks unapproved runtime requests
 
-- 2026-07-15 | DECISION: publish `main` through GitHub Pages as the stable executive-review URL
-  Considered: manual local setup, release ZIPs only, and an immediate third-party host
-  Rejected because: manual setup slows review, ZIPs are not a shared URL, and another host adds unnecessary account/configuration work
-  Must preserve: deployment remains an adapter; base paths and public assets remain environment-aware
-
-- 2026-07-15 | DECISION: include every Ohio ZCTA and generate deterministic synthetic baseline scores statewide
-  Considered: displaying only 26 curated Cleveland ZIPs, showing unscored gray statewide context, and generating statewide demonstration scores
-  Rejected because: the 26-ZIP view looked fragmented and neutral statewide context did not make every major territory explorable
-  Must preserve: curated Cleveland–Akron records remain distinguishable from generated statewide baselines; all values remain labeled synthetic
-
-- 2026-07-15 | DECISION: group Ohio into seven major-city operating territories with an All Ohio option
-  Considered: county boundaries, arbitrary equal grids, and one statewide view only
-  Rejected because: major-city territories tell an executive operating story and provide a scalable contract for future markets
-  Must preserve: every ZIP belongs to exactly one territory; selection greys other territories without removing statewide context
-
-- 2026-07-15 | DECISION: the executive shell is one fixed viewport with independently scrollable, collapsible sidebars
-  Considered: document-level scrolling and fixed always-visible panels
-  Rejected because: scrolling breaks the dashboard metaphor and fixed panels consume too much map space on executive laptops
-  Must preserve: no page scroll; map resizes/refits after panel changes; behavior is universal across all three tabs
+- 2026-07-15 | DECISION: the executive shell is a fixed viewport with expanded and compact layout modes
+  Considered: document-level scrolling, always-open panels, device detection, and a separate mobile build
+  Rejected because: scrolling breaks the dashboard metaphor, fixed panels shrink the map, and device-specific implementations drift
+  Must preserve: `useViewportMode`, `ProductViewContext.viewportMode`, and the 900px CSS breakpoint remain synchronized; map stays visible by default in compact mode
 
 - 2026-07-16 | DECISION: active opportunity values use a pastel heat-map progression
-  Considered: monochromatic light-to-deep blue and a highly saturated hot scale
-  Rejected because: monochromatic blue weakens heat-map storytelling while saturated colors overpower the neutral basemap
-  Must preserve: the progression remains soft and readable; inactive territories remain neutral gray; selection remains gold; campaign emphasis remains cyan
+  Considered: monochromatic blue and a highly saturated hot scale
+  Rejected because: monochromatic blue weakens heat storytelling while saturated colors overpower the neutral basemap
+  Must preserve: inactive territories remain gray; selection gold; campaign cyan; supporting overlays remain visibly distinct
 
-- 2026-07-16 | DECISION: map presentation state flows through diffed MapLibre feature state over one shared statewide source
-  Considered: rebuilding and re-setting the GeoJSON source per recolor, per-ZIP full-state rewrites, and separate GeoJSON sources per overlay
-  Rejected because: `setData` re-parses and re-tiles 2.7 MB of geometry per objective switch, full rewrites issue 1,200+ `setFeatureState` calls per filter tick, and per-overlay sources duplicate polygons in memory
-  Must preserve: `displayScore` feature state is presentation-only (domain still owns score truth); overlay layers filter the shared `zip-opportunities` source; applied-state diffing resets whenever a map instance is recreated
+- 2026-07-16 | DECISION: map presentation changes flow through diffed MapLibre feature state over one statewide source
+  Considered: full GeoJSON `setData` recolors, full-state rewrites, and duplicate overlay sources
+  Rejected because: those approaches reparse geometry, issue unnecessary state writes, and duplicate polygons in memory
+  Must preserve: `displayScore` is presentation-only; domain owns score truth; overlay layers filter the shared source
 
-- 2026-07-16 | DECISION: geometry sources accept a pending ZIP list so startup downloads run concurrently
-  Considered: keeping the serial payload-then-geometry load, fetching geometry directly in the repository, and a separate prefetch method
-  Rejected because: serial loading delays the largest download by a full round trip, direct fetches bypass the source boundary, and a prefetch method splits one responsibility across two calls
-  Must preserve: `ZipGeometrySource.load` still validates and normalizes against the resolved ZIP list; adapters whose request URL depends on ZIPs (Census) simply await the list first
+- 2026-07-16 | DECISION: Opportunity Explorer is the diagnostic experience and Seller Growth Studio is the internal action workflow
+  Considered: keeping both as ZIP-ranking views with different transforms and combining them into one screen
+  Rejected because: duplicate map experiences confuse executives and fail to tell an internal-sales story; one combined screen mixes diagnosis with account/prospect action
+  Must preserve: Explorer answers where/why/competitive context; Seller Growth answers who to pursue, grow, or save and what to do next
 
-- 2026-07-16 | DECISION: mobile support is a responsive compact layout mode driven by a shared matchMedia contract, not device detection
-  Considered: user-agent/device detection, a separate mobile build target, and per-feature ad-hoc media queries
-  Rejected because: UA sniffing misclassifies tablets and desktop-narrow windows and ignores rotation/resize; a separate target duplicates every feature; scattered per-feature queries drift apart
-  Must preserve: exactly two layout modes (`expanded`, `compact`); `useViewportMode`/`ProductViewContext.viewportMode` and the layout.css breakpoint stay in sync at 900px; compact keeps the map visible by default with bottom sheets opening one at a time; all product modes remain reachable from the fixed bottom bar
-
-- 2026-07-16 | DECISION: releases are named `<Phase> Release <MAJOR.MINOR>.<build>` and tagged `v<MAJOR.MINOR>.<build>`, generated entirely by CI
-  Considered: keeping `build-<run>` tags, manual semver tagging per release, and letter suffixes (0.1a, 0.1b)
-  Rejected because: `build-<run>` carries no product-maturity signal, manual tagging does not scale with merge-triggered releases, and letter suffixes exhaust and sort poorly
-  Must preserve: phase changes happen only via the single `RELEASE_PHASE` value in `ci.yml`; major/minor milestones bump `package.json`; no hand-created releases or tags; the offline workflow keeps attaching to the latest release regardless of tag format
-
-- 2026-07-16 | DECISION: selecting a ZIP changes both detail state and map camera focus
-  Considered: updating the detail panel without moving the map
-  Rejected because: spatial focus is part of the executive explanation and makes small ZIPs easier to understand
-  Must preserve: map/list selection zooms to official geometry; clearing selection and territory reset return to territory bounds; sidebar resize preserves the current focus
+- 2026-07-16 | DECISION: releases are named `<Phase> Release <MAJOR.MINOR>.<build>` and tagged `v<MAJOR.MINOR>.<build>`
+  Considered: generic build tags and manual semver releases
+  Rejected because: generic tags lack maturity context and manual tagging does not scale with merge-triggered delivery
+  Must preserve: phase comes from `RELEASE_PHASE`, major/minor from `package.json`, and build from CI run number
 
 ## Noticed
 
-- Reach-gap and competitor fixtures currently describe Northeast Ohio only. Controls remain visible statewide, but production-shaped statewide coverage definitions are a later data task.
-- Generated statewide metrics are deliberately baseline-quality synthetic records; only the existing Cleveland–Akron records have curated narratives.
-- MapLibre now ships as its own vendor chunk, so returning visitors re-download only the ~242 KB app chunk after merges; further size reduction would require lazy product-mode loading, which buys little while all three modes share the map.
-- Headless Chromium renders MapLibre in this container with `--enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader` (software WebGL; allow ~8 s per frame settle). OpenStreetMap raster tiles are proxy-blocked, so screenshots show vector layers over the plain background. This unblocks the previously noted WebGL limitation for visual checks.
-- The mode-switch and Market Growth objective lists use `role="tab"` without arrow-key navigation/roving tabindex; keyboard a11y polish fits the planned spacing/typography pass.
-- Legacy curated fixtures (`zip-opportunities.json`, `cleveland-*.geojson`) are generator inputs but still ship in `public/` on every deploy (~76 KB); relocating them would touch generator scripts and two workflows.
-- The all-offline context is lighter than a commercial street basemap and prioritizes reliable statewide orientation.
+- Reach-gap and competitor fixtures currently describe Northeast Ohio only; ZIP details correctly show no intersection elsewhere.
+- Competitor footprints are synthetic ZIP memberships, not provider service-area claims.
+- Generated statewide metrics are baseline-quality synthetic records; curated Cleveland–Akron records contain richer narratives.
+- MapLibre remains the largest standard-build dependency but is isolated in a cache-stable vendor chunk.
+- Software WebGL can render the map in headless Chromium when SwiftShader flags are enabled, but raster basemap tiles may be blocked in automation.
+- Product/objective tabs still need full keyboard arrow navigation and roving tabindex.
+- The temporary implementation branch `agent/map-clarity-sales-studio` was abandoned because it predated Fable's optimization and branding merges; all current work is based on commit `5080a237…` or later.
 
 ## How to run
 

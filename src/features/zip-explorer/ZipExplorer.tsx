@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { MapLayerControls } from '../../components/MapLayerControls';
 import { ScoreRing } from '../../components/ScoreRing';
@@ -60,6 +60,11 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     () => [...activeOpportunities].sort((a, b) => b.score - a.score).slice(0, 8),
     [activeOpportunities],
   );
+  const selectedCompetitors = useMemo(
+    () => selected ? data.overlays.competitors.filter((competitor) => competitor.zips.includes(selected.zip)) : [],
+    [data.overlays.competitors, selected],
+  );
+  const selectedHasReachGap = selected ? data.overlays.reachGapZips.includes(selected.zip) : false;
 
   useEffect(() => {
     setSelectedZip(null);
@@ -174,7 +179,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
         </div>
         <div className="synthetic-notice">
           <span className="synthetic-notice__dot" />
-          Statewide opportunity and territory values are deterministic synthetic demonstration data.
+          Statewide opportunity, coverage, and competitor values are deterministic synthetic demonstration data.
         </div>
       </aside>
 
@@ -213,6 +218,40 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
               <span>Model confidence</span>
               <strong>{selected.confidence}</strong>
             </div>
+
+            <section className="detail-section competitive-landscape">
+              <span className="detail-section__label">Competitive landscape</span>
+              <div className="competition-summary">
+                <div><strong>{selectedCompetitors.length}</strong><span>modeled competitor footprints</span></div>
+                <span className={`reach-status ${selectedHasReachGap ? 'has-gap' : ''}`}>
+                  {selectedHasReachGap ? 'Reach gap detected' : 'No modeled reach gap'}
+                </span>
+              </div>
+              {selectedCompetitors.length > 0 ? (
+                <div className="competitor-intel-list">
+                  {selectedCompetitors.map((competitor) => {
+                    const visible = visibleCompetitorIds.includes(competitor.id);
+                    return (
+                      <button
+                        className={`competitor-intel-card ${visible ? 'is-visible' : ''}`}
+                        key={competitor.id}
+                        type="button"
+                        aria-pressed={visible}
+                        style={{ '--competitor-color': competitor.color } as CSSProperties}
+                        onClick={() => handleCompetitorVisibilityChange(competitor.id, !visible)}
+                      >
+                        <span className="competitor-intel-card__swatch" aria-hidden="true" />
+                        <span><strong>{competitor.label}</strong><small>{competitor.subtitle}</small></span>
+                        <em>{visible ? 'Layer visible' : 'Show footprint'}</em>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="competitive-empty">No synthetic competitor footprint currently intersects this ZIP.</p>
+              )}
+              <small className="competitive-disclosure">Footprints are illustrative ZIP memberships, not provider service-area claims.</small>
+            </section>
 
             <section className="detail-section">
               <span className="detail-section__label">Why this ZIP stands out</span>
@@ -256,10 +295,10 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
             <div className="empty-detail__visual"><span>OH</span></div>
             <span className="eyebrow">Explore the network</span>
             <h2>Select a ZIP to reveal the opportunity</h2>
-            <p>Choose any Ohio ZIP on the map or ranked list. Territory selection keeps the chosen operating region in focus while preserving statewide context.</p>
+            <p>Choose any Ohio ZIP to review its opportunity drivers, market context, and modeled competitive landscape.</p>
             <div className="empty-detail__hint"><span>1</span>Select All Ohio or a major-city territory</div>
             <div className="empty-detail__hint"><span>2</span>Choose a ZIP on the map or ranked list</div>
-            <div className="empty-detail__hint"><span>3</span>Continue into a client or market strategy</div>
+            <div className="empty-detail__hint"><span>3</span>Review signals before moving into a growth workflow</div>
           </div>
         )}
       </aside>

@@ -260,7 +260,7 @@ export function OpportunityMap({
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
           'fill-color': '#8b5cf6',
-          'fill-opacity': 0.1,
+          'fill-opacity': 0.24,
         },
       });
       map.addLayer({
@@ -270,8 +270,9 @@ export function OpportunityMap({
         filter: zipMembershipFilter(data.overlays.reachGapZips),
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
-          'line-color': '#7c3aed',
-          'line-width': 2.2,
+          'line-color': '#c026d3',
+          'line-width': 3,
+          'line-opacity': 0.98,
           'line-dasharray': [2, 1.5],
         },
       });
@@ -288,7 +289,7 @@ export function OpportunityMap({
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'fill-color': competitor.color,
-            'fill-opacity': competitor.wide ? 0.035 : 0.08,
+            'fill-opacity': competitor.wide ? 0.11 : 0.2,
           },
         });
         map.addLayer({
@@ -299,7 +300,8 @@ export function OpportunityMap({
           layout: { visibility: visible ? 'visible' : 'none' },
           paint: {
             'line-color': competitor.color,
-            'line-width': competitor.wide ? 1.1 : 1.9,
+            'line-width': competitor.wide ? 2 : 2.8,
+            'line-opacity': 0.96,
             ...(competitor.wide ? { 'line-dasharray': [4, 3] as [number, number] } : {}),
           },
         });
