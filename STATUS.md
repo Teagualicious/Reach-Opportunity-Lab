@@ -54,7 +54,7 @@ Phase 3 — Spectrum Reach experience redesign (Codex proposal, July 2026)
   - Lakefront Automotive Group, Buckeye Home Pros, Queen City Credit Union, and Harbor & Hearth Furnishings;
   - profile-specific baselines, strategy response, premium growth-idea copy, home-market narrative, and campaign ZIP counts;
   - pure `clientAdvertiser.ts` profile-aware campaign-footprint selection, preserving Lakefront's reviewed Cleveland–Akron ZIPs and generating profile-distinct deterministic footprints elsewhere;
-  - a client-safe advertiser scenario selector with dynamic campaign metrics, growth ideas, modeled results, and account-executive handoff.
+  - a client-safe advertiser scenario selector with dynamic campaign metrics, growth ideas, modeled results, account-executive handoff, and shared-reset behavior.
 
 ## Workspace boundaries
 
