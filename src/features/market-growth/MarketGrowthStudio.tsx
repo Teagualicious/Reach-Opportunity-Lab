@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { ExperienceGuide } from '../../components/ExperienceGuide';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { MARKET_MODES, getMarketModeScore, type MarketModeId } from '../../domain/marketMode';
 import { buildSellerOpportunity } from '../../domain/sellerOpportunity';
@@ -64,7 +65,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     <main className="studio-grid market-studio product-grid">
       <aside className="panel panel--left seller-workspace-controls">
         <div className="panel__heading">
-          <span className="eyebrow">Seller Growth Studio</span>
+          <span className="eyebrow">Seller Action Center</span>
           <h1>{territoryName}</h1>
           <p>Turn ZIP intelligence into a prioritized prospect, growth, and retention action queue.</p>
         </div>
@@ -127,6 +128,13 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
       </section>
 
       <aside className="panel panel--right seller-action-detail">
+        <ExperienceGuide
+          tone="seller"
+          title="Seller Action Center"
+          audience="Local sellers and sales managers"
+          purpose="Turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save."
+          nextStep="Choose an objective, open a seller action brief, then model the recommended move."
+        />
         {selected && selectedItem && (
           <>
             <div className="seller-action-hero">

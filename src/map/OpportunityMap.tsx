@@ -10,6 +10,7 @@ import type { GeographicBounds } from '../domain/territory';
 import { getGeometryBounds } from './geometryBounds';
 import {
   opportunityColorExpression,
+  zipFillOpacityEvidenceExpression,
   zipFillOpacityExpression,
   zipLineColorExpression,
   zipLineWidthExpression,
@@ -166,6 +167,7 @@ export function OpportunityMap({
   }, [activeZips, allZips]);
   const campaignZipSet = useMemo(() => new Set(campaignZips), [campaignZips]);
   const recommendedZipSet = useMemo(() => new Set(recommendedZips), [recommendedZips]);
+  const evidenceFocusActive = showReachGap || visibleCompetitorIds.length > 0;
   const effectiveReachGapZips = useMemo(
     () => reachGapZips ?? data.overlays.reachGapZips,
     [data.overlays.reachGapZips, reachGapZips],
@@ -185,6 +187,7 @@ export function OpportunityMap({
   const viewportBoundsRef = useRef<GeographicBounds>(viewportBounds ?? data.market.bounds);
   const showReachGapRef = useRef(showReachGap);
   const visibleCompetitorIdsRef = useRef<readonly string[]>(visibleCompetitorIds);
+  const evidenceFocusActiveRef = useRef(evidenceFocusActive);
 
   // Feature state already written to the current map instance, so updates only
   // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
@@ -260,7 +263,9 @@ export function OpportunityMap({
         source: SOURCE_ID,
         paint: {
           'fill-color': opportunityColorExpression,
-          'fill-opacity': zipFillOpacityExpression,
+          'fill-opacity': evidenceFocusActiveRef.current
+            ? zipFillOpacityEvidenceExpression
+            : zipFillOpacityExpression,
           'fill-antialias': true,
         },
       });
@@ -280,7 +285,7 @@ export function OpportunityMap({
         id: REACH_GAP_LINE_LAYER_ID,
         type: 'line',
         source: SOURCE_ID,
-        filter: zipMembershipFilter(data.overlays.reachGapZips),
+        filter: zipMembershipFilter(reachGapZipsRef.current),
         layout: { visibility: showReachGapRef.current ? 'visible' : 'none' },
         paint: {
           'line-color': '#c026d3',
@@ -511,6 +516,17 @@ export function OpportunityMap({
       );
     }
   }, [data.overlays.competitors, visibleCompetitorIds]);
+
+  useEffect(() => {
+    evidenceFocusActiveRef.current = evidenceFocusActive;
+    const map = mapRef.current;
+    if (!map?.getLayer(FILL_LAYER_ID)) return;
+    map.setPaintProperty(
+      FILL_LAYER_ID,
+      'fill-opacity',
+      evidenceFocusActive ? zipFillOpacityEvidenceExpression : zipFillOpacityExpression,
+    );
+  }, [evidenceFocusActive]);
 
   useEffect(() => {
     viewportBoundsRef.current = viewportBounds ?? data.market.bounds;
