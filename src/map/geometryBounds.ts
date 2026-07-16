@@ -21,17 +21,18 @@ export function getGeometryBounds(geometry: Geometry): GeographicBounds | null {
     const childBounds = geometry.geometries
       .map(getGeometryBounds)
       .filter((bounds): bounds is GeographicBounds => bounds !== null);
+    const [firstBounds, ...remainingBounds] = childBounds;
 
-    if (childBounds.length === 0) return null;
+    if (!firstBounds) return null;
 
-    return childBounds.reduce<GeographicBounds>(
+    return remainingBounds.reduce<GeographicBounds>(
       (combined, bounds) => [
         Math.min(combined[0], bounds[0]),
         Math.min(combined[1], bounds[1]),
         Math.max(combined[2], bounds[2]),
         Math.max(combined[3], bounds[3]),
       ],
-      [...childBounds[0]],
+      firstBounds,
     );
   }
 
