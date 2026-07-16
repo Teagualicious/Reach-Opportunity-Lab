@@ -1,3 +1,4 @@
+# One-time branch workflow; removes itself after synchronizing documentation.
 name: Apply Client Growth documentation patch
 
 on:
@@ -109,7 +110,7 @@ Client Growth owns a single fictional advertiser scenario and now presents a thr
 The simulation automatically moves to Recommended plan when complete. Selecting a recommended ZIP zooms to its official geometry and reveals campaign role, reach-gap state, and competitor count.
 
 '''
-          if '### Client Growth Studio\n\nClient Growth owns a single fictional advertiser scenario and now presents' not in handoff:
+          if 'Client Growth owns a single fictional advertiser scenario and now presents' not in handoff:
             handoff = replace_once(handoff, '### Client Growth Studio\n', client_section, 'BUILD_HANDOFF Client Growth section')
           handoff = replace_once(
             handoff,
