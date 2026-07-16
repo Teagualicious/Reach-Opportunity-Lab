@@ -4,7 +4,7 @@
 
 ## Current phase
 
-Phase 2 — Statewide map foundation and differentiated product journeys
+Phase 3 — Spectrum Reach experience redesign (Codex proposal, July 2026)
 
 ## Done
 
@@ -38,6 +38,15 @@ Phase 2 — Statewide map foundation and differentiated product journeys
   - MapLibre vendor chunking;
   - one inlinable offline script.
 
+- Executed the Spectrum Reach experience-redesign proposal (July 2026) across all three workspaces:
+  - Refreshed design tokens to the proposal palette (deep navy, brand blue, reach cyan, growth teal, success green, cloud), added motion tokens (150–250 ms), and bundled Inter Variable with optical sizing (Inter Display headlines, no runtime font requests).
+  - Rebranded the header lockup to Spectrum Reach · Opportunity Lab with deep-navy active workspace tabs.
+  - Added `zipDemographics.ts` (ten deterministic synthetic demographics per ZIP), `internalMetrics.ts` (modeled penetration, ARPU, churn, share of wallet, accounts, ad revenue, competitor spend, whitespace, top categories, YoY growth), `marketLens.ts` (lens surfaces + demographic range filters), and `territoryBrief.ts`, all pure and tested.
+  - Rebuilt Market Opportunity Map: color-ZIPs-by market lens with adaptive legend and lens-aware hover/ranked list, collapsible dual-thumb demographic range filters with N-of-M count, full ZIP market profile (demographics, modeled internal signals, competitive landscape, score breakdown), and the Create-territory-brief primary output.
+  - Refreshed Seller Action Center: lead-with product story, modeled annual opportunity range, and Build-outreach-plan primary output; action modeling kept as a secondary control.
+  - Rebuilt Client Campaign Planner as a light guided client-safe story: Your-campaign-today tiles, plain-language growth ideas, Today/With-growth map views, modeled-result hero with explained new high-fit ZIPs, and Talk-to-your-account-executive CTA (Architect activation folded into the contact summary). Competitor overlays, penetration, and seller signals no longer render in the client view.
+  - Renamed competitor overlay fixtures to fictional providers (Northline Cable, Ridgeway Broadband, Lakelight Fiber, MetroLink TV, SkyCast Stream, OrbitView Satellite).
+
 ## Workspace boundaries
 
 - **Market Opportunity Map:** where is opportunity, why does it exist, and what modeled coverage or competitive signals affect it?
@@ -48,12 +57,13 @@ Shared geography does not make these the same product. Each workspace owns a dis
 
 ## Next up
 
-1. Merge and visually review the workspace-guide and supporting-layer focus pass through the stable Pages URL.
-2. Add multiple deterministic fictional advertiser profiles to Client Campaign Planner.
-3. Expand Seller Action Center with account histories, prospect lists, and retention-save comparisons.
-4. Add additional state and major-city market packages behind the existing market/territory contracts.
-5. Add the guided executive tour, full keyboard tab behavior, and remaining compact-mode polish.
-6. Add automated WebGL visual-regression coverage for standard and offline adapters.
+1. Merge and visually review the Spectrum Reach redesign pass through the stable Pages URL.
+2. Validate the all-offline package against the redesign (bundled Inter, new stylesheets) — deferred from this pass by product direction.
+3. Add multiple deterministic fictional advertiser profiles to Client Campaign Planner.
+4. Expand Seller Action Center with account histories, prospect lists, and retention-save comparisons.
+5. Add additional state and major-city market packages behind the existing market/territory contracts.
+6. Add the guided executive tour, full keyboard tab behavior, and remaining compact-mode polish.
+7. Add automated WebGL visual-regression coverage for standard and offline adapters.
 
 ## Decisions log
 
@@ -112,9 +122,31 @@ Shared geography does not make these the same product. Each workspace owns a dis
   Rejected because: duplicate map experiences confuse users and a combined screen mixes diagnosis with seller action
   Must preserve: market diagnosis and seller execution remain different workflows
 
+- 2026-07-16 | DECISION: execute the Codex redesign proposal with Spectrum Reach lockup branding and fictional competitor names
+  Considered: neutral Reach-only branding, real provider names from the original prototype screenshots, and a foundation-only first PR
+  Rejected because: the proposal's brand direction was approved for the full refresh, real provider names violate the no-real-company-data rule, and the user chose a full single-branch refresh
+  Must preserve: fixtures stay fictional; the header lockup reads Spectrum Reach · Opportunity Lab; workspace names and order are unchanged
+
+- 2026-07-16 | DECISION: synthetic demographics and internal business metrics are pure deterministic functions, not stored fixtures
+  Considered: extending the generated statewide fixture files and a new fixture JSON
+  Rejected because: derived-per-ZIP pure functions need no regeneration step, keep payload size flat, and stay deterministic by construction
+  Must preserve: `zipNoise` hashing stays stable (values are part of the reviewed experience); demographics/internal metrics remain domain-pure and covered by range/determinism tests
+
+- 2026-07-16 | DECISION: market lenses recolor through the existing displayScore feature state over the 35–100 heat ramp
+  Considered: per-lens color ramps and re-uploading recolored GeoJSON
+  Rejected because: displayScore diffing preserves the statewide performance laws and one ramp keeps the legend consistent
+  Must preserve: lens normalization happens in `marketLens.ts`; the map never computes lens values; the opportunity lens passes undefined displayScores
+
+- 2026-07-16 | DECISION: the client workspace is light-surfaced and never renders internal signals
+  Considered: keeping the shared dark rail and the three-view diagnose flow with competitor overlays
+  Rejected because: the proposal separates internal analytical density from the client growth story, and competitor/penetration data is internal-only
+  Must preserve: `.is-client-mode` flips only the client rail; internal signals may inform client recommendation scoring but not client-facing text or layers
+
 ## Noticed
 
-- Competitor fixtures currently cover Northeast Ohio only; they are illustrative ZIP memberships, not service-area claims.
+- Competitor fixtures currently cover Northeast Ohio only; they are illustrative fictional ZIP memberships, not service-area claims.
+- The all-offline package (`npm run offline:all`) has not been revalidated since the redesign added the bundled Inter font and new stylesheets; run it before the next offline review.
+- The map hover popup shows the active market lens value via `popupValueText`; other workspaces keep the default opportunity line.
 - Territory-specific client reach gaps are deterministic demonstration output.
 - Generated statewide records are baseline quality; curated Cleveland–Akron records have richer narratives.
 - MapLibre remains the largest dependency but is isolated in a cache-stable vendor chunk.
