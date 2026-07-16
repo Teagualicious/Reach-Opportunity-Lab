@@ -232,24 +232,17 @@ Feature state:
 | `territoryDim` | neutral inactive territory context |
 | `displayScore` | presentation score for objectives/simulations |
 
-### Universal active-layer focus
+### Supporting-layer focus
 
-Any active emphasized layer causes the base opportunity surface to mute:
-
-- reach-gap evidence;
-- competitor footprint;
-- current campaign;
-- recommended expansion;
-- seller focus.
-
-The base does not disappear. Selected/current/recommended ZIPs remain stronger.
+Whenever a reach-gap or competitor evidence layer is active, the base opportunity surface mutes. It remains visible so users keep geographic orientation.
 
 Implementation requirement:
 
 - use `zipFillOpacityEvidenceExpression` for the muted state;
 - switch `fill-opacity` with one `setPaintProperty` call;
 - do not write a global focus flag to every ZCTA;
-- keep reach-gap and competitor colored outlines above ordinary ZIP boundaries.
+- selected/current/recommended states remain distinct;
+- ordinary current-plan, recommended-plan, and seller-focus views use normal heat-map opacity when no supporting evidence layer is active.
 
 ### Performance constraints
 
@@ -370,8 +363,7 @@ Real-browser review remains required for final visual judgment.
 - map-first desktop proportions;
 - feature-state performance optimization;
 - pastel base opportunity surface;
-- universal active-layer muting;
-- evidence outlines above ordinary boundaries;
+- supporting-layer muting for reach gaps and competitor footprints;
 - gold selection, cyan current, green recommended;
 - synthetic disclosures and provenance;
 - client/internal separation.
@@ -397,7 +389,7 @@ Real-browser review remains required for final visual judgment.
 
 ## 12. Next implementation sequence
 
-1. Review the workspace clarity and active-layer focus through the stable Pages URL.
+1. Review the workspace clarity and supporting-layer focus through the stable Pages URL.
 2. Add multiple deterministic fictional advertiser profiles to Client Campaign Planner.
 3. Add richer account histories and retention-save comparisons to Seller Action Center.
 4. Add additional state and major-city market packages.
