@@ -12,6 +12,8 @@ Phase 2 — Shared map and first product journeys
 - Migrated the repository to Vite + React + strict TypeScript with MapLibre and Vitest; removed the obsolete Python scaffold.
 - Added Node-based CI that installs dependencies, typechecks, tests, and builds on every push and pull request.
 - Added a main-branch release job that publishes static-build and source ZIP files.
+- Added a main-branch GitHub Pages workflow that publishes one stable browser preview after each merge.
+- Added base-aware public asset resolution so local, release, offline, and GitHub Pages builds share the same repository/data contracts.
 - Added typed opportunity-domain contracts, score validation, confidence, priority bands, and synthetic ZIP opportunity fixtures.
 - Added a typed `DemoOpportunityRepository` and replaceable ZIP geometry-source boundary.
 - Added a reproducible geometry pipeline that filters a documented 2020 Census-derived Ohio ZCTA source to the 26 demonstration ZIPs.
@@ -96,12 +98,18 @@ Phase 2 — Shared map and first product journeys
   Rejected because: tile packaging creates licensing and size concerns, while replacing the standard map sacrifices visual detail and couples review constraints to product behavior
   Must preserve: the standard app keeps its isolated online basemap; the offline entry bundles Census context, embeds all fixtures and assets, and rejects unapproved runtime requests
 
+- 2026-07-15 | DECISION: publish `main` through GitHub Pages as the stable executive-review URL
+  Considered: continuing manual local setup, relying only on release ZIPs, or introducing a third-party host immediately
+  Rejected because: manual setup slows every review, release ZIPs are not a shared browser URL, and a separate host adds account/configuration work before it is needed
+  Must preserve: Pages is a deployment adapter only; Vite base paths and public asset URLs remain environment-aware rather than hard-coded in feature code
+
 ## Noticed
 
 - The Vite standard build reports a large initial JavaScript chunk because MapLibre is bundled up front. Code splitting can be considered after product journeys stabilize.
 - Automated screenshot testing is blocked in the current container because Chromium cannot initialize WebGL.
 - Synthetic competitor footprints use deterministic ZIP membership, not exact provider service-area polygons. This is appropriate for the prototype but must be replaced by governed coverage data in production.
 - The all-offline context is intentionally lighter than a commercial street basemap; it prioritizes dependable geographic orientation and ZIP-level review without network, licensing, or tile-storage dependencies.
+- GitHub Pages for this private repository may require the repository owner to enable Pages and select GitHub Actions as the source once; the workflow handles later deployments automatically.
 
 ## How to run
 
