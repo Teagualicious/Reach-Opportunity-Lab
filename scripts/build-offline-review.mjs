@@ -10,10 +10,9 @@ const PACKAGE_DIR = path.join(OUTPUT_ROOT, 'Opportunity-Lab-All-Offline');
 const OUTPUT_HTML = path.join(PACKAGE_DIR, 'Opportunity-Lab-All-Offline.html');
 
 const EMBEDDED_DATA_PATHS = [
-  '/data/zip-opportunities.json',
+  '/data/ohio-opportunities.json',
   '/data/market-overlays.json',
-  '/data/cleveland-akron-zcta-2020.geojson',
-  '/data/cleveland-zips.geojson',
+  '/data/ohio-zcta-2020.geojson',
   '/data/offline-map-context.geojson',
 ];
 
@@ -161,7 +160,8 @@ async function packageOfflineReview() {
       'No Node.js, installation, administrator access, local server, or internet connection is required.',
       '',
       'This review build contains:',
-      '- checked-in Cleveland–Akron 2020 Census-derived ZCTA geometry',
+      '- checked-in statewide Ohio 2020 Census-derived ZCTA geometry',
+      '- seven synthetic major-city operating territories',
       '- bundled Census TIGER/Line road, hydrography, county, and place context',
       '- synthetic opportunity, campaign, competitor, account, and simulation data',
       '',
