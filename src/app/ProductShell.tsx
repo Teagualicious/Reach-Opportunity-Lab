@@ -21,7 +21,7 @@ interface ProductShellProps {
 const MODE_LABELS: Readonly<Record<ProductMode, string>> = {
   explorer: 'Opportunity Explorer',
   'client-growth': 'Client Growth Studio',
-  'market-growth': 'Market Growth Studio',
+  'market-growth': 'Seller Growth Studio',
 };
 
 export function ProductShell({ data }: ProductShellProps) {
