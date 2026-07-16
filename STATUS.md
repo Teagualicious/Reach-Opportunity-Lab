@@ -17,8 +17,7 @@ Phase 2 — Statewide map foundation and differentiated product journeys
 - Added independently scrollable/collapsible sidebars and ZIP/territory camera refitting.
 - Added pastel opportunity heat, neutral inactive context, gold selection, cyan current-plan/seller focus, and green recommended expansion.
 - Added stronger reach-gap and competitor evidence layers.
-- Added universal layer focus: when reach-gap, competitor, current campaign, recommended expansion, or seller-focus layers are active, the base opportunity surface mutes rather than disappearing.
-- Moved colored evidence outlines above ordinary ZIP boundaries so they are not washed out.
+- Added supporting-layer focus: whenever a reach-gap or competitor layer is active, the base opportunity surface mutes rather than disappearing.
 - Renamed and reordered the visible workspaces:
   1. Market Opportunity Map
   2. Seller Action Center
@@ -49,7 +48,7 @@ Shared geography does not make these the same product. Each workspace owns a dis
 
 ## Next up
 
-1. Merge and visually review the workspace-guide and universal layer-focus pass through the stable Pages URL.
+1. Merge and visually review the workspace-guide and supporting-layer focus pass through the stable Pages URL.
 2. Add multiple deterministic fictional advertiser profiles to Client Campaign Planner.
 3. Expand Seller Action Center with account histories, prospect lists, and retention-save comparisons.
 4. Add additional state and major-city market packages behind the existing market/territory contracts.
@@ -98,10 +97,10 @@ Shared geography does not make these the same product. Each workspace owns a dis
   Rejected because: executives should understand purpose, audience, and the next step immediately
   Must preserve: visible order is Market Opportunity Map → Seller Action Center → Client Campaign Planner; each right panel begins with the shared workspace guide
 
-- 2026-07-16 | DECISION: any emphasized map layer mutes the base opportunity surface
-  Considered: leaving full heat-map intensity beneath overlays, hiding non-layer ZIPs, and globally muting the base surface
-  Rejected because: full intensity washes out evidence while hiding context removes orientation
-  Must preserve: base ZIPs remain visible at reduced opacity; current/recommended/selected states remain stronger; evidence outlines render above ordinary boundaries; the change uses one paint-property update rather than statewide feature-state writes
+- 2026-07-16 | DECISION: active supporting evidence layers mute the base opportunity surface
+  Considered: leaving full heat-map intensity beneath reach-gap/competitor overlays, hiding non-layer ZIPs, and globally muting every workspace at all times
+  Rejected because: full intensity washes out evidence, hiding context removes orientation, and permanent muting weakens ordinary campaign and seller views
+  Must preserve: reach-gap or competitor visibility switches the base fill-opacity expression with one paint-property update; base ZIPs remain visible; selected/current/recommended states remain distinct
 
 - 2026-07-16 | DECISION: Client Campaign Planner tells Current → Diagnose → Recommended
   Considered: one campaign layer and all evidence visible simultaneously
