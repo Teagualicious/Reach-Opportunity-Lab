@@ -12,7 +12,7 @@ export function App() {
     let cancelled = false;
 
     repository
-      .loadMarket('cleveland-akron')
+      .loadMarket('ohio')
       .then((loadedMarket) => {
         if (!cancelled) setMarket(loadedMarket);
       })
@@ -41,7 +41,7 @@ export function App() {
     return (
       <main className="load-state">
         <div className="load-state__mark" />
-        <span>Loading market intelligence</span>
+        <span>Loading statewide market intelligence</span>
       </main>
     );
   }

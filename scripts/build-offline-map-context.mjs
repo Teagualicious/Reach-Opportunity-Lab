@@ -7,10 +7,10 @@ const OUTPUT_PATH = path.join(ROOT, 'public/data/offline-map-context.geojson');
 const PROVENANCE_PATH = path.join(ROOT, 'public/data/offline-map-context.provenance.json');
 
 const BOUNDS = {
-  west: -82.3,
-  south: 40.91,
-  east: -80.98,
-  north: 41.83,
+  west: -84.9,
+  south: 38.3,
+  east: -80.45,
+  north: 42.1,
 };
 
 const QUERY_BASE = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb';
@@ -18,25 +18,44 @@ const QUERY_BASE = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERwe
 const PLACE_LABELS = [
   ['Cleveland', -81.6944, 41.4993, 'place'],
   ['Akron', -81.519, 41.0814, 'place'],
-  ['Lakewood', -81.7982, 41.4819, 'place'],
-  ['Parma', -81.7229, 41.4048, 'place'],
-  ['Beachwood', -81.5087, 41.4645, 'place'],
-  ['Mentor', -81.3396, 41.6662, 'place'],
-  ['Medina', -81.8637, 41.1384, 'place'],
-  ['Hudson', -81.4407, 41.2401, 'place'],
-  ['Cuyahoga Falls', -81.4846, 41.1339, 'place'],
-  ['Westlake', -81.9179, 41.4553, 'place'],
-  ['Brunswick', -81.8418, 41.2381, 'place'],
-  ['Stow', -81.4389, 41.1595, 'place'],
-  ['Aurora', -81.3454, 41.3176, 'place'],
-  ['Lake Erie', -81.65, 41.73, 'water'],
+  ['Canton', -81.3784, 40.7989, 'place'],
+  ['Youngstown', -80.6495, 41.0998, 'place'],
+  ['Toledo', -83.5552, 41.6528, 'place'],
+  ['Columbus', -82.9988, 39.9612, 'place'],
+  ['Dayton', -84.1916, 39.7589, 'place'],
+  ['Cincinnati', -84.512, 39.1031, 'place'],
+  ['Athens', -82.1013, 39.3292, 'place'],
+  ['Marietta', -81.4548, 39.4154, 'place'],
+  ['Lima', -84.1052, 40.7426, 'place'],
+  ['Mansfield', -82.5154, 40.7584, 'place'],
+  ['Lake Erie', -82.0, 41.92, 'water'],
+  ['Ohio River', -82.6, 38.7, 'water'],
 ];
 
-function queryUrl(service, layerId, offset) {
+function buildTiles(columns = 4, rows = 2) {
+  const longitudeStep = (BOUNDS.east - BOUNDS.west) / columns;
+  const latitudeStep = (BOUNDS.north - BOUNDS.south) / rows;
+  const tiles = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      tiles.push({
+        west: BOUNDS.west + longitudeStep * column,
+        south: BOUNDS.south + latitudeStep * row,
+        east: BOUNDS.west + longitudeStep * (column + 1),
+        north: BOUNDS.south + latitudeStep * (row + 1),
+      });
+    }
+  }
+  return tiles;
+}
+
+const QUERY_TILES = buildTiles();
+
+function queryUrl(service, layerId, offset, bounds) {
   const url = new URL(`${QUERY_BASE}/${service}/MapServer/${layerId}/query`);
   url.search = new URLSearchParams({
     where: '1=1',
-    geometry: `${BOUNDS.west},${BOUNDS.south},${BOUNDS.east},${BOUNDS.north}`,
+    geometry: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
     geometryType: 'esriGeometryEnvelope',
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
@@ -51,28 +70,50 @@ function queryUrl(service, layerId, offset) {
   return url;
 }
 
+function featureIdentity(feature, fallbackIndex) {
+  const properties = feature?.properties ?? {};
+  return String(
+    properties.OBJECTID ??
+      properties.LINEARID ??
+      properties.GEOID ??
+      properties.GEOID20 ??
+      properties.FULLNAME ??
+      properties.NAME ??
+      fallbackIndex,
+  );
+}
+
 async function fetchLayer({ label, service, layerId, offset }) {
-  const url = queryUrl(service, layerId, offset);
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/geo+json, application/json',
-      'User-Agent': 'Reach-Opportunity-Lab-offline-review-builder/1.0',
-    },
-  });
+  const byId = new Map();
 
-  if (!response.ok) {
-    throw new Error(`${label} request failed: ${response.status} ${response.statusText}`);
+  for (const [tileIndex, bounds] of QUERY_TILES.entries()) {
+    const url = queryUrl(service, layerId, offset, bounds);
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/geo+json, application/json',
+        'User-Agent': 'Reach-Opportunity-Lab-offline-review-builder/1.0',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`${label} tile ${tileIndex + 1} request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const payload = await response.json();
+    if (payload?.error) {
+      throw new Error(`${label} tile ${tileIndex + 1} request failed: ${payload.error.message ?? 'ArcGIS service error'}`);
+    }
+    if (payload?.type !== 'FeatureCollection' || !Array.isArray(payload.features)) {
+      throw new Error(`${label} tile ${tileIndex + 1} returned an unexpected response`);
+    }
+
+    for (const [featureIndex, feature] of payload.features.entries()) {
+      const key = featureIdentity(feature, `${tileIndex}:${featureIndex}`);
+      if (!byId.has(key)) byId.set(key, feature);
+    }
   }
 
-  const payload = await response.json();
-  if (payload?.error) {
-    throw new Error(`${label} request failed: ${payload.error.message ?? 'ArcGIS service error'}`);
-  }
-  if (payload?.type !== 'FeatureCollection' || !Array.isArray(payload.features)) {
-    throw new Error(`${label} returned an unexpected response`);
-  }
-
-  return payload.features;
+  return [...byId.values()];
 }
 
 function featureName(properties = {}) {
@@ -124,36 +165,11 @@ function countKinds(features) {
 }
 
 const [primaryRoads, secondaryRoads, waterLines, waterAreas, counties] = await Promise.all([
-  fetchLayer({
-    label: 'Primary roads',
-    service: 'Transportation',
-    layerId: 2,
-    offset: 0.0008,
-  }),
-  fetchLayer({
-    label: 'Secondary roads',
-    service: 'Transportation',
-    layerId: 5,
-    offset: 0.0012,
-  }),
-  fetchLayer({
-    label: 'Linear hydrography',
-    service: 'Hydro',
-    layerId: 0,
-    offset: 0.0015,
-  }),
-  fetchLayer({
-    label: 'Areal hydrography',
-    service: 'Hydro',
-    layerId: 1,
-    offset: 0.004,
-  }),
-  fetchLayer({
-    label: '2020 counties',
-    service: 'State_County',
-    layerId: 55,
-    offset: 0.002,
-  }),
+  fetchLayer({ label: 'Primary roads', service: 'Transportation', layerId: 2, offset: 0.0025 }),
+  fetchLayer({ label: 'Secondary roads', service: 'Transportation', layerId: 5, offset: 0.004 }),
+  fetchLayer({ label: 'Linear hydrography', service: 'Hydro', layerId: 0, offset: 0.005 }),
+  fetchLayer({ label: 'Areal hydrography', service: 'Hydro', layerId: 1, offset: 0.01 }),
+  fetchLayer({ label: '2020 counties', service: 'State_County', layerId: 55, offset: 0.006 }),
 ]);
 
 const features = sortFeatures([
@@ -166,9 +182,9 @@ const features = sortFeatures([
 ]);
 
 const counts = countKinds(features);
-if ((counts.road ?? 0) < 10) throw new Error('Offline context contains too few roads');
+if ((counts.road ?? 0) < 25) throw new Error('Offline context contains too few roads');
 if ((counts['water-area'] ?? 0) < 1) throw new Error('Offline context contains no areal hydrography');
-if ((counts.county ?? 0) < 1) throw new Error('Offline context contains no county boundaries');
+if ((counts.county ?? 0) < 20) throw new Error('Offline context contains too few county boundaries');
 if ((counts['place-label'] ?? 0) !== PLACE_LABELS.length) {
   throw new Error('Offline context label count does not match the declared labels');
 }
@@ -179,18 +195,16 @@ const collection = {
 };
 
 const provenance = {
-  title: 'Cleveland–Akron offline visual context',
+  title: 'Ohio statewide offline visual context',
   source: 'U.S. Census Bureau TIGERweb',
-  services: [
-    'TIGERweb/Transportation',
-    'TIGERweb/Hydro',
-    'TIGERweb/State_County',
-  ],
+  services: ['TIGERweb/Transportation', 'TIGERweb/Hydro', 'TIGERweb/State_County'],
   bounds: BOUNDS,
+  queryTiles: QUERY_TILES.length,
   transformation: [
-    'Queried features intersecting the Cleveland–Akron demonstration bounds',
+    'Queried tiled envelopes covering statewide Ohio review bounds',
+    'Deduplicated features returned across tile boundaries',
     'Requested WGS84 GeoJSON with server-side simplification and five-decimal coordinate precision',
-    'Normalized roads, hydrography, county boundaries, and presentation labels into one local context source',
+    'Normalized roads, hydrography, county boundaries, and major-city presentation labels into one local context source',
   ],
   featureCounts: counts,
   runtimeNotice: 'The generated context is bundled into the offline review artifact and makes no runtime network requests.',

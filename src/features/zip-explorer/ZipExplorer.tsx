@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ProductViewContext } from '../../app/ProductViewContext';
 import { MapLayerControls } from '../../components/MapLayerControls';
 import { ScoreRing } from '../../components/ScoreRing';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
-import { COMPONENT_LABELS, COMPONENT_MAXIMUMS, getPriorityBand, type ZipOpportunity } from '../../domain/opportunity';
+import {
+  COMPONENT_LABELS,
+  COMPONENT_MAXIMUMS,
+  getPriorityBand,
+  type ZipOpportunity,
+} from '../../domain/opportunity';
 import { OpportunityMap } from '../../map/OpportunityMap';
 import { opportunityLegendGradient } from '../../map/mapExpressions';
 
 interface ZipExplorerProps {
   data: OpportunityMarket;
   resetVersion: number;
+  view: ProductViewContext;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -23,7 +30,7 @@ function findOpportunity(data: OpportunityMarket, zip: string | null): ZipOpport
   return data.opportunities.find((opportunity) => opportunity.zip === zip) ?? null;
 }
 
-export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
+export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [minScore, setMinScore] = useState(35);
   const [category, setCategory] = useState('All categories');
@@ -31,24 +38,32 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
   const [visibleCompetitorIds, setVisibleCompetitorIds] = useState<string[]>([]);
   const [mapResetVersion, setMapResetVersion] = useState(0);
 
+  const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
+  const territoryOpportunities = useMemo(
+    () => data.opportunities.filter((opportunity) => territoryZipSet.has(opportunity.zip)),
+    [data.opportunities, territoryZipSet],
+  );
   const categories = useMemo(
-    () => ['All categories', ...Array.from(new Set(data.opportunities.map(({ categoryStrength }) => categoryStrength))).sort()],
-    [data.opportunities],
+    () => [
+      'All categories',
+      ...Array.from(new Set(territoryOpportunities.map(({ categoryStrength }) => categoryStrength))).sort(),
+    ],
+    [territoryOpportunities],
   );
 
   const activeOpportunities = useMemo(
     () =>
-      data.opportunities.filter(
+      territoryOpportunities.filter(
         (opportunity) =>
           opportunity.score >= minScore &&
           (category === 'All categories' || opportunity.categoryStrength === category),
       ),
-    [category, data.opportunities, minScore],
+    [category, minScore, territoryOpportunities],
   );
   const activeZips = useMemo(() => activeOpportunities.map(({ zip }) => zip), [activeOpportunities]);
   const selected = findOpportunity(data, selectedZip);
   const ranked = useMemo(
-    () => [...activeOpportunities].sort((a, b) => b.score - a.score).slice(0, 6),
+    () => [...activeOpportunities].sort((a, b) => b.score - a.score).slice(0, 8),
     [activeOpportunities],
   );
 
@@ -60,6 +75,11 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
     setVisibleCompetitorIds([]);
     setMapResetVersion((version) => version + 1);
   }, [resetVersion]);
+
+  useEffect(() => {
+    setSelectedZip(null);
+    setCategory('All categories');
+  }, [view.selectedTerritoryId]);
 
   useEffect(() => {
     if (selectedZip && !activeZips.includes(selectedZip)) setSelectedZip(null);
@@ -82,22 +102,24 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
     [],
   );
 
+  const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
+
   return (
-    <main className="explorer-grid">
+    <main className="explorer-grid product-grid">
       <aside className="panel panel--left">
         <div className="panel__heading">
           <span className="eyebrow">Market intelligence</span>
-          <h1>{data.market.name}</h1>
-          <p>{data.market.subtitle}</p>
+          <h1>{territoryName}</h1>
+          <p>{view.selectedTerritory ? view.selectedTerritory.anchorCities.join(' · ') : data.market.subtitle}</p>
         </div>
 
         <section className="panel-section">
           <div className="section-heading">
-            <span>ZIP opportunity heat</span>
-            <strong>{activeOpportunities.length} of {data.opportunities.length}</strong>
+            <span>ZIP opportunity</span>
+            <strong>{activeOpportunities.length} of {territoryOpportunities.length}</strong>
           </div>
           <div className="legend-ramp" style={{ background: opportunityLegendGradient }} aria-label="Opportunity score legend" />
-          <div className="legend-labels"><span>Cool</span><span>Qualified</span><span>Hot</span></div>
+          <div className="legend-labels"><span>Emerging</span><span>Qualified</span><span>Priority</span></div>
         </section>
 
         <section className="panel-section filter-stack">
@@ -131,7 +153,7 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
         <section className="panel-section panel-section--grow">
           <div className="section-heading">
             <span>Highest opportunity</span>
-            <small>Ranked by score</small>
+            <small>{territoryName}</small>
           </div>
           <div className="ranked-list">
             {ranked.length > 0 ? ranked.map((opportunity, index) => (
@@ -158,7 +180,7 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
         </div>
         <div className="synthetic-notice">
           <span className="synthetic-notice__dot" />
-          Synthetic opportunity and coverage metrics · illustrative scoring only
+          Statewide opportunity and territory values are deterministic synthetic demonstration data.
         </div>
       </aside>
 
@@ -169,12 +191,15 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
           resetVersion={mapResetVersion}
           onSelectZip={handleSelectZip}
           activeZips={activeZips}
+          territoryZips={view.territoryZips}
+          viewportBounds={view.viewportBounds}
+          layoutVersion={view.panelLayoutVersion}
           showReachGap={showReachGap}
           visibleCompetitorIds={visibleCompetitorIds}
         />
         <div className="map-stage__caption">
-          <span>Opportunity heat map</span>
-          <strong>Cool-to-hot ZIP scoring over Cleveland–Akron</strong>
+          <span>{territoryName}</span>
+          <strong>Statewide ZIP fabric · selected territory stays vivid</strong>
         </div>
       </section>
 
@@ -234,12 +259,12 @@ export function ZipExplorer({ data, resetVersion }: ZipExplorerProps) {
           </>
         ) : (
           <div className="empty-detail">
-            <div className="empty-detail__visual"><span>84</span></div>
-            <span className="eyebrow">Explore the market</span>
+            <div className="empty-detail__visual"><span>OH</span></div>
+            <span className="eyebrow">Explore the network</span>
             <h2>Select a ZIP to reveal the opportunity</h2>
-            <p>Click any ZIP on the Cleveland map to see its score, confidence, component drivers, and market context.</p>
-            <div className="empty-detail__hint"><span>1</span>Choose a ZIP on the map or ranked list</div>
-            <div className="empty-detail__hint"><span>2</span>Review the explainable score breakdown</div>
+            <p>Choose any Ohio ZIP on the map or ranked list. Territory selection keeps the chosen operating region in focus while preserving statewide context.</p>
+            <div className="empty-detail__hint"><span>1</span>Select All Ohio or a major-city territory</div>
+            <div className="empty-detail__hint"><span>2</span>Choose a ZIP on the map or ranked list</div>
             <div className="empty-detail__hint"><span>3</span>Continue into a client or market strategy</div>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ProductViewContext } from '../../app/ProductViewContext';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { MARKET_MODES, getMarketModeScore, type MarketModeId } from '../../domain/marketMode';
 import { OpportunityMap } from '../../map/OpportunityMap';
@@ -6,6 +7,7 @@ import { OpportunityMap } from '../../map/OpportunityMap';
 interface MarketGrowthStudioProps {
   data: OpportunityMarket;
   resetVersion: number;
+  view: ProductViewContext;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -21,14 +23,19 @@ const FICTIONAL_PROSPECTS: Readonly<Record<string, string>> = {
   Recruitment: 'Northstar Talent Solutions',
 };
 
-export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioProps) {
+export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStudioProps) {
   const [mode, setMode] = useState<MarketModeId>('new-business');
-  const [selectedZip, setSelectedZip] = useState<string | null>('44122');
+  const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [simulated, setSimulated] = useState(false);
+
+  const territoryZipSet = useMemo(() => new Set(view.territoryZips), [view.territoryZips]);
+  const territoryOpportunities = useMemo(
+    () => data.opportunities.filter((opportunity) => territoryZipSet.has(opportunity.zip)),
+    [data.opportunities, territoryZipSet],
+  );
 
   useEffect(() => {
     setMode('new-business');
-    setSelectedZip('44122');
     setSimulated(false);
   }, [resetVersion]);
 
@@ -40,21 +47,28 @@ export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioPro
     [data.opportunities, mode],
   );
   const ranked = useMemo(
-    () => [...data.opportunities].sort((a, b) => scores[b.zip] - scores[a.zip]).slice(0, 7),
-    [data.opportunities, scores],
+    () => [...territoryOpportunities].sort((a, b) => scores[b.zip] - scores[a.zip]).slice(0, 8),
+    [scores, territoryOpportunities],
   );
+
+  useEffect(() => {
+    setSelectedZip(ranked[0]?.zip ?? null);
+    setSimulated(false);
+  }, [ranked, view.selectedTerritoryId]);
+
   const selected = data.opportunities.find((opportunity) => opportunity.zip === selectedZip) ?? ranked[0];
   const selectedScore = selected ? scores[selected.zip] : 0;
   const projectedScore = simulated ? Math.min(100, selectedScore + 9) : selectedScore;
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
+  const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
 
   return (
-    <main className="studio-grid market-studio">
+    <main className="studio-grid market-studio product-grid">
       <aside className="panel panel--left">
         <div className="panel__heading">
           <span className="eyebrow">Market Growth Studio</span>
-          <h1>Find, protect, and grow local business</h1>
-          <p>Shared ZIP intelligence reweighted for the selected seller objective.</p>
+          <h1>{territoryName}</h1>
+          <p>Find, protect, and grow local business using objective-specific ZIP intelligence.</p>
         </div>
 
         <div className="internal-mode-list" role="tablist" aria-label="Market growth objective">
@@ -78,7 +92,7 @@ export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioPro
         </section>
 
         <section className="panel-section panel-section--grow">
-          <div className="section-heading"><span>Priority ZIPs</span><small>Fictional examples</small></div>
+          <div className="section-heading"><span>Priority ZIPs</span><small>{territoryName}</small></div>
           <div className="ranked-list">
             {ranked.map((opportunity, index) => (
               <button
@@ -95,7 +109,7 @@ export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioPro
           </div>
         </section>
 
-        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Internal scenarios, prospects, and performance signals are synthetic.</div>
+        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Internal scenarios, territories, prospects, and performance signals are synthetic.</div>
       </aside>
 
       <section className="map-stage">
@@ -106,8 +120,11 @@ export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioPro
           onSelectZip={handleSelectZip}
           displayScores={scores}
           campaignZips={selected ? [selected.zip] : []}
+          territoryZips={view.territoryZips}
+          viewportBounds={view.viewportBounds}
+          layoutVersion={view.panelLayoutVersion}
         />
-        <div className="map-stage__caption"><span>{definition.label}</span><strong>The map is recolored for this internal objective</strong></div>
+        <div className="map-stage__caption"><span>{definition.label}</span><strong>{territoryName} is recolored for this internal objective</strong></div>
       </section>
 
       <aside className="panel panel--right internal-detail">
@@ -132,14 +149,14 @@ export function MarketGrowthStudio({ data, resetVersion }: MarketGrowthStudioPro
 
             <section className="fictional-prospect-card">
               <span>Fictional example</span>
-              <strong>{FICTIONAL_PROSPECTS[selected.categoryStrength] ?? 'Lakefront Local Business'}</strong>
+              <strong>{FICTIONAL_PROSPECTS[selected.categoryStrength] ?? 'Ohio Local Business'}</strong>
               <p>{mode === 'retention-risk' ? 'Spend and reach signals suggest a proactive save conversation.' : 'Category and audience signals suggest a timely seller conversation.'}</p>
             </section>
 
             <section className="recommended-action">
               <span>Recommended action</span>
               <strong>{definition.action}</strong>
-              <p>{simulated ? 'The illustrative action improves the modeled score while preserving the strongest local audience signal.' : 'Run a simple action simulation to compare the current and recommended state.'}</p>
+              <p>{simulated ? `The illustrative action improves the modeled score within ${territoryName}.` : 'Run a simple action simulation to compare the current and recommended state.'}</p>
             </section>
 
             <button className="primary-action" type="button" onClick={() => setSimulated((value) => !value)}>

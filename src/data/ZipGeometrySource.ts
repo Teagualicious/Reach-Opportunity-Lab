@@ -6,6 +6,7 @@ export interface RawZipGeometryProperties {
   GEOID?: unknown;
   BASENAME?: unknown;
   NAME?: unknown;
+  territoryId?: unknown;
 }
 
 export type RawZipGeometry = FeatureCollection<Geometry, RawZipGeometryProperties>;
@@ -76,6 +77,7 @@ export function normalizeZipGeometry(
         GEOID: zip,
         BASENAME: feature.properties?.BASENAME,
         NAME: feature.properties?.NAME,
+        territoryId: feature.properties?.territoryId,
       },
     });
   }
