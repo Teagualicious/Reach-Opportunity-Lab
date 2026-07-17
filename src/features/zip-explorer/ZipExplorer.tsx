@@ -249,6 +249,18 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     return null;
   }, [countySummaries, level, regionSummaries]);
 
+  // Quiet ZIP-code labels inside a drilled county, matching the county text.
+  const areaLabels = useMemo(() => {
+    if (level !== 'zips' || !selectedCounty) return [];
+    return focusOpportunities
+      .filter((opportunity) => opportunity.centroid)
+      .map((opportunity) => ({
+        id: opportunity.zip,
+        text: opportunity.zip,
+        center: opportunity.centroid as [number, number],
+      }));
+  }, [focusOpportunities, level, selectedCounty]);
+
   const handleSelectGroup = useCallback(
     (groupId: string) => {
       if (view.regionMode) view.selectTerritory(groupId);
@@ -512,6 +524,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           popupValueText={popupValueText}
           groupLayer={groupLayer}
           onSelectGroup={handleSelectGroup}
+          areaLabels={areaLabels}
         />
         <MapBreadcrumb
           regionName={view.selectedTerritory?.name ?? null}

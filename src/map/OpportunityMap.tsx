@@ -38,6 +38,14 @@ interface OpportunityMapProps {
   /** Drill-down navigation: render ZIPs as solid groups (regions or counties). */
   groupLayer?: MapGroupLayer | null;
   onSelectGroup?: (groupId: string) => void;
+  /** Quiet text labels over individual areas (e.g. ZIP codes at the county level). */
+  areaLabels?: readonly AreaLabel[];
+}
+
+export interface AreaLabel {
+  id: string;
+  text: string;
+  center: [longitude: number, latitude: number];
 }
 
 const SOURCE_ID = 'zip-opportunities';
@@ -203,6 +211,31 @@ function syncGroupLabels(
   );
 }
 
+function buildAreaLabelElement(label: AreaLabel): HTMLDivElement {
+  const element = document.createElement('div');
+  element.className = 'region-label region-label--compact region-label--area';
+  element.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('strong');
+  text.textContent = label.text;
+
+  element.append(text);
+  return element;
+}
+
+function syncAreaLabels(
+  map: MapLibreMap,
+  markers: maplibregl.Marker[],
+  labels: readonly AreaLabel[],
+): maplibregl.Marker[] {
+  for (const marker of markers) marker.remove();
+  return labels.map((label) =>
+    new maplibregl.Marker({ element: buildAreaLabelElement(label), anchor: 'center' })
+      .setLngLat(label.center)
+      .addTo(map),
+  );
+}
+
 function setLayerVisibility(map: MapLibreMap, layerIds: readonly string[], visible: boolean) {
   for (const layerId of layerIds) {
     if (map.getLayer(layerId)) {
@@ -245,6 +278,7 @@ export function OpportunityMap({
   popupValueText,
   groupLayer = null,
   onSelectGroup,
+  areaLabels = [],
 }: OpportunityMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -288,6 +322,8 @@ export function OpportunityMap({
   );
   const onSelectGroupRef = useRef(onSelectGroup);
   const groupMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const areaLabelsRef = useRef<readonly AreaLabel[]>(areaLabels);
+  const areaMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   // Feature state already written to the current map instance, so updates only
   // touch ZIPs whose state changed instead of rewriting all 1,200+ features.
@@ -460,6 +496,7 @@ export function OpportunityMap({
       }
       applySurfacePaint(map, groupLayerRef.current, evidenceFocusActiveRef.current);
       groupMarkersRef.current = syncGroupLabels(map, groupMarkersRef.current, groupLayerRef.current);
+      areaMarkersRef.current = syncAreaLabels(map, areaMarkersRef.current, areaLabelsRef.current);
       fitViewport(map, viewportBoundsRef.current, 0);
     });
 
@@ -555,10 +592,19 @@ export function OpportunityMap({
       popupRef.current = null;
       for (const marker of groupMarkersRef.current) marker.remove();
       groupMarkersRef.current = [];
+      for (const marker of areaMarkersRef.current) marker.remove();
+      areaMarkersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
   }, [allZips, data, onSelectZip]);
+
+  useEffect(() => {
+    areaLabelsRef.current = areaLabels;
+    const map = mapRef.current;
+    if (!map?.getSource(SOURCE_ID)) return;
+    areaMarkersRef.current = syncAreaLabels(map, areaMarkersRef.current, areaLabels);
+  }, [areaLabels]);
 
   useEffect(() => {
     onSelectGroupRef.current = onSelectGroup;

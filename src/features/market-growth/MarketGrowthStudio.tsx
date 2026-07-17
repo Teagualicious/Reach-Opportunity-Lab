@@ -90,6 +90,18 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     if (level === 'counties') return buildCountyGroupLayer(countySummaries);
     return null;
   }, [countySummaries, level, regionSummaries]);
+
+  // Quiet ZIP-code labels inside a drilled county, matching the county text.
+  const areaLabels = useMemo(() => {
+    if (level !== 'zips' || !selectedCounty) return [];
+    return focusOpportunities
+      .filter((opportunity) => opportunity.centroid)
+      .map((opportunity) => ({
+        id: opportunity.zip,
+        text: opportunity.zip,
+        center: opportunity.centroid as [number, number],
+      }));
+  }, [focusOpportunities, level, selectedCounty]);
   const handleSelectGroup = useCallback(
     (groupId: string) => {
       if (view.regionMode) view.selectTerritory(groupId);
@@ -245,6 +257,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           layoutVersion={view.panelLayoutVersion}
           groupLayer={groupLayer}
           onSelectGroup={handleSelectGroup}
+          areaLabels={areaLabels}
         />
         <MapBreadcrumb
           regionName={view.selectedTerritory?.name ?? null}

@@ -97,8 +97,17 @@
 }
 .region-label--compact span { display: none; }
 
+/* ZIP-code labels inside a drilled county: one register quieter than counties. */
+.region-label--area strong {
+  color: #5b6d7d;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 @media (max-width: 900px) {
   .region-label--compact strong { font-size: 8px; }
+  .region-label--area strong { font-size: 7px; }
 }
 
 /* Simplified rail and detail --------------------------------------------- */
