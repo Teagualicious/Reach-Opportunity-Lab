@@ -72,6 +72,16 @@
 }
 .region-label strong { color: var(--navy-900); font-size: 11px; letter-spacing: -0.01em; }
 .region-label span { color: var(--slate-500); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.region-label--compact { padding: 4px 8px; border-radius: 8px; }
+.region-label--compact strong { font-size: 9px; }
+.region-label--compact span { font-size: 7px; }
+
+/* Phone viewports: county labels shrink to name-only chips so 15+ labels stay legible. */
+@media (max-width: 900px) {
+  .region-label--compact { padding: 3px 6px; }
+  .region-label--compact strong { font-size: 8px; }
+  .region-label--compact span { display: none; }
+}
 
 /* Simplified rail and detail --------------------------------------------- */
 

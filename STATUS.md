@@ -50,6 +50,11 @@ Phase 3 — Spectrum Reach experience redesign (Codex proposal, July 2026)
   - Replaced the abstract header mark with the supplied official Spectrum Reach logo asset (`src/assets/spectrum-reach-logo.jpg`).
   - Added region-first navigation everywhere: the statewide view renders the seven operating territories as solid soft-colored regions with HTML-marker name labels (`regionSummary.ts`, map `regionMode`, `RegionPicker`, `MapBreadcrumb`); clicking a region drills into its ZIP areas and the Ohio breadcrumb returns to regions. The region surface switches with one paint-property pass over the shared statewide source.
   - Simplified the interface for non-technical users: plain-language section labels, evidence layers and technical detail (demographics, internal signals, competitor cards, score build-up) behind collapsible disclosures, one calm data footnote, larger small-type sizes.
+- Round 3 of the redesign: county drill-down (user review feedback):
+  - `geometry:refresh` now assigns every ZCTA a real Ohio county (`countyId`/`countyName`) by point-in-polygon against county cartographic boundaries (plotly/datasets national county GeoJSON, filtered to Ohio's 88 counties; nearest-county-center fallback for lake-edge midpoints); the validator requires county coverage of at least 80 counties.
+  - Navigation is now Ohio (7 regions) → region (counties with name labels, colored by opportunity stretched across the counties in view) → county (its ZIP areas, everything outside faded) in Market Opportunity Map and Seller Action Center, with a three-level Ohio › region › county breadcrumb; the Client Campaign Planner keeps region → campaign story.
+  - The map's region layer became a generic group layer (`mapGroups.ts`, `groupLayer` prop keyed by `territoryId` or `countyId`) with caller-supplied colors — still one paint-property pass over the shared source.
+  - County selection is shared shell state (`ProductViewContext.selectedCountyId`/`selectCounty`); queues, filters, lenses, ranked lists, and the opportunity brief scope to the drilled county; `AreaPicker` replaced `RegionPicker` for both levels.
 - Added multiple deterministic fictional advertiser profiles to Client Campaign Planner:
   - Lakefront Automotive Group, Buckeye Home Pros, Queen City Credit Union, and Harbor & Hearth Furnishings;
   - profile-specific baselines, strategy response, premium growth-idea copy, home-market narrative, and campaign ZIP counts;
@@ -144,6 +149,11 @@ Shared geography does not make these the same product. Each workspace owns a dis
   Considered: dissolved region polygons in a second source, projecting region averages onto the opportunity heat ramp, and keeping the statewide ZIP fabric as the default view
   Rejected because: duplicate geometry violates the performance laws, statewide averages cluster within one ramp step so regions became indistinguishable, and the ZIP-first statewide view read as too technical for the audience
   Must preserve: region mode is a paint-property swap on the shared source (no re-upload); the seven-color REGION_PALETTE stays soft and distinguishable; clicking a region routes through `ProductViewContext.selectTerritory`; the territory dropdown remains synchronized
+
+- 2026-07-17 | DECISION: counties are the middle drill-down level, rendered as groups over the existing ZIP source with real county assignments
+  Considered: skipping counties (region → ZIPs), fetching the Census ZCTA↔county relationship file, dissolved county polygons in a second map source, and synthetic county groupings
+  Rejected because: region → 200+ ZIPs was overwhelming for the audience; census.gov is blocked by the sandbox proxy while the county-boundary GeoJSON on the approved GitHub raw host provides authoritative boundaries for point-in-polygon assignment; duplicate geometry violates the performance laws; counties must be real ("text on the county")
+  Must preserve: county assignment happens only in `build-ohio-market.mjs` (generated fixtures are never hand-edited); the group layer stays a paint-property swap keyed by feature properties; county colors stretch opportunity averages across the visible set; Client Campaign Planner intentionally skips the county level
 
 - 2026-07-16 | DECISION: technical depth is disclosed progressively, not removed
   Considered: deleting score breakdowns and internal metric grids outright, and leaving all detail always visible

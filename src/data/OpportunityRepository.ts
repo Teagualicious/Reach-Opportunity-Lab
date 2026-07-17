@@ -24,6 +24,7 @@ export interface ZipFeatureProperties {
   zip: string;
   name: string;
   territoryId: string;
+  countyId: string;
   score: number;
   priority: string;
   confidence: string;

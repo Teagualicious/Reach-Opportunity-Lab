@@ -3,6 +3,9 @@ import path from 'node:path';
 
 const SOURCE_URL =
   'https://raw.githubusercontent.com/aha1994/ZCTA2020/refs/heads/main/2020%20Census%20Simplified/Ohio_ZCTAs_simplified_2020.json';
+const COUNTY_SOURCE_URL =
+  'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json';
+const OHIO_STATE_FIPS = '39';
 const CURATED_DATA_PATH = 'public/data/zip-opportunities.json';
 const GEOMETRY_OUTPUT = 'public/data/ohio-zcta-2020.geojson';
 const OPPORTUNITY_OUTPUT = 'public/data/ohio-opportunities.json';
@@ -199,6 +202,82 @@ function assignTerritory(center) {
   }, null).territory;
 }
 
+// Ray-casting point-in-ring test; rings follow GeoJSON [longitude, latitude].
+function pointInRing([x, y], ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInPolygonRings(point, rings) {
+  if (!pointInRing(point, rings[0])) return false;
+  for (let hole = 1; hole < rings.length; hole += 1) {
+    if (pointInRing(point, rings[hole])) return false;
+  }
+  return true;
+}
+
+function pointInGeometry(point, geometry) {
+  if (geometry.type === 'Polygon') return pointInPolygonRings(point, geometry.coordinates);
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.some((rings) => pointInPolygonRings(point, rings));
+  }
+  return false;
+}
+
+function kebabCase(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Each ZCTA belongs to the county containing its bounds midpoint; lake-edge
+// and border midpoints that miss every polygon fall back to the nearest
+// county center so the assignment stays total and deterministic.
+function assignCounty(center, counties) {
+  for (const county of counties) {
+    if (pointInGeometry(center, county.geometry)) return county;
+  }
+  return counties.reduce((best, county) => {
+    const distance = squaredDistance(center, county.center);
+    return !best || distance < best.distance ? { county, distance } : best;
+  }, null).county;
+}
+
+async function fetchCounties() {
+  const response = await fetch(COUNTY_SOURCE_URL, {
+    headers: {
+      'User-Agent': 'Reach-Opportunity-Lab Ohio market builder',
+      Accept: 'application/geo+json, application/json',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Unable to download county boundary source: ${response.status} ${response.statusText}`);
+  }
+  const collection = await response.json();
+  assertFeatureCollection(collection, 'Downloaded county boundary source');
+  const counties = collection.features
+    .filter((feature) => feature?.properties?.STATE === OHIO_STATE_FIPS)
+    .map((feature) => ({
+      id: kebabCase(feature.properties.NAME),
+      name: feature.properties.NAME,
+      geometry: feature.geometry,
+      center: midpoint(geometryBounds(feature.geometry)),
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  if (counties.length !== 88) {
+    throw new Error(`Expected 88 Ohio counties in the boundary source, found ${counties.length}`);
+  }
+  return counties;
+}
+
 function stableHash(value) {
   let hash = 2166136261;
   for (const character of value) {
@@ -285,7 +364,7 @@ async function main() {
     curatedPayload.opportunities.map((opportunity) => [opportunity.zip, opportunity]),
   );
 
-  const source = await fetchSource();
+  const [source, counties] = await Promise.all([fetchSource(), fetchCounties()]);
   assertFeatureCollection(source, 'Downloaded Ohio ZCTA source');
 
   const normalizedRecords = [];
@@ -298,7 +377,8 @@ async function main() {
     const bounds = geometryBounds(feature.geometry);
     const center = midpoint(bounds);
     const territory = assignTerritory(center);
-    normalizedRecords.push({ zip, feature, bounds, center, territory });
+    const county = assignCounty(center, counties);
+    normalizedRecords.push({ zip, feature, bounds, center, territory, county });
   }
   normalizedRecords.sort((a, b) => a.zip.localeCompare(b.zip));
 
@@ -321,11 +401,18 @@ async function main() {
   }));
 
   const opportunities = normalizedRecords.map((record) => {
+    const countyFields = { countyId: record.county.id, countyName: record.county.name };
     const curated = curatedByZip.get(record.zip);
-    if (!curated) return buildSyntheticOpportunity(record.zip, record.territory, record.center);
+    if (!curated) {
+      return {
+        ...buildSyntheticOpportunity(record.zip, record.territory, record.center),
+        ...countyFields,
+      };
+    }
     return {
       ...curated,
       territoryId: record.territory.id,
+      ...countyFields,
       detailLevel: 'curated-demo',
       centroid: record.center.map((value) => Number(value.toFixed(5))),
     };
@@ -351,6 +438,7 @@ async function main() {
         ZCTA5: record.zip,
         GEOID: record.zip,
         territoryId: record.territory.id,
+        countyId: record.county.id,
       },
       geometry: {
         ...record.feature.geometry,
@@ -380,10 +468,14 @@ async function main() {
     sourceDataset: '2020 Census Simplified ZCTA geometry',
     sourceRepository: 'aha1994/ZCTA2020',
     sourceUrl: SOURCE_URL,
+    countySourceDataset: 'US county cartographic boundaries with FIPS codes',
+    countySourceRepository: 'plotly/datasets',
+    countySourceUrl: COUNTY_SOURCE_URL,
     transformations: [
       'Included every Ohio ZCTA in the source fixture',
       'Rounded coordinates to five decimal places',
       'Assigned each ZCTA to the nearest multi-city synthetic territory anchor set',
+      'Assigned each ZCTA to the Ohio county containing its bounds midpoint (nearest county center as fallback)',
       'Preserved existing curated Cleveland–Akron opportunity records',
       'Generated deterministic synthetic baseline metrics for all remaining Ohio ZCTAs',
     ],
@@ -396,7 +488,9 @@ async function main() {
   await writeFile(OPPORTUNITY_OUTPUT, `${JSON.stringify(payload)}\n`);
   await writeFile(PROVENANCE_OUTPUT, `${JSON.stringify(provenance, null, 2)}\n`);
 
+  const assignedCountyIds = new Set(opportunities.map((record) => record.countyId));
   console.log(`Generated ${geometry.features.length} Ohio ZCTAs across ${territories.length} territories.`);
+  console.log(`Assigned ZCTAs to ${assignedCountyIds.size} of ${counties.length} Ohio counties.`);
   console.log(`Preserved ${opportunities.filter((record) => record.detailLevel === 'curated-demo').length} curated ZIP records.`);
 }
 

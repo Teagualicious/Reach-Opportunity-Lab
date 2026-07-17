@@ -5,10 +5,14 @@
   "sourceDataset": "2020 Census Simplified ZCTA geometry",
   "sourceRepository": "aha1994/ZCTA2020",
   "sourceUrl": "https://raw.githubusercontent.com/aha1994/ZCTA2020/refs/heads/main/2020%20Census%20Simplified/Ohio_ZCTAs_simplified_2020.json",
+  "countySourceDataset": "US county cartographic boundaries with FIPS codes",
+  "countySourceRepository": "plotly/datasets",
+  "countySourceUrl": "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json",
   "transformations": [
     "Included every Ohio ZCTA in the source fixture",
     "Rounded coordinates to five decimal places",
     "Assigned each ZCTA to the nearest multi-city synthetic territory anchor set",
+    "Assigned each ZCTA to the Ohio county containing its bounds midpoint (nearest county center as fallback)",
     "Preserved existing curated Cleveland–Akron opportunity records",
     "Generated deterministic synthetic baseline metrics for all remaining Ohio ZCTAs"
   ],

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
+import { AreaPicker } from '../../components/AreaPicker';
 import { MapBreadcrumb } from '../../components/MapBreadcrumb';
-import { RegionPicker } from '../../components/RegionPicker';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
 import { selectClientCampaignZips } from '../../domain/clientAdvertiser';
 import { buildClientGeographyPlan } from '../../domain/clientGeography';
 import { buildRegionSummaries } from '../../domain/regionSummary';
+import { buildRegionGroupLayer } from '../../map/mapGroups';
 import {
   CLIENT_ADVERTISER_PROFILES,
   CLIENT_STRATEGIES,
@@ -171,6 +172,10 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
   );
   const recommendedZipExpansions = result ? geographyPlan.recommendedZips : [];
   const growthVisible = mapView === 'growth' && Boolean(result);
+  const groupLayer = useMemo(
+    () => (regionMode ? buildRegionGroupLayer(regionSummaries) : null),
+    [regionMode, regionSummaries],
+  );
 
   useEffect(() => {
     setSelectedAdvertiserId(DEFAULT_CLIENT_ADVERTISER.id);
@@ -281,7 +286,16 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
 
         {regionMode ? (
           <>
-            <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
+            <AreaPicker
+              intro="Start with a region. Click one on the map, or choose it here."
+              items={regionSummaries.map((region) => ({
+                id: region.territoryId,
+                name: region.name,
+                subtitle: region.anchorCities.join(' · '),
+                score: region.averageOpportunityScore,
+              }))}
+              onSelect={view.selectTerritory}
+            />
             <div className="synthetic-notice synthetic-notice--light">
               <span className="synthetic-notice__dot" />
               Fictional advertiser with modeled demonstration results — not a performance forecast.
@@ -387,9 +401,8 @@ export function ClientGrowthStudio({ data, resetVersion, view }: ClientGrowthStu
           territoryZips={view.territoryZips}
           viewportBounds={view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
-          regionMode={regionMode}
-          regions={regionSummaries}
-          onSelectRegion={view.selectTerritory}
+          groupLayer={groupLayer}
+          onSelectGroup={view.selectTerritory}
         />
         <MapBreadcrumb
           regionName={view.selectedTerritory?.name ?? null}

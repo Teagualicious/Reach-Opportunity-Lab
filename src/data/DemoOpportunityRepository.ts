@@ -71,11 +71,17 @@ export function buildOpportunityMarket(
       (typeof feature.properties?.territoryId === 'string'
         ? feature.properties.territoryId
         : payload.market.defaultTerritoryId ?? 'unassigned');
+    const countyId =
+      opportunity.countyId ??
+      (typeof feature.properties?.countyId === 'string'
+        ? feature.properties.countyId
+        : 'unassigned');
 
     const properties: ZipFeatureProperties = {
       zip,
       name: opportunity.name,
       territoryId,
+      countyId,
       score: opportunity.score,
       priority: getPriorityBand(opportunity.score),
       confidence: opportunity.confidence,
