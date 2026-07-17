@@ -40,7 +40,9 @@ describe('Static ZCTA geometry source', () => {
     const source = new StaticZctaGeometrySource('/data/test-zcta.geojson');
     const geometry = await source.load(['44122', '44308']);
 
-    expect(fetchMock).toHaveBeenCalledWith('/data/test-zcta.geojson');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/data\/test-zcta\.geojson\?v=/),
+    );
     expect(geometry.features.map((feature) => feature.properties.zip)).toEqual(['44122', '44308']);
     expect(geometry.features[0]?.id).toBe('44122');
   });

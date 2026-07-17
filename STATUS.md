@@ -182,8 +182,9 @@ Shared geography does not make these the same product. Each workspace owns a dis
 
 ## Noticed
 
+- GitHub Pages caches the stable `public/data` URLs (~10 min) while hashed JS updates immediately, which briefly served new code with stale county-less fixtures on mobile. Data requests now carry a `?v=<DATA_VERSION>` query (`publicAssetUrl.ts`) — bump `DATA_VERSION` whenever the generated fixtures change shape — and the workspaces skip the county level gracefully if county assignments are ever absent, keeping ZIP areas clickable.
 - Competitor fixtures currently cover Northeast Ohio only; they are illustrative synthetic ZIP memberships, not service-area claims.
-- The all-offline package (`npm run offline:all`) has not been revalidated since the redesign added the bundled Inter font and new stylesheets; run it before the next offline review.
+- The offline package now builds in CI (`build-offline-review` job) and passed against the redesign, closing the earlier deferred revalidation.
 - The map hover popup shows the active market lens value via `popupValueText`; other workspaces keep the default opportunity line.
 - Territory-specific client reach gaps are deterministic demonstration output.
 - Advertiser home markets are narrative demo defaults; any profile can be modeled in any Ohio territory for comparative walkthroughs.

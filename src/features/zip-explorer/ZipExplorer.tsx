@@ -119,9 +119,12 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     () => countySummaries.find((county) => county.countyId === view.selectedCountyId) ?? null,
     [countySummaries, view.selectedCountyId],
   );
+  // If county assignments are unavailable (e.g. stale cached fixtures), skip
+  // the county level so ZIP areas stay reachable and clickable.
+  const countiesAvailable = countySummaries.length > 0;
   const level: 'regions' | 'counties' | 'zips' = view.regionMode
     ? 'regions'
-    : selectedCounty
+    : selectedCounty || !countiesAvailable
       ? 'zips'
       : 'counties';
 
