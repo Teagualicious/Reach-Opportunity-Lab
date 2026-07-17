@@ -1,0 +1,51 @@
+/* Advertiser scenario selector for the client-safe campaign-planning story. */
+.client-profile-picker {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0 4px;
+  padding: 13px;
+  border: 1px solid var(--slate-200);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #ffffff, #f5faff);
+  box-shadow: var(--shadow-card);
+}
+
+.client-profile-picker > span {
+  color: var(--blue-700);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.client-profile-picker select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 32px 10px 11px;
+  border: 1px solid var(--slate-300);
+  border-radius: 10px;
+  color: var(--navy-900);
+  background: white;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.client-profile-picker select:hover,
+.client-profile-picker select:focus-visible {
+  border-color: var(--blue-500);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(0, 98, 197, 0.12);
+}
+
+.client-profile-picker small {
+  color: var(--slate-500);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .client-profile-picker {
+    margin-top: 13px;
+  }
+}

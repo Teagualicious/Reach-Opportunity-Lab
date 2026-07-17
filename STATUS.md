@@ -50,6 +50,11 @@ Phase 3 — Spectrum Reach experience redesign (Codex proposal, July 2026)
   - Replaced the abstract header mark with the supplied official Spectrum Reach logo asset (`src/assets/spectrum-reach-logo.jpg`).
   - Added region-first navigation everywhere: the statewide view renders the seven operating territories as solid soft-colored regions with HTML-marker name labels (`regionSummary.ts`, map `regionMode`, `RegionPicker`, `MapBreadcrumb`); clicking a region drills into its ZIP areas and the Ohio breadcrumb returns to regions. The region surface switches with one paint-property pass over the shared statewide source.
   - Simplified the interface for non-technical users: plain-language section labels, evidence layers and technical detail (demographics, internal signals, competitor cards, score build-up) behind collapsible disclosures, one calm data footnote, larger small-type sizes.
+- Added multiple deterministic fictional advertiser profiles to Client Campaign Planner:
+  - Lakefront Automotive Group, Buckeye Home Pros, Queen City Credit Union, and Harbor & Hearth Furnishings;
+  - profile-specific baselines, strategy response, premium growth-idea copy, home-market narrative, and campaign ZIP counts;
+  - pure `clientAdvertiser.ts` profile-aware campaign-footprint selection, preserving Lakefront's reviewed Cleveland–Akron ZIPs and generating profile-distinct deterministic footprints elsewhere;
+  - a client-safe advertiser scenario selector with dynamic campaign metrics, growth ideas, modeled results, account-executive handoff, and shared-reset behavior.
 
 ## Workspace boundaries
 
@@ -61,13 +66,12 @@ Shared geography does not make these the same product. Each workspace owns a dis
 
 ## Next up
 
-1. Merge and visually review the Spectrum Reach redesign pass through the stable Pages URL.
+1. Merge and visually review the Spectrum Reach redesign and advertiser-profile pass through the stable Pages URL.
 2. Validate the all-offline package against the redesign (bundled Inter, new stylesheets) — deferred from this pass by product direction.
-3. Add multiple deterministic fictional advertiser profiles to Client Campaign Planner.
-4. Expand Seller Action Center with account histories, prospect lists, and retention-save comparisons.
-5. Add additional state and major-city market packages behind the existing market/territory contracts.
-6. Add the guided executive tour, full keyboard tab behavior, and remaining compact-mode polish.
-7. Add automated WebGL visual-regression coverage for standard and offline adapters.
+3. Expand Seller Action Center with account histories, prospect lists, and retention-save comparisons.
+4. Add additional state and major-city market packages behind the existing market/territory contracts.
+5. Add the guided executive tour, full keyboard tab behavior, and remaining compact-mode polish.
+6. Add automated WebGL visual-regression coverage for standard and offline adapters.
 
 ## Decisions log
 
@@ -161,12 +165,18 @@ Shared geography does not make these the same product. Each workspace owns a dis
   Rejected because: the proposal separates internal analytical density from the client growth story, and competitor/penetration data is internal-only
   Must preserve: `.is-client-mode` flips only the client rail; internal signals may inform client recommendation scoring but not client-facing text or layers
 
+- 2026-07-16 | DECISION: advertiser scenarios are typed pure profile configurations over one client-planning workflow
+  Considered: duplicating the client workspace per advertiser, storing large profile fixtures, and mutating the shared opportunity payload
+  Rejected because: duplicate workspaces drift, fixture duplication adds payload and maintenance, and shared geography should remain immutable
+  Must preserve: profiles remain deterministic synthetic configurations; Lakefront's reviewed canonical home-market footprint stays stable; noncanonical footprints are selected in pure domain code; client-facing UI never exposes internal signals
+
 ## Noticed
 
-- Competitor fixtures currently cover Northeast Ohio only; they are illustrative fictional ZIP memberships, not service-area claims.
+- Competitor fixtures currently cover Northeast Ohio only; they are illustrative synthetic ZIP memberships, not service-area claims.
 - The all-offline package (`npm run offline:all`) has not been revalidated since the redesign added the bundled Inter font and new stylesheets; run it before the next offline review.
 - The map hover popup shows the active market lens value via `popupValueText`; other workspaces keep the default opportunity line.
 - Territory-specific client reach gaps are deterministic demonstration output.
+- Advertiser home markets are narrative demo defaults; any profile can be modeled in any Ohio territory for comparative walkthroughs.
 - Generated statewide records are baseline quality; curated Cleveland–Akron records have richer narratives.
 - MapLibre remains the largest dependency but is isolated in a cache-stable vendor chunk.
 - Product and plan tabs still need full arrow-key navigation and roving tabindex.
