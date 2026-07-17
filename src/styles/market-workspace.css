@@ -72,6 +72,34 @@
 }
 .region-label strong { color: var(--navy-900); font-size: 11px; letter-spacing: -0.01em; }
 .region-label span { color: var(--slate-500); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+/*
+ * County labels read like quiet basemap text: name only, no card chrome.
+ * Scores stay in the hover popup and the county list.
+ */
+.region-label--compact {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.region-label--compact strong {
+  color: #44586b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.92),
+    0 -1px 0 rgba(255, 255, 255, 0.92),
+    1px 0 0 rgba(255, 255, 255, 0.92),
+    -1px 0 0 rgba(255, 255, 255, 0.92),
+    0 0 6px rgba(255, 255, 255, 0.9);
+}
+.region-label--compact span { display: none; }
+
+@media (max-width: 900px) {
+  .region-label--compact strong { font-size: 8px; }
+}
 
 /* Simplified rail and detail --------------------------------------------- */
 

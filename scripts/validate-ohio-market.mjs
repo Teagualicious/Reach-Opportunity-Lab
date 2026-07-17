@@ -70,6 +70,14 @@ for (const record of payload.opportunities) {
   assert(!opportunityZips.has(record.zip), `Opportunity records contain duplicate ZIP ${record.zip}`);
   assert(geometryZips.has(record.zip), `Opportunity ZIP ${record.zip} has no geometry`);
   assert(typeof record.territoryId === 'string', `Opportunity ZIP ${record.zip} has no territory`);
+  assert(
+    typeof record.countyId === 'string' && record.countyId.length > 0,
+    `Opportunity ZIP ${record.zip} has no county id`,
+  );
+  assert(
+    typeof record.countyName === 'string' && record.countyName.length > 0,
+    `Opportunity ZIP ${record.zip} has no county name`,
+  );
   assert(['curated-demo', 'statewide-baseline'].includes(record.detailLevel), `Opportunity ZIP ${record.zip} has invalid detail level`);
   assert(Number.isFinite(record.score) && record.score >= 0 && record.score <= 100, `Opportunity ZIP ${record.zip} has invalid score`);
   let componentTotal = 0;
@@ -83,6 +91,8 @@ for (const record of payload.opportunities) {
   opportunityZips.add(record.zip);
 }
 assert(curatedCount >= 20, 'Curated Cleveland–Akron records were not preserved');
+const countyIds = new Set(payload.opportunities.map((record) => record.countyId));
+assert(countyIds.size >= 80, `Expected ZCTAs across at least 80 Ohio counties, found ${countyIds.size}`);
 
 const territoryIds = new Set();
 const coveredZips = new Set();

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { AreaPicker } from '../../components/AreaPicker';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
 import { MapBreadcrumb } from '../../components/MapBreadcrumb';
 import { MapLayerControls } from '../../components/MapLayerControls';
 import { RangeSlider } from '../../components/RangeSlider';
-import { RegionPicker } from '../../components/RegionPicker';
 import { ScoreRing } from '../../components/ScoreRing';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
+import { buildCountySummaries } from '../../domain/countySummary';
 import { getInternalZipMetrics } from '../../domain/internalMetrics';
 import {
   buildMarketLensSurface,
@@ -24,6 +25,7 @@ import {
   getPriorityBand,
 } from '../../domain/opportunity';
 import { buildRegionSummaries } from '../../domain/regionSummary';
+import type { GeographicBounds } from '../../domain/territory';
 import { buildTerritoryBrief } from '../../domain/territoryBrief';
 import {
   DEMOGRAPHIC_METRICS,
@@ -31,6 +33,8 @@ import {
   getZipDemographics,
   type DemographicMetricId,
 } from '../../domain/zipDemographics';
+import { getGeometryBounds } from '../../map/geometryBounds';
+import { buildCountyGroupLayer, buildRegionGroupLayer } from '../../map/mapGroups';
 import { OpportunityMap } from '../../map/OpportunityMap';
 import { opportunityLegendGradient } from '../../map/mapExpressions';
 
@@ -96,7 +100,6 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const [showBrief, setShowBrief] = useState(false);
   const [mapResetVersion, setMapResetVersion] = useState(0);
 
-  const regionMode = view.regionMode;
   const territories = data.market.territories ?? [];
   const regionSummaries = useMemo(
     () => buildRegionSummaries(data.opportunities, territories),
@@ -108,22 +111,65 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     () => data.opportunities.filter((opportunity) => territoryZipSet.has(opportunity.zip)),
     [data.opportunities, territoryZipSet],
   );
+  const countySummaries = useMemo(
+    () => buildCountySummaries(territoryOpportunities),
+    [territoryOpportunities],
+  );
+  const selectedCounty = useMemo(
+    () => countySummaries.find((county) => county.countyId === view.selectedCountyId) ?? null,
+    [countySummaries, view.selectedCountyId],
+  );
+  const level: 'regions' | 'counties' | 'zips' = view.regionMode
+    ? 'regions'
+    : selectedCounty
+      ? 'zips'
+      : 'counties';
+
+  // ZIP-level analysis scopes to the drilled county; higher levels use the territory.
+  const focusZips = selectedCounty ? selectedCounty.zips : view.territoryZips;
+  const focusZipSet = useMemo(() => new Set(focusZips), [focusZips]);
+  const focusOpportunities = useMemo(
+    () =>
+      selectedCounty
+        ? territoryOpportunities.filter((opportunity) => focusZipSet.has(opportunity.zip))
+        : territoryOpportunities,
+    [focusZipSet, selectedCounty, territoryOpportunities],
+  );
+  const countyBounds = useMemo<GeographicBounds | null>(() => {
+    if (!selectedCounty) return null;
+    let merged: GeographicBounds | null = null;
+    for (const feature of data.geometry.features) {
+      if (feature.properties.countyId !== selectedCounty.countyId) continue;
+      const bounds = getGeometryBounds(feature.geometry);
+      if (!bounds) continue;
+      merged = merged
+        ? [
+            Math.min(merged[0], bounds[0]),
+            Math.min(merged[1], bounds[1]),
+            Math.max(merged[2], bounds[2]),
+            Math.max(merged[3], bounds[3]),
+          ]
+        : bounds;
+    }
+    return merged;
+  }, [data.geometry.features, selectedCounty]);
+
   const categories = useMemo(
     () => [
       'All categories',
-      ...Array.from(new Set(territoryOpportunities.map(({ categoryStrength }) => categoryStrength))).sort(),
+      ...Array.from(new Set(focusOpportunities.map(({ categoryStrength }) => categoryStrength))).sort(),
     ],
-    [territoryOpportunities],
+    [focusOpportunities],
   );
 
   const lens = useMemo(() => findMarketLens(lensId), [lensId]);
   const lensSurface = useMemo(
-    () => buildMarketLensSurface(territoryOpportunities, lens),
-    [lens, territoryOpportunities],
+    () => buildMarketLensSurface(focusOpportunities, lens),
+    [lens, focusOpportunities],
   );
   const demographicRanges = useMemo(
-    () => computeDemographicRanges(territoryOpportunities),
-    [territoryOpportunities],
+    () => computeDemographicRanges(focusOpportunities),
+    [focusOpportunities],
   );
 
   const activeDemographicFilters = useMemo(() => {
@@ -140,19 +186,19 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const demographicFilterCount = Object.keys(activeDemographicFilters).length;
 
   const demographicMatchSet = useMemo(
-    () => filterZipsByDemographics(territoryOpportunities, activeDemographicFilters),
-    [activeDemographicFilters, territoryOpportunities],
+    () => filterZipsByDemographics(focusOpportunities, activeDemographicFilters),
+    [activeDemographicFilters, focusOpportunities],
   );
 
   const activeOpportunities = useMemo(
     () =>
-      territoryOpportunities.filter(
+      focusOpportunities.filter(
         (opportunity) =>
           opportunity.score >= minScore &&
           (category === 'All categories' || opportunity.categoryStrength === category) &&
           demographicMatchSet.has(opportunity.zip),
       ),
-    [category, demographicMatchSet, minScore, territoryOpportunities],
+    [category, demographicMatchSet, minScore, focusOpportunities],
   );
   const activeZips = useMemo(() => activeOpportunities.map(({ zip }) => zip), [activeOpportunities]);
 
@@ -180,17 +226,32 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
   const selectedHasReachGap = selected ? data.overlays.reachGapZips.includes(selected.zip) : false;
 
   const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
+  const focusName = selectedCounty ? `${selectedCounty.name} County` : territoryName;
   const territoryBrief = useMemo(
     () =>
       showBrief
         ? buildTerritoryBrief(
-            territoryName,
-            territoryOpportunities,
+            focusName,
+            focusOpportunities,
             data.overlays.competitors,
             data.overlays.reachGapZips,
           )
         : null,
-    [data.overlays.competitors, data.overlays.reachGapZips, showBrief, territoryName, territoryOpportunities],
+    [data.overlays.competitors, data.overlays.reachGapZips, focusName, focusOpportunities, showBrief],
+  );
+
+  const groupLayer = useMemo(() => {
+    if (level === 'regions') return buildRegionGroupLayer(regionSummaries);
+    if (level === 'counties') return buildCountyGroupLayer(countySummaries);
+    return null;
+  }, [countySummaries, level, regionSummaries]);
+
+  const handleSelectGroup = useCallback(
+    (groupId: string) => {
+      if (view.regionMode) view.selectTerritory(groupId);
+      else view.selectCounty(groupId);
+    },
+    [view],
   );
 
   useEffect(() => {
@@ -210,7 +271,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
     setSelectedZip(null);
     setCategory('All categories');
     setDemographicFilters({});
-  }, [view.selectedTerritoryId]);
+  }, [view.selectedTerritoryId, view.selectedCountyId]);
 
   useEffect(() => {
     if (selectedZip && !activeZips.includes(selectedZip)) setSelectedZip(null);
@@ -257,19 +318,43 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
       <aside className="panel panel--left">
         <div className="panel__heading">
           <span className="eyebrow">Find the market</span>
-          <h1>{regionMode ? 'Ohio' : territoryName}</h1>
+          <h1>{level === 'regions' ? 'Ohio' : level === 'counties' ? territoryName : `${selectedCounty?.name} County`}</h1>
           <p>
-            {regionMode
+            {level === 'regions'
               ? 'Seven operating regions across the state.'
-              : view.selectedTerritory
-                ? view.selectedTerritory.anchorCities.join(' · ')
-                : data.market.subtitle}
+              : level === 'counties'
+                ? `${countySummaries.length} counties · ${view.selectedTerritory?.anchorCities.join(' · ') ?? ''}`
+                : `${focusOpportunities.length} ZIP areas in ${territoryName}`}
           </p>
         </div>
 
-        {regionMode ? (
-          <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
-        ) : (
+        {level === 'regions' && (
+          <AreaPicker
+            intro="Start with a region. Click one on the map, or choose it here to see its counties."
+            items={regionSummaries.map((region) => ({
+              id: region.territoryId,
+              name: region.name,
+              subtitle: region.anchorCities.join(' · '),
+              score: region.averageOpportunityScore,
+            }))}
+            onSelect={view.selectTerritory}
+          />
+        )}
+
+        {level === 'counties' && (
+          <AreaPicker
+            intro="Pick a county. Click one on the map, or choose it here to see its ZIP areas."
+            items={countySummaries.map((county) => ({
+              id: county.countyId,
+              name: `${county.name} County`,
+              subtitle: `${county.zipCount} ZIP ${county.zipCount === 1 ? 'area' : 'areas'} · strongest: ${county.topCategory}`,
+              score: county.averageOpportunityScore,
+            }))}
+            onSelect={(countyId) => view.selectCounty(countyId)}
+          />
+        )}
+
+        {level === 'zips' && (
           <>
             <section className="panel-section lens-section">
               <div className="section-heading">
@@ -308,7 +393,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
                 onClick={() => setFiltersOpen((open) => !open)}
               >
                 <span>Narrow the list</span>
-                <strong>{activeOpportunities.length} of {territoryOpportunities.length}</strong>
+                <strong>{activeOpportunities.length} of {focusOpportunities.length}</strong>
                 <i aria-hidden="true">{filtersOpen ? '−' : '+'}</i>
               </button>
 
@@ -377,7 +462,7 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
             <section className="panel-section panel-section--grow">
               <div className="section-heading">
                 <span>Top areas</span>
-                <small>{lensIsOpportunity ? territoryName : lens.label}</small>
+                <small>{lensIsOpportunity ? focusName : lens.label}</small>
               </div>
               <div className="ranked-list">
                 {ranked.length > 0 ? ranked.map((opportunity, index) => (
@@ -416,28 +501,31 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           onSelectZip={handleSelectZip}
           activeZips={activeZips}
           displayScores={lensSurface.displayScores}
-          territoryZips={view.territoryZips}
-          viewportBounds={view.viewportBounds}
+          territoryZips={focusZips}
+          viewportBounds={countyBounds ?? view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
           showReachGap={showReachGap}
           visibleCompetitorIds={visibleCompetitorIds}
           popupValueText={popupValueText}
-          regionMode={regionMode}
-          regions={regionSummaries}
-          onSelectRegion={view.selectTerritory}
+          groupLayer={groupLayer}
+          onSelectGroup={handleSelectGroup}
         />
         <MapBreadcrumb
           regionName={view.selectedTerritory?.name ?? null}
+          countyName={selectedCounty ? `${selectedCounty.name} County` : null}
           onSelectTerritory={view.selectTerritory}
+          onClearCounty={() => view.selectCounty(null)}
         />
         <div className="map-stage__caption">
-          <span>{regionMode ? 'Ohio' : territoryName}</span>
+          <span>{level === 'regions' ? 'Ohio' : level === 'counties' ? territoryName : focusName}</span>
           <strong>
-            {regionMode
-              ? 'Click a region to see its ZIP areas'
-              : lensIsOpportunity
-                ? 'ZIP areas colored by opportunity'
-                : `ZIP areas colored by ${lens.label.toLowerCase()}`}
+            {level === 'regions'
+              ? 'Click a region to see its counties'
+              : level === 'counties'
+                ? 'Counties colored by opportunity · click one to see ZIP areas'
+                : lensIsOpportunity
+                  ? 'ZIP areas colored by opportunity'
+                  : `ZIP areas colored by ${lens.label.toLowerCase()}`}
           </strong>
         </div>
       </section>
@@ -449,9 +537,11 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           audience="Strategy, intelligence, and leadership"
           purpose="See where the company can compete and grow — demand, audience, competitors, and unclaimed revenue."
           nextStep={
-            regionMode
-              ? 'Pick a region, then choose a ZIP area to see what makes it strong.'
-              : 'Choose a ZIP area, then create the opportunity brief.'
+            level === 'regions'
+              ? 'Pick a region, then a county, then a ZIP area to see what makes it strong.'
+              : level === 'counties'
+                ? 'Pick a county to see its ZIP areas, then create the opportunity brief.'
+                : 'Choose a ZIP area, then create the opportunity brief.'
           }
         />
         {selected && selectedDemographics && selectedInternalMetrics ? (
@@ -569,14 +659,22 @@ export function ZipExplorer({ data, resetVersion, view }: ZipExplorerProps) {
           <div className="empty-detail">
             <div className="empty-detail__visual"><span>OH</span></div>
             <span className="eyebrow">Find the market</span>
-            <h2>{regionMode ? 'Start with a region' : 'Choose a ZIP area'}</h2>
+            <h2>
+              {level === 'regions'
+                ? 'Start with a region'
+                : level === 'counties'
+                  ? 'Pick a county'
+                  : 'Choose a ZIP area'}
+            </h2>
             <p>
-              {regionMode
-                ? 'Each region has its own color. Click one to see the ZIP areas inside it.'
-                : 'Pick any area on the map or in the Top areas list to see what makes it strong.'}
+              {level === 'regions'
+                ? 'Each region has its own color. Click one to see the counties inside it.'
+                : level === 'counties'
+                  ? 'Counties are colored by opportunity — stronger counties are warmer. Click one to see its ZIP areas.'
+                  : 'Pick any area on the map or in the Top areas list to see what makes it strong.'}
             </p>
-            <div className="empty-detail__hint"><span>1</span>{regionMode ? 'Click a region on the map' : 'Choose an area on the map or list'}</div>
-            <div className="empty-detail__hint"><span>2</span>{regionMode ? 'Explore its ZIP areas' : 'Review its market profile'}</div>
+            <div className="empty-detail__hint"><span>1</span>Click a region on the map</div>
+            <div className="empty-detail__hint"><span>2</span>Pick a county, then a ZIP area</div>
             <div className="empty-detail__hint"><span>3</span>Create the opportunity brief</div>
           </div>
         )}

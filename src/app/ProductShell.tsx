@@ -49,6 +49,7 @@ export function ProductShell({ data }: ProductShellProps) {
   const [mode, setMode] = useState<ProductMode>('explorer');
   const [resetVersion, setResetVersion] = useState(0);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState(defaultTerritoryId);
+  const [selectedCountyId, setSelectedCountyId] = useState<string | null>(null);
   const [leftCollapsed, setLeftCollapsed] = useState(isCompact);
   const [rightCollapsed, setRightCollapsed] = useState(isCompact);
 
@@ -70,6 +71,10 @@ export function ProductShell({ data }: ProductShellProps) {
   );
   const selectTerritory = useCallback((territoryId: string) => {
     setSelectedTerritoryId(territoryId);
+    setSelectedCountyId(null);
+  }, []);
+  const selectCounty = useCallback((countyId: string | null) => {
+    setSelectedCountyId(countyId);
   }, []);
   const view = useMemo<ProductViewContext>(
     () => ({
@@ -82,12 +87,16 @@ export function ProductShell({ data }: ProductShellProps) {
       viewportMode,
       regionMode: selectedTerritoryId === ALL_TERRITORIES_ID && territories.length > 0,
       selectTerritory,
+      selectedCountyId,
+      selectCounty,
     }),
     [
       data.market.bounds,
       isCompact,
       leftCollapsed,
       rightCollapsed,
+      selectCounty,
+      selectedCountyId,
       selectedTerritory,
       selectedTerritoryId,
       selectTerritory,
@@ -99,6 +108,7 @@ export function ProductShell({ data }: ProductShellProps) {
 
   const resetReview = () => {
     setSelectedTerritoryId(defaultTerritoryId);
+    setSelectedCountyId(null);
     setLeftCollapsed(isCompact);
     setRightCollapsed(isCompact);
     setResetVersion((version) => version + 1);
@@ -134,7 +144,7 @@ export function ProductShell({ data }: ProductShellProps) {
         <TerritorySelector
           territories={territories}
           selectedTerritoryId={selectedTerritoryId}
-          onChange={setSelectedTerritoryId}
+          onChange={selectTerritory}
         />
 
         <div className="mode-switch" role="tablist" aria-label="Product workspace">

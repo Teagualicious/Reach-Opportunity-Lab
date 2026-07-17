@@ -15,6 +15,9 @@ export interface ZipOpportunity {
   zip: string;
   name: string;
   territoryId?: string;
+  /** Ohio county containing the ZCTA, from the geometry build pipeline. */
+  countyId?: string;
+  countyName?: string;
   detailLevel?: OpportunityDetailLevel;
   centroid?: [longitude: number, latitude: number];
   score: number;
@@ -64,6 +67,14 @@ export function assertZipOpportunity(value: ZipOpportunity): void {
 
   if (value.territoryId !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.territoryId)) {
     throw new Error(`Invalid territory identifier for ZIP ${value.zip}`);
+  }
+
+  if (value.countyId !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.countyId)) {
+    throw new Error(`Invalid county identifier for ZIP ${value.zip}`);
+  }
+
+  if (value.countyName !== undefined && value.countyName.trim().length === 0) {
+    throw new Error(`Invalid county name for ZIP ${value.zip}`);
   }
 
   if (

@@ -32,13 +32,34 @@ export function regionColorForIndex(index: number): string {
   return REGION_PALETTE[index % REGION_PALETTE.length];
 }
 
-/** Solid region coloring: every ZIP in a territory shares one fill. */
-export function regionFillColorExpression(
-  regionColors: ReadonlyMap<string, string>,
+/** The heat-ramp color for a score, matching the map's interpolate expression. */
+export function opportunityColorForScore(score: number): string {
+  const stops = OPPORTUNITY_COLOR_STOPS;
+  if (score <= stops[0][0]) return stops[0][1];
+  for (let index = 1; index < stops.length; index += 1) {
+    const [stopScore, stopColor] = stops[index];
+    if (score <= stopScore) {
+      const [previousScore, previousColor] = stops[index - 1];
+      const ratio = (score - previousScore) / (stopScore - previousScore);
+      const from = [1, 3, 5].map((at) => Number.parseInt(previousColor.slice(at, at + 2), 16));
+      const to = [1, 3, 5].map((at) => Number.parseInt(stopColor.slice(at, at + 2), 16));
+      const mixed = from.map((channel, part) => Math.round(channel + (to[part] - channel) * ratio));
+      return `#${mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+
+export type MapGroupKey = 'territoryId' | 'countyId';
+
+/** Solid group coloring: every ZIP in a group (region or county) shares one fill. */
+export function groupFillColorExpression(
+  key: MapGroupKey,
+  groupColors: ReadonlyMap<string, string>,
 ): ExpressionSpecification {
-  const branches: unknown[] = ['match', ['get', 'territoryId']];
-  for (const [territoryId, color] of regionColors) {
-    branches.push(territoryId, color);
+  const branches: unknown[] = ['match', ['get', key]];
+  for (const [groupId, color] of groupColors) {
+    branches.push(groupId, color);
   }
   branches.push('#e4e7ea');
   return branches as unknown as ExpressionSpecification;

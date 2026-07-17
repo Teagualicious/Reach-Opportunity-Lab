@@ -13,4 +13,7 @@ export interface ProductViewContext {
   regionMode: boolean;
   /** Region-first navigation: drill into a region or return to all regions. */
   selectTerritory: (territoryId: string) => void;
+  /** Selected county inside the territory, or null while at the county level. */
+  selectedCountyId: string | null;
+  selectCounty: (countyId: string | null) => void;
 }

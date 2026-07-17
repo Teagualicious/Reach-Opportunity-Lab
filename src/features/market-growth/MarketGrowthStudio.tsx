@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProductViewContext } from '../../app/ProductViewContext';
+import { AreaPicker } from '../../components/AreaPicker';
 import { ExperienceGuide } from '../../components/ExperienceGuide';
 import { MapBreadcrumb } from '../../components/MapBreadcrumb';
-import { RegionPicker } from '../../components/RegionPicker';
 import type { OpportunityMarket } from '../../data/OpportunityRepository';
+import { buildCountySummaries } from '../../domain/countySummary';
 import { MARKET_MODES, getMarketModeScore, type MarketModeId } from '../../domain/marketMode';
 import { buildRegionSummaries } from '../../domain/regionSummary';
 import { buildSellerOpportunity } from '../../domain/sellerOpportunity';
+import type { GeographicBounds } from '../../domain/territory';
+import { getGeometryBounds } from '../../map/geometryBounds';
+import { buildCountyGroupLayer, buildRegionGroupLayer } from '../../map/mapGroups';
 import { OpportunityMap } from '../../map/OpportunityMap';
 
 interface MarketGrowthStudioProps {
@@ -28,7 +32,6 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   const [simulated, setSimulated] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
 
-  const regionMode = view.regionMode;
   const territories = data.market.territories ?? [];
   const regionSummaries = useMemo(
     () => buildRegionSummaries(data.opportunities, territories),
@@ -38,6 +41,58 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   const territoryOpportunities = useMemo(
     () => data.opportunities.filter((opportunity) => territoryZipSet.has(opportunity.zip)),
     [data.opportunities, territoryZipSet],
+  );
+  const countySummaries = useMemo(
+    () => buildCountySummaries(territoryOpportunities),
+    [territoryOpportunities],
+  );
+  const selectedCounty = useMemo(
+    () => countySummaries.find((county) => county.countyId === view.selectedCountyId) ?? null,
+    [countySummaries, view.selectedCountyId],
+  );
+  const level: 'regions' | 'counties' | 'zips' = view.regionMode
+    ? 'regions'
+    : selectedCounty
+      ? 'zips'
+      : 'counties';
+  const focusZips = selectedCounty ? selectedCounty.zips : view.territoryZips;
+  const focusZipSet = useMemo(() => new Set(focusZips), [focusZips]);
+  const focusOpportunities = useMemo(
+    () =>
+      selectedCounty
+        ? territoryOpportunities.filter((opportunity) => focusZipSet.has(opportunity.zip))
+        : territoryOpportunities,
+    [focusZipSet, selectedCounty, territoryOpportunities],
+  );
+  const countyBounds = useMemo<GeographicBounds | null>(() => {
+    if (!selectedCounty) return null;
+    let merged: GeographicBounds | null = null;
+    for (const feature of data.geometry.features) {
+      if (feature.properties.countyId !== selectedCounty.countyId) continue;
+      const bounds = getGeometryBounds(feature.geometry);
+      if (!bounds) continue;
+      merged = merged
+        ? [
+            Math.min(merged[0], bounds[0]),
+            Math.min(merged[1], bounds[1]),
+            Math.max(merged[2], bounds[2]),
+            Math.max(merged[3], bounds[3]),
+          ]
+        : bounds;
+    }
+    return merged;
+  }, [data.geometry.features, selectedCounty]);
+  const groupLayer = useMemo(() => {
+    if (level === 'regions') return buildRegionGroupLayer(regionSummaries);
+    if (level === 'counties') return buildCountyGroupLayer(countySummaries);
+    return null;
+  }, [countySummaries, level, regionSummaries]);
+  const handleSelectGroup = useCallback(
+    (groupId: string) => {
+      if (view.regionMode) view.selectTerritory(groupId);
+      else view.selectCounty(groupId);
+    },
+    [view],
   );
 
   useEffect(() => {
@@ -57,8 +112,8 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
     [data.opportunities, mode],
   );
   const ranked = useMemo(
-    () => [...territoryOpportunities].sort((a, b) => scores[b.zip] - scores[a.zip]).slice(0, 8),
-    [scores, territoryOpportunities],
+    () => [...focusOpportunities].sort((a, b) => scores[b.zip] - scores[a.zip]).slice(0, 8),
+    [scores, focusOpportunities],
   );
   const actionQueue = useMemo(
     () => ranked.map((opportunity, index) => buildSellerOpportunity(opportunity, mode, scores[opportunity.zip], index)),
@@ -68,7 +123,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   useEffect(() => {
     setSelectedZip(ranked[0]?.zip ?? null);
     setSimulated(false);
-  }, [ranked, view.selectedTerritoryId]);
+  }, [ranked, view.selectedCountyId, view.selectedTerritoryId]);
 
   const selected = (selectedZip ? data.opportunitiesByZip.get(selectedZip) : undefined) ?? ranked[0];
   const selectedIndex = selected ? Math.max(0, ranked.findIndex((opportunity) => opportunity.zip === selected.zip)) : 0;
@@ -79,26 +134,56 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   const projectedScore = simulated ? Math.min(100, selectedScore + 9) : selectedScore;
   const handleSelectZip = useCallback((zip: string | null) => setSelectedZip(zip), []);
   const territoryName = view.selectedTerritory?.name ?? 'All Ohio';
+  const focusName = selectedCounty ? `${selectedCounty.name} County` : territoryName;
 
   return (
     <main className="studio-grid market-studio product-grid">
       <aside className="panel panel--left seller-workspace-controls">
         <div className="panel__heading">
           <span className="eyebrow">Prioritize the business</span>
-          <h1>{regionMode ? 'Ohio' : territoryName}</h1>
+          <h1>{level === 'regions' ? 'Ohio' : level === 'counties' ? territoryName : focusName}</h1>
           <p>
-            {regionMode
-              ? 'Pick a region to build its seller action queue.'
-              : 'Who is worth pursuing, growing, or saving — and what to do next.'}
+            {level === 'regions'
+              ? 'Pick a region, then a county, to build its seller action queue.'
+              : level === 'counties'
+                ? 'Pick a county to build its seller action queue.'
+                : 'Who is worth pursuing, growing, or saving — and what to do next.'}
           </p>
         </div>
 
-        {regionMode ? (
+        {level === 'regions' && (
           <>
-            <RegionPicker regions={regionSummaries} onSelectRegion={view.selectTerritory} />
+            <AreaPicker
+              intro="Start with a region. Click one on the map, or choose it here to see its counties."
+              items={regionSummaries.map((region) => ({
+                id: region.territoryId,
+                name: region.name,
+                subtitle: region.anchorCities.join(' · '),
+                score: region.averageOpportunityScore,
+              }))}
+              onSelect={view.selectTerritory}
+            />
             <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
           </>
-        ) : (
+        )}
+
+        {level === 'counties' && (
+          <>
+            <AreaPicker
+              intro="Pick a county. Click one on the map, or choose it here to build its action queue."
+              items={countySummaries.map((county) => ({
+                id: county.countyId,
+                name: `${county.name} County`,
+                subtitle: `${county.zipCount} ZIP ${county.zipCount === 1 ? 'area' : 'areas'} · strongest: ${county.topCategory}`,
+                score: county.averageOpportunityScore,
+              }))}
+              onSelect={(countyId) => view.selectCounty(countyId)}
+            />
+            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+          </>
+        )}
+
+        {level === 'zips' && (
         <>
         <div className="internal-mode-list" role="tablist" aria-label="Seller growth objective">
           {MARKET_MODES.map((candidate) => (
@@ -121,7 +206,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
         </section>
 
         <section className="panel-section panel-section--grow">
-          <div className="section-heading"><span>Seller action queue</span><small>{territoryName}</small></div>
+          <div className="section-heading"><span>Seller action queue</span><small>{focusName}</small></div>
           <div className="seller-queue">
             {actionQueue.map((item) => (
               <button
@@ -147,30 +232,33 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
       <section className="map-stage">
         <OpportunityMap
           data={data}
-          selectedZip={regionMode ? null : selected?.zip ?? null}
+          selectedZip={level === 'zips' ? selected?.zip ?? null : null}
           resetVersion={resetVersion}
           onSelectZip={handleSelectZip}
-          displayScores={regionMode ? undefined : scores}
-          campaignZips={!regionMode && selected ? [selected.zip] : []}
-          territoryZips={view.territoryZips}
-          viewportBounds={view.viewportBounds}
+          displayScores={level === 'zips' ? scores : undefined}
+          campaignZips={level === 'zips' && selected ? [selected.zip] : []}
+          territoryZips={focusZips}
+          viewportBounds={countyBounds ?? view.viewportBounds}
           layoutVersion={view.panelLayoutVersion}
-          regionMode={regionMode}
-          regions={regionSummaries}
-          onSelectRegion={view.selectTerritory}
+          groupLayer={groupLayer}
+          onSelectGroup={handleSelectGroup}
         />
         <MapBreadcrumb
           regionName={view.selectedTerritory?.name ?? null}
+          countyName={selectedCounty ? `${selectedCounty.name} County` : null}
           onSelectTerritory={view.selectTerritory}
+          onClearCounty={() => view.selectCounty(null)}
         />
         <div className="map-stage__caption">
-          <span>{regionMode ? 'Ohio' : 'Geographic evidence'}</span>
+          <span>{level === 'regions' ? 'Ohio' : level === 'counties' ? territoryName : 'Geographic evidence'}</span>
           <strong>
-            {regionMode
-              ? 'Click a region to build its action queue'
-              : selectedItem
-                ? `${selectedItem.entityName} · ${definition.label}`
-                : definition.label}
+            {level === 'regions'
+              ? 'Click a region to see its counties'
+              : level === 'counties'
+                ? 'Click a county to build its action queue'
+                : selectedItem
+                  ? `${selectedItem.entityName} · ${definition.label}`
+                  : definition.label}
           </strong>
         </div>
       </section>
@@ -182,19 +270,25 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           audience="Local sellers and sales managers"
           purpose="Turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save."
           nextStep={
-            regionMode
-              ? 'Pick a region to see who is worth contacting there.'
-              : 'Choose an objective, open an action brief, then build the outreach plan.'
+            level === 'regions'
+              ? 'Pick a region, then a county, to see who is worth contacting there.'
+              : level === 'counties'
+                ? 'Pick a county to see who is worth contacting there.'
+                : 'Choose an objective, open an action brief, then build the outreach plan.'
           }
         />
-        {regionMode && (
+        {level !== 'zips' && (
           <div className="empty-detail">
             <span className="eyebrow">Prioritize the business</span>
-            <h2>Start with a region</h2>
-            <p>Choose a region on the map or in the list to build its prioritized seller action queue.</p>
+            <h2>{level === 'regions' ? 'Start with a region' : 'Pick a county'}</h2>
+            <p>
+              {level === 'regions'
+                ? 'Choose a region on the map or in the list, then one of its counties, to build the prioritized seller action queue.'
+                : 'Choose a county on the map or in the list to build its prioritized seller action queue.'}
+            </p>
           </div>
         )}
-        {!regionMode && selected && selectedItem && (
+        {level === 'zips' && selected && selectedItem && (
           <>
             <div className="seller-action-hero">
               <div className="seller-action-hero__meta">
@@ -243,7 +337,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
             <section className="recommended-action">
               <span>Recommended next step</span>
               <strong>{selectedItem.recommendedAction}</strong>
-              <p>{simulated ? `The illustrative action improves the seller priority within ${territoryName}.` : 'Model the recommended action to compare the current and potential seller state.'}</p>
+              <p>{simulated ? `The illustrative action improves the seller priority within ${focusName}.` : 'Model the recommended action to compare the current and potential seller state.'}</p>
             </section>
 
             <button className="primary-action" type="button" onClick={() => setShowOutreach(true)}>
@@ -263,7 +357,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
             <button className="modal-close" type="button" aria-label="Close outreach plan" onClick={() => setShowOutreach(false)}>×</button>
             <span className="eyebrow">Seller outreach plan</span>
             <h2 id="outreach-title">{selectedItem.entityName}</h2>
-            <p>{definition.label} play for {selected.name} · ZIP {selected.zip} within {territoryName}.</p>
+            <p>{definition.label} play for {selected.name} · ZIP {selected.zip} within {focusName}.</p>
             <dl className="handoff-grid">
               <div><dt>Who to contact</dt><dd>{selectedItem.entityName} · {selectedItem.entityKind}</dd></div>
               <div><dt>Objective</dt><dd>{definition.label}</dd></div>
