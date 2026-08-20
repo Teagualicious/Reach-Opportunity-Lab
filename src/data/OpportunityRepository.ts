@@ -1,5 +1,6 @@
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { MarketOverlayData } from '../domain/mapOverlay';
+import type { PackageMetadata } from '../domain/marketPackage';
 import type { ZipOpportunity } from '../domain/opportunity';
 import type { GeographicBounds, TerritoryDefinition } from '../domain/territory';
 
@@ -37,6 +38,7 @@ export interface OpportunityMarket {
   geometry: FeatureCollection<Geometry, ZipFeatureProperties>;
   geometryMetadata: GeometryMetadata;
   overlays: MarketOverlayData;
+  metadata?: PackageMetadata;
 }
 
 export interface OpportunityRepository {

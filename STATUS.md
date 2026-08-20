@@ -4,7 +4,7 @@
 
 ## Current phase
 
-**Fall pivot foundation validated — growth/retention-first Seller Action Center, synthetic decision-maker path, and hardened standalone offline delivery**
+**Phase 1 — Manifest-driven multi-market contracts and explicit data-mode infrastructure**
 
 Canonical continuation after PR #24:
 
@@ -12,7 +12,7 @@ Canonical continuation after PR #24:
 main
 ```
 
-PR #24 carries the offline hardening discovered during post-merge browser validation.
+Market manifest, data mode types, package metadata, and ManifestOpportunityRepository are implemented. App loads via manifest. Territory functions support any market's all-territories ID.
 
 ## Product direction
 
@@ -26,6 +26,22 @@ The product hierarchy is:
 The fall project is primarily a methodology, validation, secure-data, and multi-market build. The application remains a production-shaped synthetic demo until validated market packages are introduced.
 
 ## Done
+
+### Manifest-driven multi-market infrastructure — Phase 1
+
+- Added `DataMode` (`demo` | `validated`) and `ValidationStatus` (`unvalidated` | `provisional` | `validated`) types.
+- Added `MarketManifest`, `MarketManifestEntry`, `PackageMetadata`, `ScoreMetadata`, and `MarketPackagePaths` contracts.
+- Added `assertMarketManifest` and `assertMarketManifestEntry` runtime validators.
+- Added `findManifestEntry` and `buildPackageMetadata` utilities.
+- Created `public/data/market-manifest.json` with the Ohio demo market entry.
+- Added optional `PackageMetadata` to `OpportunityMarket` interface.
+- Updated `buildOpportunityMarket` to accept and pass through metadata.
+- Created `ManifestOpportunityRepository` that loads markets from a typed manifest.
+- Updated `App.tsx` to load the manifest and create `ManifestOpportunityRepository`.
+- Added `allTerritoriesId(marketId)` and `isAllTerritoriesId(id)` to territory module.
+- Updated `findTerritory` to accept any market's all-territories ID.
+- Added 32 new tests across `marketPackage.test.ts`, `ManifestOpportunityRepository.test.ts`, and `territory.test.ts`.
+- All 21 test files / 88 tests pass, typecheck passes, build passes.
 
 ### Growth, retention, and contacts — PR #23
 
@@ -60,12 +76,14 @@ The fall project is primarily a methodology, validation, secure-data, and multi-
 
 ### Automated evidence
 
-Growth/retention branch head `783f54b50fd52b39175ed971c7671f964fb2b2b5`:
+Phase 1 manifest infrastructure:
 
-- CI run 447: passed.
-- All-offline run 106: passed under the previous validator.
+- 21 test files / 88 tests passed.
+- Typecheck passed.
+- Production build passed.
+- Offline context generation requires external Census tile access (blocked in remote environments; pre-existing).
 
-Final functional PR #24 commit `5805f43e56735a0e21644d0260a530b623ee3032`:
+Prior PR #24 commit `5805f43e56735a0e21644d0260a530b623ee3032`:
 
 - CI run 457: passed.
 - All-offline run 110: passed.
@@ -93,15 +111,16 @@ Detailed evidence is in `docs/VALIDATION.md`.
 
 ## Next up
 
-1. Approve the exact New Business handoff destination and configuration.
-2. Freeze Charlotte market/cohort and growth/churn outcome definitions.
-3. Inventory Charlotte CRM contact, owner, last-touch, renewal, and suppression fields.
-4. Finalize validated contact/provider contracts.
-5. Approve one professional enrichment provider.
-6. Run a manually adjudicated Charlotte contact-quality sample.
-7. Build observed-outcome Account Whitespace and Retention methods.
-8. Introduce manifest-driven multi-market packages and explicit Demo/Validated modes.
-9. Add version, freshness, confidence, coverage, and validation status to decision outputs.
+1. Wire data-mode and metadata surfaces into the product UI (badge, status indicator, methodology card).
+2. Add a market selector for multi-market navigation when additional markets are added.
+3. Approve the exact New Business handoff destination and configuration.
+4. Freeze Charlotte market/cohort and growth/churn outcome definitions.
+5. Inventory Charlotte CRM contact, owner, last-touch, renewal, and suppression fields.
+6. Finalize validated contact/provider contracts.
+7. Approve one professional enrichment provider.
+8. Run a manually adjudicated Charlotte contact-quality sample.
+9. Build observed-outcome Account Whitespace and Retention methods.
+10. Add Charlotte market package to the manifest and validate multi-market loading.
 
 ## Blocked / external input
 
@@ -115,6 +134,11 @@ Detailed evidence is in `docs/VALIDATION.md`.
 - Privacy/security approval for authenticated real-contact delivery.
 
 ## Decisions log
+
+- 2026-08-20 | DECISION: App loads markets through a typed manifest rather than hardcoded repository selection
+  Considered: keeping DemoOpportunityRepository as the sole entry point, adding a factory function, or a full registry pattern
+  Rejected because: the factory hides the manifest contract, and a registry adds indirection without benefit at this stage; the manifest is a declarative file that a build step or analytics pipeline can generate
+  Must preserve: manifest is the single source for available markets, paths, data modes, and metadata; ManifestOpportunityRepository delegates to the existing buildOpportunityMarket builder; DemoOpportunityRepository remains available for direct use in tests
 
 - 2026-08-20 | DECISION: Account Whitespace and Retention are the primary Seller Action Center workflows
   Considered: retaining New Business as default, removing it entirely, and combining objectives into one score
@@ -151,8 +175,11 @@ Detailed evidence is in `docs/VALIDATION.md`.
 - Opportunity scores, account entities, dollar ranges, scenario outputs, and contacts remain synthetic demo logic.
 - Contact links use reserved values but still open the configured mail/phone application; synthetic labels must remain visible.
 - New Business handoff destination is not configured.
-- Ohio loading remains hard-coded and must be generalized for Charlotte and other markets.
+- Ohio is the only manifest entry; Charlotte and additional markets need data, geometry, and overlays before they can be added.
+- TerritorySelector label "All Ohio · Statewide view" is Ohio-specific and should become market-aware when multi-market UI is added.
+- Client advertiser profiles in clientScenario.ts remain Ohio-territory-specific demo data.
 - Physical-device review is still useful, but compact Chromium contract checks passed.
+- Offline context generation requires external Census tile access, blocked in remote cloud environments.
 
 ## Historical record
 

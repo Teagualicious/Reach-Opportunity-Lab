@@ -1,0 +1,26 @@
+{
+  "manifestVersion": "1.0.0",
+  "generatedAt": "2026-08-20T00:00:00Z",
+  "defaultMarketId": "ohio",
+  "markets": [
+    {
+      "marketId": "ohio",
+      "name": "Ohio Opportunity Network",
+      "subtitle": "Statewide Ohio market",
+      "dataMode": "demo",
+      "packageVersion": "1.0.0",
+      "geographyVintage": "2020 ZCTA",
+      "center": [-82.5, 40.2],
+      "bounds": [-84.82, 38.4, -80.52, 42.0],
+      "zipCount": 1233,
+      "territoryCount": 7,
+      "validationStatus": "unvalidated",
+      "asOfDate": "2026-08-20",
+      "paths": {
+        "opportunities": "data/ohio-opportunities.json",
+        "overlays": "data/market-overlays.json",
+        "geometry": "data/ohio-zcta-2020.geojson"
+      }
+    }
+  ]
+}
