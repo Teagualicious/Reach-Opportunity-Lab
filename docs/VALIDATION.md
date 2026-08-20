@@ -8,20 +8,40 @@ base commit: b769fac1dffcff5957bb8c96ae181c0175e971a1
 branch: feature/growth-retention-decision-makers
 ```
 
-## Focused validation completed before publication
+## Focused validation completed
 
-- Unified patch reverse/forward application check passed.
-- Strict TypeScript checking passed for changed domain modules and their unit-test sources.
-- `MarketGrowthStudio.tsx` JSX and imported type surface parsed against focused stubs.
-- Runtime assertions passed for:
-  - Account Whitespace first;
-  - Retention second;
-  - New Business marked secondary;
-  - deterministic synthetic decision maker;
-  - `.example` email;
-  - `202-555-01xx` phone;
-  - whitespace value label;
-  - retention revenue-at-risk label.
+The focused validation was rerun after publication on 2026-08-20 and passed:
+
+- strict TypeScript compilation of the changed domain modules;
+- focused TypeScript/JSX compilation of `MarketGrowthStudio.tsx` against the repository type surface used by the patch review;
+- deterministic runtime assertions for the changed domain behavior.
+
+Verified runtime results:
+
+```text
+mode order:
+  Account Whitespace
+  Retention / KEEP
+  Category Expansion
+  New Business Handoff
+
+sample contact:
+  Taylor Sullivan
+  Marketing Director
+  taylor.sullivan@lakeside-european-auto.example
+  (202) 555-0196
+
+account-growth value label: Modeled whitespace
+retention value label: Revenue at risk
+```
+
+Additional focused checks completed before publication:
+
+- unified patch reverse/forward application check;
+- New Business marked secondary;
+- deterministic synthetic contact output;
+- `.example` email enforcement;
+- reserved `202-555-01xx` phone enforcement.
 
 ## Required full-repository gates
 
@@ -33,7 +53,7 @@ npm run build
 npm run offline:all
 ```
 
-GitHub Actions on the pushed branch is the authoritative automated result.
+GitHub Actions on the pushed branch is the authoritative automated full-repository result. A missing or unavailable status is not equivalent to a pass.
 
 ## Required manual gates
 
@@ -48,4 +68,4 @@ GitHub Actions on the pushed branch is the authoritative automated result.
 
 ## Production validation not yet performed
 
-The branch does not validate real Charlotte contacts or real whitespace/retention models. Those require approved internal data, contact sources, outcome definitions, and manual adjudication.
+The branch does not validate real Charlotte contacts or real whitespace/retention models. Those require approved internal data, contact sources, outcome definitions, authenticated delivery, and manual adjudication.
