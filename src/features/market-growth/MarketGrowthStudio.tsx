@@ -27,7 +27,7 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 });
 
 export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStudioProps) {
-  const [mode, setMode] = useState<MarketModeId>('new-business');
+  const [mode, setMode] = useState<MarketModeId>('account-growth');
   const [selectedZip, setSelectedZip] = useState<string | null>(null);
   const [simulated, setSimulated] = useState(false);
   const [showOutreach, setShowOutreach] = useState(false);
@@ -111,7 +111,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
   );
 
   useEffect(() => {
-    setMode('new-business');
+    setMode('account-growth');
     setSimulated(false);
     setShowOutreach(false);
   }, [resetVersion]);
@@ -162,7 +162,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               ? 'Pick a region, then a county, to build its seller action queue.'
               : level === 'counties'
                 ? 'Pick a county to build its seller action queue.'
-                : 'Who is worth pursuing, growing, or saving — and what to do next.'}
+                : 'Which existing account should you grow or protect — and who should you contact?'}
           </p>
         </div>
 
@@ -178,7 +178,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               }))}
               onSelect={view.selectTerritory}
             />
-            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, decision makers, and performance signals are synthetic.</div>
           </>
         )}
 
@@ -194,7 +194,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               }))}
               onSelect={(countyId) => view.selectCounty(countyId)}
             />
-            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+            <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, decision makers, and performance signals are synthetic.</div>
           </>
         )}
 
@@ -239,7 +239,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           </div>
         </section>
 
-        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, prospects, and performance signals are synthetic.</div>
+        <div className="synthetic-notice"><span className="synthetic-notice__dot" />Seller queue, accounts, decision makers, and performance signals are synthetic.</div>
         </>
         )}
       </aside>
@@ -284,13 +284,13 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
           tone="seller"
           title="Seller Action Center"
           audience="Local sellers and sales managers"
-          purpose="Turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save."
+          purpose="Grow and protect the existing book by finding whitespace, surfacing retention risk, and identifying the right decision maker. New Business is a secondary handoff."
           nextStep={
             level === 'regions'
               ? 'Pick a region, then a county, to see who is worth contacting there.'
               : level === 'counties'
                 ? 'Pick a county to see who is worth contacting there.'
-                : 'Choose an objective, open an action brief, then build the outreach plan.'
+                : 'Start with Account Whitespace or Retention, open an account brief, then contact the synthetic decision maker.'
           }
         />
         {level !== 'zips' && (
@@ -320,7 +320,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               </div>
               {simulated && <small>+{projectedScore - selectedScore} modeled action lift</small>}
               <div className="seller-opportunity-range">
-                <span>Modeled opportunity</span>
+                <span>{selectedItem.valueLabel}</span>
                 <strong>
                   {currencyFormatter.format(selectedItem.opportunityRange.minimum)}–
                   {currencyFormatter.format(selectedItem.opportunityRange.maximum)}
@@ -339,6 +339,45 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
             <section className="lead-with-card">
               <span>Lead with</span>
               <strong>{selectedItem.leadWith}</strong>
+            </section>
+
+            <section
+              className="decision-maker-card"
+              aria-label={`Synthetic decision maker for ${selectedItem.entityName}`}
+            >
+              <div className="decision-maker-card__heading">
+                <span>Decision maker</span>
+                <em>{selectedItem.decisionMaker.statusLabel}</em>
+              </div>
+              <strong>{selectedItem.decisionMaker.fullName}</strong>
+              <p>{selectedItem.decisionMaker.title}</p>
+              <dl>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{selectedItem.decisionMaker.professionalEmail}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{selectedItem.decisionMaker.phoneDisplay}</dd>
+                </div>
+              </dl>
+              <div className="contact-actions">
+                <a
+                  className="contact-action contact-action--primary"
+                  href={`mailto:${selectedItem.decisionMaker.professionalEmail}`}
+                >
+                  Email
+                </a>
+                <a
+                  className="contact-action"
+                  href={`tel:${selectedItem.decisionMaker.phoneE164}`}
+                >
+                  Call
+                </a>
+              </div>
+              <small>
+                {selectedItem.decisionMaker.sourceLabel}. These contact values are reserved synthetic demo data.
+              </small>
             </section>
 
             <section className="detail-section">
@@ -362,7 +401,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
             <button className="secondary-action" type="button" onClick={() => setSimulated((value) => !value)}>
               {simulated ? 'Return to current state' : 'Model seller action'}
             </button>
-            <p className="model-disclosure">Illustrative synthetic results. No real account, prospect, seller, or revenue data is shown.</p>
+            <p className="model-disclosure">Illustrative synthetic results and decision-maker contacts. No real account, prospect, seller, contact, or revenue data is shown.</p>
           </>
         )}
       </aside>
@@ -375,17 +414,32 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
             <h2 id="outreach-title">{selectedItem.entityName}</h2>
             <p>{definition.label} play for {selected.name} · ZIP {selected.zip} within {focusName}.</p>
             <dl className="handoff-grid">
-              <div><dt>Who to contact</dt><dd>{selectedItem.entityName} · {selectedItem.entityKind}</dd></div>
+              <div><dt>Account</dt><dd>{selectedItem.entityName} · {selectedItem.entityKind}</dd></div>
+              <div><dt>Decision maker</dt><dd>{selectedItem.decisionMaker.fullName} · {selectedItem.decisionMaker.title}</dd></div>
               <div><dt>Objective</dt><dd>{definition.label}</dd></div>
               <div><dt>Lead with</dt><dd>{selectedItem.leadWith}</dd></div>
               <div>
-                <dt>Modeled opportunity</dt>
+                <dt>{selectedItem.valueLabel}</dt>
                 <dd>
                   {currencyFormatter.format(selectedItem.opportunityRange.minimum)}–
                   {currencyFormatter.format(selectedItem.opportunityRange.maximum)}
                 </dd>
               </div>
             </dl>
+            <div className="contact-actions contact-actions--modal">
+              <a
+                className="contact-action contact-action--primary"
+                href={`mailto:${selectedItem.decisionMaker.professionalEmail}`}
+              >
+                Email {selectedItem.decisionMaker.fullName}
+              </a>
+              <a
+                className="contact-action"
+                href={`tel:${selectedItem.decisionMaker.phoneE164}`}
+              >
+                Call {selectedItem.decisionMaker.phoneDisplay}
+              </a>
+            </div>
             <section className="brief-highlights">
               <span>Why now</span>
               <div><strong>{selectedItem.headline}</strong><small>{selectedItem.urgencyLabel}</small></div>
@@ -397,7 +451,7 @@ export function MarketGrowthStudio({ data, resetVersion, view }: MarketGrowthStu
               <span>Next step</span>
               <p>{selectedItem.recommendedAction}</p>
             </section>
-            <small>Deterministic synthetic outreach plan. No real account, prospect, seller, or revenue data.</small>
+            <small>Deterministic synthetic outreach plan and contact. No real account, prospect, seller, contact, or revenue data.</small>
           </section>
         </div>
       )}

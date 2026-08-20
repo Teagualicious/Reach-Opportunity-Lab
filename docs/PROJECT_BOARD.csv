@@ -1,0 +1,127 @@
+ID,Phase,Initial Column,Priority,Title,Dependencies,Primary Role,Target Week
+F0-01,F0 — Existing Product Foundation,Done,P0,Production-shaped React/TypeScript application foundation,None,Existing repository,Complete
+F0-02,F0 — Existing Product Foundation,Done,P0,Three distinct decision workspaces,None,Existing repository,Complete
+F0-03,F0 — Existing Product Foundation,Done,P0,"Ohio ZCTA, region, county, and ZIP drill-down",None,Existing repository,Complete
+F0-04,F0 — Existing Product Foundation,Done,P0,"Static deployment, CI, releases, and offline package",None,Existing repository,Complete
+F0-05,F0 — Existing Product Foundation,Done,P1,Responsive map-first desktop and mobile shell,None,Existing repository,Complete
+F0-06,F0 — Existing Product Foundation,Done,P0,Deterministic synthetic opportunity and scenario engine,None,Existing repository,Complete
+F0-07,F0 — Existing Product Foundation,Done,P1,"CHIP guided-tour, mobile, and GET/KEEP/GROW patterns",None,Existing reference repository,Complete
+F0-08,F0 — Existing Product Foundation,Done,P0,Synthetic-data and client/internal trust boundaries,None,Existing repository,Complete
+P0-01,"P0 — Project Reset, Scope, and Governance",Ready,P0,Create the fall project source-of-truth files,None,Developer / Data Scientist,Week 1
+P0-02,"P0 — Project Reset, Scope, and Governance",Ready,P0,Create and configure the GitHub Project board,P0-01,Product Owner / Developer,Week 1
+P0-03,"P0 — Project Reset, Scope, and Governance",Ready,P0,Reconcile stale repository documentation,P0-01,Developer / Data Scientist,Week 1
+P0-04,"P0 — Project Reset, Scope, and Governance",Ready,P0,Create a protected fall-methodology development baseline,None,Repository Admin / Developer,Week 1
+P0-05,"P0 — Project Reset, Scope, and Governance",Ready,P0,"Define measurable growth, retention, contactability, and validation success criteria",P0-01,Product Owner / Business Sponsor,Week 1
+P0-06,"P0 — Project Reset, Scope, and Governance",Ready,P0,"Freeze Charlotte pilot, comparison market, target verticals, and validation outcomes",P0-05,Product Owner / Sales & Research SME,Week 1
+P0-07,"P0 — Project Reset, Scope, and Governance",Blocked / External Input,P0,Obtain stakeholder approval for data use and decision claims,"P0-05, P0-06",Business Sponsor / Data Owner / Compliance,Week 1–2
+P0-08,"P0 — Project Reset, Scope, and Governance",Backlog,P1,"Define milestones, review cadence, and demo freeze dates","P0-05, P0-06",Product Owner / Developer,Week 1
+P0-09,"P0 — Project Reset, Scope, and Governance",Ready,P0,Approve the growth/retention-first product hierarchy and new-business handoff,P0-05,Product Owner / Sponsor,Week 1
+P1-01,P1 — Analytical Architecture and Reproducibility,Ready,P0,Add a Python analytical workspace beside the TypeScript app,P0-04,Developer / Data Scientist,Week 1–2
+P1-02,P1 — Analytical Architecture and Reproducibility,Backlog,P0,"Create raw, processed, restricted, and artifact storage boundaries",P1-01,Developer / Data Scientist,Week 1–2
+P1-03,P1 — Analytical Architecture and Reproducibility,Backlog,P0,Create versioned market and data-vintage configuration,"P1-01, P0-06",Developer / Data Scientist,Week 2
+P1-04,P1 — Analytical Architecture and Reproducibility,Backlog,P0,Configure secrets and API-key handling,P1-01,Developer / Data Scientist,Week 2
+P1-05,P1 — Analytical Architecture and Reproducibility,Backlog,P0,Define canonical analytical schemas,"P1-01, P0-06",Developer / Data Scientist,Week 2
+P1-06,P1 — Analytical Architecture and Reproducibility,Backlog,P0,Implement run manifests and artifact versioning,"P1-03, P1-05",Developer / Data Scientist,Week 2
+P1-07,P1 — Analytical Architecture and Reproducibility,Backlog,P0,Extend CI to the analytical workspace,"P1-01, P1-04",Developer / Data Scientist,Week 2
+P1-08,P1 — Analytical Architecture and Reproducibility,Backlog,P1,Define the analytical-to-frontend export contract,P1-05,Developer / Data Scientist,Week 2
+P2-01,P2 — Geography and Public Data Foundation,Backlog,P0,Replace third-party geometry sourcing with a governed Census source,"P1-03, P1-04",Developer / Data Scientist,Week 2–3
+P2-02,P2 — Geography and Public Data Foundation,Backlog,P0,Build a many-to-many ZIP/ZCTA/county/market geography bridge,"P2-01, P1-05",Developer / Data Scientist,Week 2–3
+P2-03,P2 — Geography and Public Data Foundation,Backlog,P0,Replace synthetic city-anchor territories with governed definitions,"P0-06, P2-02, P0-07",Developer / Data Scientist,Week 3
+P2-04,P2 — Geography and Public Data Foundation,Backlog,P0,Create the ACS variable registry,"P0-06, P1-03",Developer / Data Scientist,Week 2–3
+P2-05,P2 — Geography and Public Data Foundation,Backlog,P0,Implement resilient ACS 5-year ingestion,"P1-04, P2-04, P2-02",Developer / Data Scientist,Week 3
+P2-06,P2 — Geography and Public Data Foundation,Backlog,P0,Create the CBP/ZIP Business Patterns registry,"P0-06, P1-03",Developer / Data Scientist,Week 2–3
+P2-07,P2 — Geography and Public Data Foundation,Backlog,P0,Implement CBP/ZBP ingestion at county and ZIP levels,"P1-04, P2-06, P2-02",Developer / Data Scientist,Week 3–4
+P2-08,P2 — Geography and Public Data Foundation,Backlog,P0,Create a governed NAICS-to-advertiser-vertical mapping,"P2-06, P0-07",Developer / Research SME,Week 3–4
+P2-09,P2 — Geography and Public Data Foundation,Backlog,P0,Implement public-data quality and reliability checks,"P2-05, P2-07",Developer / Data Scientist,Week 4
+P2-10,P2 — Geography and Public Data Foundation,Backlog,P0,"Build bronze, silver, and gold public-market tables","P2-05, P2-07, P2-09",Developer / Data Scientist,Week 4
+P2-11,P2 — Geography and Public Data Foundation,Backlog,P1,Produce a pilot-market public-data profile,P2-10,Developer / Data Scientist,Week 4
+P2-12,P2 — Geography and Public Data Foundation,Backlog,P1,Document public-data methodology and refresh procedure,"P2-10, P2-11",Developer / Data Scientist,Week 4
+P3-01,"P3 — Internal Data, Penetration, and Outcome Contracts",Ready,P0,Draft the minimum internal account and campaign data contract,"P0-06, P1-05",Developer / Data Owner,Week 1–2
+P3-02,"P3 — Internal Data, Penetration, and Outcome Contracts",Backlog,P0,"Define account growth, whitespace, retention, churn, and secondary acquisition outcomes","P0-06, P3-01",Developer / Sales SME,Week 2
+P3-03,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,Obtain approved historical account and outcome extracts,"P0-07, P3-01, P3-02",Data Owner / Compliance,Week 2–4
+P3-04,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,Establish the restricted-data development workflow,"P0-07, P3-03",Data Owner / Developer,Week 2–4
+P3-05,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,Implement the restricted internal-data adapter,"P3-03, P3-04, P1-05, P2-02",Developer / Data Scientist,Week 4–5
+P3-06,"P3 — Internal Data, Penetration, and Outcome Contracts",Backlog,P0,Build time-indexed account snapshots,"P3-02, P3-05",Developer / Data Scientist,Week 5
+P3-07,"P3 — Internal Data, Penetration, and Outcome Contracts",Backlog,P0,"Profile internal coverage, duplicates, and survivorship bias","P3-05, P3-06",Developer / Data Scientist,Week 5
+P3-08,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,Approve penetration numerator and denominator definitions,"P3-01, P2-10, P0-07",Business Sponsor / Data Owner / Developer,Week 4–5
+P3-09,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,Approve churn and revenue-at-risk definitions,"P3-02, P0-07",Business Sponsor / Sales SME / Developer,Week 4–5
+P3-10,"P3 — Internal Data, Penetration, and Outcome Contracts",Backlog,P1,Create synthetic restricted-data fixtures for CI and public demos,"P3-01, P3-02, P1-05",Developer / Data Scientist,Week 3–5
+P3-11,"P3 — Internal Data, Penetration, and Outcome Contracts",Blocked / External Input,P0,"Inventory CRM contacts, account ownership, communication history, and suppression fields","P0-07, P0-09, P3-01",CRM Owner / Data Owner / Developer,Week 1–3
+P3-12,"P3 — Internal Data, Penetration, and Outcome Contracts",Backlog,P0,"Define the decision-maker contact, provenance, verification, and suppression contract","P0-07, P3-11",Developer / Data Steward,Week 3
+P4-01,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Create a unified pilot analytical table,"P2-10, P3-06, P3-08, P3-09",Developer / Data Scientist,Week 5–6
+P4-02,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,"Run missingness, distribution, and outlier analysis",P4-01,Developer / Data Scientist,Week 5–6
+P4-03,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Engineer market-demand features from CBP and ACS,"P2-10, P4-02",Developer / Data Scientist,Week 5–6
+P4-04,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,"Engineer account-growth, product/geography whitespace, and penetration features","P3-08, P4-01",Developer / Data Scientist,Week 6
+P4-05,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Engineer lagged churn and account-health features,"P3-06, P3-09, P4-02",Developer / Data Scientist,Week 6
+P4-06,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Convert ACS MOE and source quality into reliability features,"P2-04, P2-05, P4-03",Developer / Data Scientist,Week 6
+P4-07,P4 — Exploratory Analysis and Feature Engineering,Backlog,P1,Implement transformations and sparse-area stabilization,"P4-02, P4-03, P4-04, P4-05",Developer / Data Scientist,Week 6
+P4-08,P4 — Exploratory Analysis and Feature Engineering,Backlog,P1,"Assess redundancy, multicollinearity, and temporal stability","P4-03, P4-04, P4-05, P4-07",Developer / Data Scientist,Week 6
+P4-09,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Create the feature catalog and reason-code dictionary,"P4-03, P4-04, P4-05, P4-06",Developer / Data Scientist,Week 6
+P4-10,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Hold the pre-model methodology review,P4-01 through P4-09,Developer / Business Sponsor / Data Owner,End of Week 6
+P4-11,P4 — Exploratory Analysis and Feature Engineering,Backlog,P0,Create decision-maker role taxonomy and provider-chain matching rules,"P0-06, P3-12, P4-09",Developer / Sales SME / Data Scientist,Week 5–6
+P5-01,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Define the market-demand target and fallback proxy,"P3-03, P4-10",Developer / Data Scientist,Week 6–7
+P5-02,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Implement transparent demand baselines,"P5-01, P4-03",Developer / Data Scientist,Week 7
+P5-03,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Train an interpretable demand candidate,"P5-02, P4-07",Developer / Data Scientist,Week 7
+P5-04,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P1,Train one nonlinear challenger model,"P5-02, P4-07",Developer / Data Scientist,Week 7–8
+P5-05,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,"Produce demand ranges, calibration, and reason codes","P5-03, P5-04",Developer / Data Scientist,Week 8
+P5-06,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Calculate raw penetration and whitespace measures,"P3-08, P4-04",Developer / Data Scientist,Week 7
+P5-07,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Apply empirical-Bayes or hierarchical stabilization,"P5-06, P4-06",Developer / Data Scientist,Week 7–8
+P5-08,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Create expected-versus-observed opportunity gaps,"P5-05, P5-07",Developer / Data Scientist,Week 8
+P5-09,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Implement churn baseline rules and logistic model,"P3-09, P4-05, P4-10",Developer / Data Scientist,Week 7
+P5-10,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Train a calibrated churn challenger,"P5-09, P4-07",Developer / Data Scientist,Week 8
+P5-11,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Select operating thresholds and capacity-aware queues,"P5-09, P5-10",Developer / Sales Leader,Week 8
+P5-12,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Generate account-level churn reason codes,"P5-10, P4-09",Developer / Data Scientist,Week 8
+P5-13,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Define primary Account Whitespace and Retention scorecards plus secondary Category and New Business outputs,"P5-05, P5-08, P5-11",Developer / Data Scientist,Week 8
+P5-14,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Implement stable 0–100 score normalization,P5-13,Developer / Data Scientist,Week 8–9
+P5-15,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Create a confidence score independent of opportunity/risk,"P4-06, P5-05, P5-08, P5-10",Developer / Data Scientist,Week 8–9
+P5-16,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,"Version models, weights, thresholds, and feature definitions","P5-13, P5-14, P5-15",Developer / Data Scientist,Week 9
+P5-17,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P1,Run score sensitivity and rank-stability analysis,"P5-14, P5-15",Developer / Data Scientist,Week 9
+P5-18,"P5 — Demand, Penetration, Churn, and Scorecard Models",Backlog,P0,Hold the model-selection review,P5-01 through P5-17,Developer / Business Sponsor / Data Owner,End of Week 9
+P6-01,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Preregister the validation protocol,"P4-10, P5-18",Developer / Data Scientist,Week 9
+P6-02,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Implement time-based and market-aware splits,"P6-01, P3-06",Developer / Data Scientist,Week 9
+P6-03,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Benchmark demand predictions and rankings,"P5-05, P6-02",Developer / Data Scientist,Week 9–10
+P6-04,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Benchmark account whitespace and penetration against observed account growth,"P5-08, P6-02",Developer / Data Scientist,Week 10
+P6-05,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Benchmark churn probability and queue performance,"P5-11, P6-02",Developer / Data Scientist,Week 10
+P6-06,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Run historical cutoff backtests,"P6-02, P6-03, P6-04, P6-05",Developer / Data Scientist,Week 10
+P6-07,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Blocked / External Input,P0,Reconcile model outputs to observed account outcomes,"P3-03, P3-05, P6-02",Developer / Data Scientist,Week 9–10
+P6-08,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,"Evaluate stability across markets, categories, and account segments","P6-03, P6-04, P6-05",Developer / Data Scientist,Week 10
+P6-09,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Run bias and permitted-use review,"P0-07, P4-09, P6-08",Developer / Compliance / Business Sponsor,Week 10–11
+P6-10,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P1,Perform error analysis and qualitative case review,P6-03 through P6-09,Developer / Sales & Research SME,Week 11
+P6-11,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Write the consolidated validation report,P6-03 through P6-10,Developer / Data Scientist,Week 11
+P6-12,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Hold the validation go/no-go gate,P6-11,Business Sponsor / Data Owner / Developer,End of Week 11
+P6-13,"P6 — Validation, Backtesting, and Observed-Outcome Benchmarking",Backlog,P0,Validate Charlotte business identity and decision-maker contact quality,"P3-11, P3-12, P4-11",Developer / Data Steward / Sales Reviewer,Week 9–11
+P7-01,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Implement a MarketPackage registry,"P1-08, P2-03, P6-12",Developer / Data Scientist,Week 10–11
+P7-02,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Onboard the second market from configuration,"P0-06, P2-12, P7-01",Developer / Data Scientist,Week 10–11
+P7-03,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Automate multi-market batch builds,"P7-01, P7-02",Developer / Data Scientist,Week 11
+P7-04,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Run leave-one-market-out generalization tests,"P7-02, P6-02",Developer / Data Scientist,Week 11–12
+P7-05,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Define market-specific calibration and fallback rules,"P7-04, P5-15",Developer / Data Scientist,Week 12
+P7-06,P7 — Multi-Market Scaling and Generalization,Backlog,P1,Test statewide and multi-market performance,"P7-03, P7-01",Developer / Data Scientist,Week 12
+P7-07,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Write a repeatable market onboarding runbook,P7-02 through P7-06,Developer / Data Scientist,Week 12
+P7-08,P7 — Multi-Market Scaling and Generalization,Backlog,P0,Hold the multi-market readiness gate,P7-07,Developer / Business Sponsor / Data Owner,End of Week 12
+P8-01,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Introduce explicit demo and validated-pilot data modes,"P1-08, P6-12",Developer / Data Scientist,Week 11–12
+P8-02,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Implement ValidatedOpportunityRepository,"P7-01, P8-01",Developer / Data Scientist,Week 12
+P8-03,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Extend domain types for validated outputs,"P1-08, P5-16",Developer / Data Scientist,Week 12
+P8-04,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Replace synthetic demographics in validated mode,"P2-10, P8-02, P8-03",Developer / Data Scientist,Week 12
+P8-05,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Replace synthetic internal metrics in validated mode,"P3-04, P5-08, P5-11, P8-02",Developer / Data Scientist,Week 12
+P8-06,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Replace synthetic mode transforms with scorecard artifacts,"P5-14, P5-15, P8-03",Developer / Data Scientist,Week 12–13
+P8-07,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Build GROW / KEEP-first recommendation taxonomy with a secondary GET handoff,"P5-13, P5-12, P4-09",Developer / Data Scientist,Week 12–13
+P8-08,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Integrate existing-account growth and retention queues into Seller Action Center,"P8-05, P8-06, P8-07",Developer / Data Scientist,Week 13
+P8-09,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,"Add methodology, validation, and model-card surfaces","P6-11, P5-16, P8-03",Developer / Data Scientist,Week 13
+P8-10,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Add market comparison and selection,"P7-01, P7-05, P8-02",Developer / Data Scientist,Week 13
+P8-11,P8 — Product Integration and Decision-Ready Workflows,Backlog,P1,Add a concise executive guided tour inspired by CHIP,P8-06 through P8-10,Developer / Data Scientist,Week 13
+P8-12,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,"Run product regression, accessibility, and offline validation",P8-01 through P8-11,Developer / Data Scientist,Week 13
+P8-13,P8 — Product Integration and Decision-Ready Workflows,Technical Review,P0,Add deterministic synthetic decision makers and direct contact actions to the demo,"F0-06, P8-07",Developer,Immediate / Week 12
+P8-14,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,Implement the private Charlotte decision-maker resolver and provider adapters,"P3-12, P4-11, P6-13, P8-01",Developer / Data Engineer,Week 11–13
+P8-15,P8 — Product Integration and Decision-Ready Workflows,Backlog,P0,"Add verified contact cards, CRM deep links, and human-controlled outreach actions","P8-14, P8-08, P8-13",Developer / CRM Owner,Week 12–13
+P8-16,P8 — Product Integration and Decision-Ready Workflows,Technical Review,P0,Make Account Whitespace the default workflow and Retention the second workflow,"P0-09, P8-06, P8-07",Developer / Product Owner,Immediate / Week 12
+P9-01,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Write the methodology paper outline and claims matrix,"P6-12, P7-08",Developer / Data Scientist,Week 11–12
+P9-02,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Write data and geography methodology chapters,"P2-12, P7-07",Developer / Data Scientist,Week 12–13
+P9-03,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Write model and scorecard methodology chapters,"P5-16, P5-18",Developer / Data Scientist,Week 12–13
+P9-04,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,"Write validation, limitations, and governance chapters","P6-11, P6-12",Developer / Data Scientist,Week 12–13
+P9-05,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Create reproducibility and developer appendices,"P1-07, P7-07, P8-12",Developer / Data Scientist,Week 13
+P9-06,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Build the final leadership presentation,"P6-12, P7-08, P8-12, P9-01",Intern / Developer / Designer,Week 13–14
+P9-07,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Create the live demo script and backup assets,"P8-11, P8-12, P9-06",Developer / Data Scientist,Week 14
+P9-08,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Run methodology and executive rehearsals,P9-02 through P9-07,Intern / Developer / Stakeholders,Week 14
+P9-09,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,"Freeze, release, and archive the final project","P8-12, P9-08",Developer / Repository Admin,Week 14
+P9-10,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,Complete developer and stakeholder handoff,P9-09,Intern / Developer / Business Sponsor,Week 14
+P9-11,"P9 — Methodology Paper, Executive Presentation, and Final Handoff",Backlog,P0,"Document contact enrichment, Charlotte pilot results, and the growth/retention product boundary","P0-09, P6-13, P8-14, P8-15",Intern / Developer / Data Steward,Week 13–14

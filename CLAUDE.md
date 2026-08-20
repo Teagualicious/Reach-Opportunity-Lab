@@ -1,14 +1,30 @@
 # CLAUDE.md
 
-Instructions for coding sessions in this repository. Read `STATUS.md` before starting any work.
+Instructions for coding sessions in this repository.
 
-## Project overview
+## Before any work
 
-**Reach Opportunity Lab** is a geographic market-intelligence and deterministic scenario-planning product. One shared ZIP/ZCTA intelligence layer powers an external Client Growth Studio and an internal Market Growth Studio through the workflow **Describe → Prioritize → Simulate → Activate**.
+Read in this order:
 
-The current deliverable is a locally runnable executive prototype. It uses synthetic opportunity, advertiser, prospect, account, performance, reach-gap, and competitor-footprint data. It does not contain a production predictive model, live LLM calls, real company data, or a live Architect integration. Architect is the campaign-planning and activation destination, not a capability this product replaces.
+1. `CURRENT_HANDOFF.md`
+2. `STATUS.md`
+3. `ARCHITECTURE.md`
+4. `PRODUCT_BUILD_SPEC.md`
+5. `BUILD_HANDOFF.md`
+6. the relevant file under `docs/`
 
-Read [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) for product scope, [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) for the current technical handoff, and [`ARCHITECTURE.md`](ARCHITECTURE.md) for dependency boundaries.
+Archived documentation under `docs/archive/pre-fall-pivot/` is historical and does not override current instructions.
+
+## Product direction
+
+Seller Action Center priority is:
+
+1. Account Whitespace / GROW
+2. Retention / KEEP
+3. Category Expansion
+4. New Business Handoff — secondary
+
+Do not restore New Business as the default without a recorded product decision.
 
 ## Stack
 
@@ -21,35 +37,41 @@ Read [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) for product scope, [`BUILD
 
 ## Workflow rules
 
-1. Read `STATUS.md` first and continue from its **Next up** list.
-2. Work only on the assigned task. Record unrelated issues under **Noticed**.
-3. Run `npm run typecheck`, `npm run test`, and `npm run build` before declaring product work complete.
-4. Work on a branch and deliver through a pull request. Never commit directly to `main`.
-5. End every session by updating `STATUS.md` and leaving a zero-context handoff.
+1. Read `STATUS.md` first and continue from **Next up**.
+2. Work only on the assigned card. Record unrelated issues under **Noticed**.
+3. Work on a branch and deliver through a pull request unless the user explicitly requests another publish path.
+4. Run `npm run typecheck`, `npm run test`, and `npm run build` before completion.
+5. Run `npm run offline:all` when shared application, fixture, styling, map, or offline behavior changes.
+6. Perform real-browser expanded and compact review for UI work.
+7. End by updating `STATUS.md`, `BUILD_HANDOFF.md` when architecture/flow changes, and the project board evidence.
 
-### Decision-log format
+## Architecture rules
+
+- Domain logic does not import React, MapLibre, storage, network, CRM, or provider SDKs.
+- React features consume typed repositories and domain services.
+- MapLibre renders supplied state; it does not own score, recommendation, contact, suppression, or territory truth.
+- Demo and Validated data modes remain explicit.
+- Every product surface renders correctly in expanded and compact modes through the shared 900px viewport contract.
+- Client-facing and internal-only data remain separated.
+- Deployment-specific behavior does not enter domain/feature modules.
+- No broad `any`, uncontrolled randomness, duplicate sources of truth, or business rules in JSX handlers.
+
+## Contact/data laws
+
+- No real contact, account, campaign, revenue, seller, or provider-response data enters Git.
+- No provider key or enrichment request runs in frontend code.
+- Demo contacts use reserved synthetic values and visible labels.
+- Real contacts require authenticated internal delivery, source, confidence/status, freshness, and suppression.
+- Suppressed contacts expose no Email or Call action.
+- Registered agents and generic inboxes are not verified decision makers.
+- No automatic email, dialing, texting, or sequences.
+- Never scrape the North Carolina Secretary of State interactive portal.
+
+## Decision-log format
 
 ```text
 - YYYY-MM-DD | DECISION: what was chosen
   Considered: alternatives evaluated
   Rejected because: the actual reason
-  Must preserve: constraints the next agent must not break
+  Must preserve: constraints the next contributor must not break
 ```
-
-## Architecture rules
-
-- Domain scoring, simulation, recommendations, and overlay validation are pure TypeScript.
-- React features consume typed repositories and domain services.
-- Every product surface must render correctly in both layout modes: `expanded` (desktop) and `compact` (≤900px phones/portrait tablets). Adapt through the shared viewport-mode contract (`useViewportMode`, `ProductViewContext.viewportMode`, and the matching CSS breakpoint) — never through user-agent or device detection.
-- MapLibre renders geometry and domain-provided values; it does not own business truth.
-- Network and local-file access live behind repository or source interfaces.
-- Keep client-facing and internal-only data separated.
-- Do not add deployment-specific behavior to domain or feature modules.
-- Do not create monolithic HTML/JavaScript or business rules embedded in JSX event handlers.
-- Do not hide boundary problems with broad `any` types.
-
-## Data hygiene
-
-- No real company data, credentials, internal exports, client identifiers, campaign data, or revenue data.
-- All demonstration fixtures are synthetic, deterministic, and visibly disclosed.
-- Geographic boundary and basemap providers must preserve attribution and provenance.

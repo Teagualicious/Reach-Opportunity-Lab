@@ -1,94 +1,69 @@
 # Reach Opportunity Lab
 
-A production-shaped executive prototype for statewide ZIP-level opportunity intelligence, client campaign planning, and seller prioritization.
+Reach Opportunity Lab is a geographic market-intelligence and account-strategy product for Spectrum Reach. The product now prioritizes the existing client book rather than duplicating a newly launched internal new-business workflow.
 
-> **Find the opportunity. Decide what to do. Activate the plan.**
+> **Protect the book. Find the whitespace. Reach the right decision maker.**
+
+## Current product hierarchy
+
+1. **Account Whitespace / GROW** — find product, media, audience, budget, category, and geographic headroom inside existing accounts.
+2. **Retention / KEEP** — surface accounts that need proactive intervention and explain the modeled revenue at risk.
+3. **Category Expansion** — identify vertical opportunities across the current book.
+4. **New Business Handoff** — retain market-demand context, but route prospecting to the approved Spectrum Reach workflow rather than treating it as this product's primary purpose.
+
+The current checked-in business, account, revenue, score, simulation, and contact values remain deterministic synthetic demonstration data. Validated Charlotte work is planned separately and must use approved internal data and authenticated contact loading.
+
+## Start here
+
+A future contributor should read these files in order:
+
+1. [`CURRENT_HANDOFF.md`](CURRENT_HANDOFF.md) — exact restart point, branch, current implementation, blocked decisions, and next sequence.
+2. [`STATUS.md`](STATUS.md) — current phase, completed work, validation state, decisions, and next tasks.
+3. [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md) — source ownership, changed modules, UI behavior, and validation commands.
+4. [`ARCHITECTURE.md`](ARCHITECTURE.md) — durable dependency, trust, geography, contact, responsive, and delivery laws.
+5. [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md) — current fall project specification and acceptance gates.
+6. [`docs/FALL_PROJECT_HANDOFF.md`](docs/FALL_PROJECT_HANDOFF.md) — detailed methodology, validation, market-scaling, and project-board handoff.
+7. [`docs/PROJECT_BOARD.csv`](docs/PROJECT_BOARD.csv) — complete project backlog.
+8. [`docs/CONTACT_STRATEGY.md`](docs/CONTACT_STRATEGY.md) — demo and Charlotte decision-maker contact architecture.
+
+Historical pre-pivot root documentation is preserved under `docs/archive/pre-fall-pivot/`.
+
+## Product workspaces
+
+### Market Opportunity Map
+
+**Question:** Where is market opportunity, what evidence drives it, and how reliable is the evidence?
+
+The current demo uses statewide Ohio geography and deterministic synthetic values. The fall project replaces the validated path with versioned public and approved internal data while retaining an explicit demo mode.
+
+### Seller Action Center
+
+**Question:** Which existing account should a seller grow or protect, why now, who should be contacted, and what should the seller do next?
+
+Default objective order:
+
+1. Account Whitespace
+2. Retention / KEEP
+3. Category Expansion
+4. New Business Handoff
+
+Every synthetic highlighted business now receives a deterministic synthetic decision maker with a reserved `.example` email address, a reserved `202-555-01xx` telephone number, a visible synthetic label, and human-initiated Email and Call actions.
+
+### Client Campaign Planner
+
+**Question:** How could a fictional advertiser improve its geographic campaign plan and modeled market position?
+
+This remains client-safe. It must not expose internal account, churn, contact, revenue, penetration, or seller-prioritization data.
 
 ## Stable preview
 
-The latest merged build publishes automatically to:
+The latest merged `main` build publishes to:
 
 ```text
 https://teagualicious.github.io/Reach-Opportunity-Lab/
 ```
 
-## Product workspaces
-
-The application uses one shared Ohio ZIP/ZCTA intelligence layer across three deliberately different workflows, presented in this order:
-
-### 1. Market Opportunity Map
-
-**Who uses it:** market strategists, sellers, and sales leaders.
-
-**Purpose:** find the strongest ZIP-level opportunities and understand the audience, coverage, and competitive signals behind them.
-
-**What to do next:** select a territory, choose a ZIP, then inspect its score drivers, modeled reach-gap status, and synthetic competitor intersections.
-
-### 2. Seller Action Center
-
-**Who uses it:** local sellers and sales managers.
-
-**Purpose:** turn market intelligence into a prioritized list of prospects and accounts to pursue, grow, or save.
-
-**What to do next:** choose New Business, Account Growth, Retention Risk, or Category Opportunity; open a seller action brief; then model the recommended move.
-
-### 3. Client Campaign Planner
-
-**Who uses it:** account executives and advertiser teams.
-
-**Purpose:** diagnose a current campaign footprint, test growth strategies, and build an explained ZIP expansion plan.
-
-**What to do next:** review **Current plan**, open **Diagnose gaps**, select strategies, run the simulation, then review the **Recommended plan** and conceptual Architect handoff.
-
-The right panel in every workspace begins with a compact guide showing the same purpose, intended user, and next action.
-
-## Universal map behavior
-
-- Every source Ohio ZCTA is displayed.
-- Seven synthetic major-city operating territories plus **All Ohio** are available.
-- Selected territories remain vivid while the rest of Ohio stays visible in neutral gray.
-- Opportunity scores use a pastel cool-to-hot progression.
-- Selected ZIPs use gold outlines.
-- Current campaign or seller-focus ZIPs use cyan outlines.
-- Recommended campaign expansion ZIPs use green outlines.
-- Reach-gap and competitor evidence layers use strong typed colors and outlines.
-- Whenever a reach-gap or competitor evidence layer is active, the base opportunity surface automatically mutes rather than disappearing.
-- ZIP selection zooms to official Polygon or MultiPolygon geometry.
-
-All opportunity, territory, coverage, competitor, advertiser, campaign, seller, account, prospect, recommendation, and simulation values are deterministic synthetic demonstration data.
-
-## Ohio operating territories
-
-- Northeast Ohio · Cleveland–Akron
-- Eastern Ohio · Youngstown
-- Northwest Ohio · Toledo
-- Central Ohio · Columbus
-- West Central Ohio · Dayton
-- Southwest Ohio · Cincinnati
-- Southeast Ohio · Athens–Marietta
-
-Territory membership is demonstration logic. Production membership must eventually use governed business definitions without changing the feature or map contracts.
-
-## Geography and data
-
-Checked-in generated fixtures:
-
-```text
-public/data/
-  ohio-zcta-2020.geojson
-  ohio-opportunities.json
-  ohio-market.provenance.json
-  market-overlays.json
-```
-
-Generation and validation:
-
-```bash
-npm run geometry:refresh
-npm run geometry:validate
-```
-
-Do not edit generated statewide geography or opportunity fixtures manually. Change the builder and regenerate them.
+The feature branch documented in `CURRENT_HANDOFF.md` is not represented at that stable URL until merged.
 
 ## Run locally
 
@@ -99,76 +74,40 @@ npm install
 npm run dev
 ```
 
-Open the URL printed by Vite, normally `http://127.0.0.1:5173`.
-
 ## Validate
 
 ```bash
 npm run typecheck
 npm run test
 npm run build
-npm run preview
-```
-
-`npm run test` validates statewide geometry, opportunity records, territory coverage, and provenance before running Vitest.
-
-## All-offline review
-
-```bash
 npm run offline:all
 ```
 
-Output:
+Real-browser desktop and compact-mode review remains required for visual acceptance.
+
+## Architecture summary
 
 ```text
-offline-dist/Opportunity-Lab-All-Offline/
-```
-
-The packaged HTML opens directly from disk with no Node.js, local server, administrator access, or internet connection. It contains the same product workflows and a bundled Census-derived map context.
-
-## Architecture
-
-```text
-public statewide geography + deterministic synthetic fixtures
+public geography + deterministic demo fixtures
         ↓
-repository / geometry-source adapters
+typed repository / market-package / geometry adapters
         ↓
-pure opportunity, territory, client-planning, seller-action, scoring, and simulation domain
+pure opportunity, seller, contact, client-planning, scoring, and simulation domain
         ↓
-shared React territory, viewport, and panel state
+shared React application state
         ↓
 Market Opportunity Map / Seller Action Center / Client Campaign Planner
         ↓
-MapLibre standard or all-offline presentation adapter
+MapLibre standard and all-offline presentation adapters
 ```
-
-Core boundaries:
-
-- `src/domain/` — pure scoring, client geography, simulation, seller-action, territory, recommendation, and overlay contracts
-- `src/data/` — repositories, public-asset resolution, and geometry-source adapters
-- `src/app/` — composition root, workspace navigation, territory selection, viewport mode, and panel state
-- `src/map/` — one statewide source, filtered evidence layers, diffed feature state, viewport fitting, and basemap adapters
-- `src/features/` — workspace-owned UI and orchestration
-- `src/components/` — reusable controls and workspace guidance
-- `src/styles/` — tokens, responsive shell, workspace styling, and map polish
-
-Preserve the optimized map laws: no statewide geometry re-upload for recoloring, no duplicate overlay geometry sources, Set-based interaction checks, O(1) ZIP lookup, cache-stable MapLibre vendor chunking, and one inlinable offline script.
-
-## Documentation
-
-Read before non-trivial work:
-
-1. [`STATUS.md`](STATUS.md)
-2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
-3. [`PRODUCT_BUILD_SPEC.md`](PRODUCT_BUILD_SPEC.md)
-4. [`BUILD_HANDOFF.md`](BUILD_HANDOFF.md)
-5. [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md)
 
 ## Trust boundaries
 
-- No real company, advertiser, campaign, seller, account, revenue, or proprietary data belongs in the repository.
-- Competitor footprints are illustrative ZIP memberships, not provider service-area claims.
+- No real client, account, campaign, revenue, seller, or contact data belongs in the public repository or static artifacts.
+- Demo contacts use reserved synthetic values only.
+- Real Charlotte contact data must load only in authenticated internal mode.
+- CRM contact truth precedes external enrichment.
+- Every real contact requires provenance, confidence/status, freshness, and suppression state.
+- Email and Call actions are initiated by a human. The internship does not auto-send, auto-dial, text, or launch sequences.
 - Client-facing and internal-only models remain separated.
-- Geographic provenance is preserved.
-- Simulation and recommendation outputs are deterministic illustrations, not production forecasts.
-- Architect remains a conceptual activation destination; no live integration is represented.
+- Scores, simulations, opportunity ranges, and decision-maker contacts must identify whether they are demo or validated.

@@ -8,36 +8,38 @@ export interface MarketModeDefinition {
   question: string;
   scoreLabel: string;
   action: string;
+  secondary?: boolean;
 }
 
 export const MARKET_MODES: readonly MarketModeDefinition[] = [
   {
-    id: 'new-business',
-    label: 'New Business',
-    question: 'Where should sellers prioritize prospecting?',
-    scoreLabel: 'New business opportunity',
-    action: 'Build a category prospecting list',
-  },
-  {
     id: 'account-growth',
-    label: 'Account Growth',
-    question: 'Which geographies support account expansion?',
-    scoreLabel: 'Growth opportunity',
-    action: 'Prepare an expansion conversation',
+    label: 'Account Whitespace',
+    question: 'Which existing accounts have the clearest product, media, or geographic whitespace?',
+    scoreLabel: 'Whitespace opportunity',
+    action: 'Prepare a whitespace expansion conversation',
   },
   {
     id: 'retention-risk',
-    label: 'Retention Risk',
-    question: 'Where are save strategies most urgent?',
+    label: 'Retention / KEEP',
+    question: 'Which existing accounts need a proactive save conversation?',
     scoreLabel: 'Retention risk',
-    action: 'Compare account save strategies',
+    action: 'Prepare an account save plan',
   },
   {
     id: 'category-opportunity',
-    label: 'Category Opportunity',
-    question: 'Which ZIPs are strongest for the selected vertical?',
-    scoreLabel: 'Category opportunity',
-    action: 'Create a vertical market brief',
+    label: 'Category Expansion',
+    question: 'Where can the current book expand around a strong category signal?',
+    scoreLabel: 'Category expansion opportunity',
+    action: 'Create an existing-account category brief',
+  },
+  {
+    id: 'new-business',
+    label: 'New Business Handoff',
+    question: 'Which external opportunities should move to the approved prospecting workflow?',
+    scoreLabel: 'Secondary new-business signal',
+    action: 'Prepare a prospecting handoff',
+    secondary: true,
   },
 ] as const;
 

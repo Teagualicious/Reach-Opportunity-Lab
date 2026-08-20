@@ -1,3 +1,4 @@
+import { buildDemoDecisionMaker, type DecisionMakerContact } from './businessContact';
 import { COMPONENT_LABELS, type ZipOpportunity } from './opportunity';
 import type { MarketModeId } from './marketMode';
 
@@ -17,7 +18,13 @@ export interface SellerOpportunityItem {
   recommendedAction: string;
   /** The product story the seller should open with. */
   leadWith: string;
-  /** Modeled annual opportunity range in dollars, minimum and maximum. */
+  /** What the modeled dollar range represents in this workflow. */
+  valueLabel: string;
+  /** New Business remains available, but only as a secondary handoff. */
+  secondaryWorkflow: boolean;
+  /** Deterministic synthetic contact in demo mode; validated mode replaces this through a typed provider. */
+  decisionMaker: DecisionMakerContact;
+  /** Modeled annual opportunity or value-at-risk range in dollars. */
   opportunityRange: { minimum: number; maximum: number };
   evidence: readonly string[];
 }
@@ -43,44 +50,54 @@ const MODE_COPY: Readonly<
       headline: (opportunity: ZipOpportunity) => string;
       action: string;
       leadWith: (opportunity: ZipOpportunity) => string;
+      valueLabel: string;
+      secondaryWorkflow: boolean;
     }
   >
 > = {
-  'new-business': {
-    entityKind: 'Prospect',
-    tone: 'prospect',
-    urgencyLabel: 'Prospect now',
-    headline: (opportunity) =>
-      `${opportunity.categoryStrength} demand and audience signals make this ZIP a strong prospecting window.`,
-    action: 'Open a category-led prospecting conversation and build a short target list.',
-    leadWith: () => 'Streaming + Search support',
-  },
   'account-growth': {
     entityKind: 'Existing account',
     tone: 'growth',
-    urgencyLabel: 'Expansion ready',
+    urgencyLabel: 'Whitespace ready',
     headline: (opportunity) =>
-      `Audience scale and search activity support a larger footprint around ${opportunity.name}.`,
-    action: 'Prepare an account expansion brief with adjacent ZIP and product recommendations.',
-    leadWith: () => 'TV + Streaming expansion',
+      `Audience, search, category, and adjacent-geography signals indicate uncaptured account whitespace around ${opportunity.name}.`,
+    action: 'Prepare a whitespace expansion brief and open a decision-maker conversation.',
+    leadWith: () => 'Cross-screen expansion + adjacent ZIPs',
+    valueLabel: 'Modeled whitespace',
+    secondaryWorkflow: false,
   },
   'retention-risk': {
     entityKind: 'At-risk account',
     tone: 'risk',
-    urgencyLabel: 'Save priority',
+    urgencyLabel: 'KEEP priority',
     headline: (opportunity) =>
       `Competitive pressure and coverage signals suggest a proactive save conversation in ${opportunity.name}.`,
-    action: 'Compare save strategies and schedule an account-health conversation.',
-    leadWith: () => 'Retention bundle + added streaming value',
+    action: 'Compare save strategies and contact the decision maker before the account declines further.',
+    leadWith: () => 'Account health review + added streaming value',
+    valueLabel: 'Revenue at risk',
+    secondaryWorkflow: false,
   },
   'category-opportunity': {
-    entityKind: 'Vertical lead',
+    entityKind: 'Existing account',
     tone: 'category',
-    urgencyLabel: 'Category signal',
+    urgencyLabel: 'Expansion signal',
     headline: (opportunity) =>
-      `${opportunity.categoryStrength} is the strongest modeled vertical signal for this ZIP.`,
-    action: 'Create a vertical market brief and identify matching local businesses.',
-    leadWith: (opportunity) => `${opportunity.categoryStrength} vertical package`,
+      `${opportunity.categoryStrength} is the strongest modeled category signal for expanding the current book in this ZIP.`,
+    action: 'Create an existing-account category expansion brief and identify the best-fit offer.',
+    leadWith: (opportunity) => `${opportunity.categoryStrength} expansion package`,
+    valueLabel: 'Modeled category whitespace',
+    secondaryWorkflow: false,
+  },
+  'new-business': {
+    entityKind: 'Prospect',
+    tone: 'prospect',
+    urgencyLabel: 'Secondary handoff',
+    headline: (opportunity) =>
+      `${opportunity.categoryStrength} demand makes this ZIP a candidate for the approved prospecting workflow.`,
+    action: 'Send the opportunity signal to the approved new-business workflow and confirm seller ownership.',
+    leadWith: () => 'Approved prospecting handoff',
+    valueLabel: 'Secondary prospect opportunity',
+    secondaryWorkflow: true,
   },
 };
 
@@ -106,10 +123,12 @@ export function buildSellerOpportunity(
 ): SellerOpportunityItem {
   const copy = MODE_COPY[mode];
   const modeledOpportunity = opportunity.householdCount * (0.9 + priorityScore / 100);
+  const businessName = entityName(opportunity, index);
+
   return {
     id: `${mode}-${opportunity.zip}`,
     zip: opportunity.zip,
-    entityName: entityName(opportunity, index),
+    entityName: businessName,
     entityKind: copy.entityKind,
     tone: copy.tone,
     category: opportunity.categoryStrength,
@@ -118,6 +137,14 @@ export function buildSellerOpportunity(
     headline: copy.headline(opportunity),
     recommendedAction: copy.action,
     leadWith: copy.leadWith(opportunity),
+    valueLabel: copy.valueLabel,
+    secondaryWorkflow: copy.secondaryWorkflow,
+    decisionMaker: buildDemoDecisionMaker({
+      businessName,
+      zip: opportunity.zip,
+      category: opportunity.categoryStrength,
+      mode,
+    }),
     opportunityRange: {
       minimum: Math.round((modeledOpportunity * 0.8) / 500) * 500,
       maximum: Math.round((modeledOpportunity * 1.25) / 500) * 500,
