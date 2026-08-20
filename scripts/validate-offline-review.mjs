@@ -54,8 +54,11 @@ if (moduleScripts.length !== 1) {
   throw new Error(`Offline review must contain exactly one inline module script; found ${moduleScripts.length}`);
 }
 
-if (/assets\/offline-[^"'<>\s]+\.js/i.test(html)) {
-  throw new Error('Offline review still contains a reference to the generated offline JavaScript asset');
+const generatedAssetReferences = [...new Set(html.match(/\/assets\/[A-Za-z0-9._-]+/g) ?? [])];
+if (generatedAssetReferences.length > 0) {
+  throw new Error(
+    `Offline review still contains generated asset references: ${generatedAssetReferences.join(', ')}`,
+  );
 }
 
 async function validateInlineModule(javascript) {
@@ -105,6 +108,8 @@ for (const required of [
   '/data/market-overlays.json',
   '/data/ohio-zcta-2020.geojson',
   '/data/offline-map-context.geojson',
+  'data:font/woff2;base64,',
+  'data:image/',
   'cleveland-akron',
   'columbus-central',
   'cincinnati-southwest',
@@ -137,5 +142,9 @@ console.log({
   htmlBytes: htmlStats.size,
   scriptBlocks: scriptBlocks.length,
   inlineModuleBytes: Buffer.byteLength(moduleScripts[0].content),
+  embeddedAssets: {
+    fonts: (html.match(/data:font\/woff2;base64,/g) ?? []).length,
+    images: (html.match(/data:image\/[^;]+;base64,/g) ?? []).length,
+  },
   featureCounts: kindCounts,
 });

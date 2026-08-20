@@ -16,6 +16,17 @@ const EMBEDDED_DATA_PATHS = [
   '/data/offline-map-context.geojson',
 ];
 
+const ASSET_MIME_TYPES = {
+  '.gif': 'image/gif',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 function buildOfflineEntry() {
@@ -43,12 +54,37 @@ function replaceLiteral(source, match, replacement) {
   return source.replace(match, () => replacement);
 }
 
+function replaceAllLiteral(source, match, replacement) {
+  return source.split(match).join(replacement);
+}
+
 function escapeInlineStyle(css) {
   return css.replace(/<\/style/gi, '<\\/style');
 }
 
 function escapeInlineScript(javascript) {
   return javascript.replace(/<\/script/gi, '<\\/script');
+}
+
+function mimeTypeForAsset(urlPath) {
+  return ASSET_MIME_TYPES[path.extname(urlPath).toLowerCase()] ?? 'application/octet-stream';
+}
+
+async function generatedAssetDataUri(urlPath) {
+  const assetPath = urlPath.replace(/^\//, '');
+  const asset = await readFile(path.join(BUILD_DIR, assetPath));
+  return `data:${mimeTypeForAsset(urlPath)};base64,${asset.toString('base64')}`;
+}
+
+async function inlineGeneratedAssets(source) {
+  const references = [...new Set(source.match(/\/assets\/[A-Za-z0-9._-]+/g) ?? [])];
+  let result = source;
+
+  for (const reference of references) {
+    result = replaceAllLiteral(result, reference, await generatedAssetDataUri(reference));
+  }
+
+  return result;
 }
 
 async function inlineStyles(html) {
@@ -58,7 +94,9 @@ async function inlineStyles(html) {
 
   for (const match of matches) {
     const assetPath = match[1].replace(/^\//, '');
-    const css = escapeInlineStyle(await readFile(path.join(BUILD_DIR, assetPath), 'utf8'));
+    const css = escapeInlineStyle(
+      await inlineGeneratedAssets(await readFile(path.join(BUILD_DIR, assetPath), 'utf8')),
+    );
     result = replaceLiteral(result, match[0], `<style>${css}</style>`);
   }
 
@@ -72,7 +110,7 @@ async function inlineApplication(html) {
 
   const assetPath = match[1].replace(/^\//, '');
   const javascript = escapeInlineScript(
-    await readFile(path.join(BUILD_DIR, assetPath), 'utf8'),
+    await inlineGeneratedAssets(await readFile(path.join(BUILD_DIR, assetPath), 'utf8')),
   );
 
   return replaceLiteral(html, match[0], `<script type="module">${javascript}</script>`);
@@ -174,6 +212,7 @@ async function packageOfflineReview() {
       '- checked-in statewide Ohio 2020 Census-derived ZCTA geometry',
       '- seven synthetic major-city operating territories',
       '- bundled Census TIGER/Line road, hydrography, county, and place context',
+      '- bundled fonts and product imagery',
       '- synthetic opportunity, campaign, competitor, account, and simulation data',
       '',
       'The normal application continues to use the online OpenStreetMap basemap. This package is a dedicated visual-review distribution target.',
