@@ -132,6 +132,7 @@ function offlineFetchShim(embeddedData) {
   return `<script>
 (() => {
   const embedded = ${serialized};
+  window.__OPPORTUNITY_LAB_OFFLINE_DATA__ = embedded;
 
   function normalizePath(raw) {
     if (Object.prototype.hasOwnProperty.call(embedded, raw)) return raw;

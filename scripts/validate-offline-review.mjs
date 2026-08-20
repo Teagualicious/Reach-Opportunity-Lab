@@ -114,6 +114,7 @@ for (const required of [
   'columbus-central',
   'cincinnati-southwest',
   'Offline review blocked external request:',
+  '__OPPORTUNITY_LAB_OFFLINE_DATA__',
   'Opportunity Lab',
 ]) {
   if (!html.includes(required)) {
