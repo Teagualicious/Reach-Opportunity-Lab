@@ -19,17 +19,37 @@ if (htmlStats.size < 1_000_000) {
   throw new Error(`Offline review HTML is unexpectedly small: ${htmlStats.size} bytes`);
 }
 
-const scriptOpenCount = html.match(/<script\b/gi)?.length ?? 0;
-const scriptCloseCount = html.match(/<\/script>/gi)?.length ?? 0;
-if (scriptOpenCount !== scriptCloseCount) {
-  throw new Error(
-    `Offline review contains unbalanced script tags: ${scriptOpenCount} opening and ${scriptCloseCount} closing`,
-  );
+function extractScriptBlocks(documentHtml) {
+  const lowerHtml = documentHtml.toLowerCase();
+  const blocks = [];
+  let cursor = 0;
+
+  while (true) {
+    const openIndex = lowerHtml.indexOf('<script', cursor);
+    if (openIndex < 0) break;
+
+    const openEnd = documentHtml.indexOf('>', openIndex);
+    if (openEnd < 0) {
+      throw new Error(`Offline review contains an unterminated script opening tag at byte ${openIndex}`);
+    }
+
+    const closeIndex = lowerHtml.indexOf('</script>', openEnd + 1);
+    if (closeIndex < 0) {
+      throw new Error(`Offline review contains an unclosed script tag at byte ${openIndex}`);
+    }
+
+    blocks.push({
+      openTag: documentHtml.slice(openIndex, openEnd + 1),
+      content: documentHtml.slice(openEnd + 1, closeIndex),
+    });
+    cursor = closeIndex + '</script>'.length;
+  }
+
+  return blocks;
 }
 
-const moduleScripts = [
-  ...html.matchAll(/<script\s+type="module"[^>]*>([\s\S]*?)<\/script>/gi),
-];
+const scriptBlocks = extractScriptBlocks(html);
+const moduleScripts = scriptBlocks.filter((block) => /\btype="module"/i.test(block.openTag));
 if (moduleScripts.length !== 1) {
   throw new Error(`Offline review must contain exactly one inline module script; found ${moduleScripts.length}`);
 }
@@ -57,7 +77,7 @@ async function validateInlineModule(javascript) {
   }
 }
 
-await validateInlineModule(moduleScripts[0][1]);
+await validateInlineModule(moduleScripts[0].content);
 
 const documentShell = html
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
@@ -115,7 +135,7 @@ if ((kindCounts['place-label'] ?? 0) < 10) throw new Error('Offline context has 
 console.log('Offline review validation passed.');
 console.log({
   htmlBytes: htmlStats.size,
-  scriptTags: { opening: scriptOpenCount, closing: scriptCloseCount },
-  inlineModuleBytes: Buffer.byteLength(moduleScripts[0][1]),
+  scriptBlocks: scriptBlocks.length,
+  inlineModuleBytes: Buffer.byteLength(moduleScripts[0].content),
   featureCounts: kindCounts,
 });
