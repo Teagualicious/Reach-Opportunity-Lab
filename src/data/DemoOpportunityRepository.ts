@@ -1,5 +1,6 @@
 import type { FeatureCollection, Geometry } from 'geojson';
 import { assertMarketOverlayData, EMPTY_MARKET_OVERLAYS } from '../domain/mapOverlay';
+import type { PackageMetadata } from '../domain/marketPackage';
 import { assertZipOpportunity, getPriorityBand, type ZipOpportunity } from '../domain/opportunity';
 import { assertTerritoryDefinitions } from '../domain/territory';
 import type {
@@ -13,7 +14,7 @@ import { publicAssetUrl } from './publicAssetUrl';
 import { StaticZctaGeometrySource } from './StaticZctaGeometrySource';
 import type { RawZipGeometry, ZipGeometrySource } from './ZipGeometrySource';
 
-interface DemoMarketPayload {
+export interface DemoMarketPayload {
   market: MarketDefinition;
   opportunities: ZipOpportunity[];
 }
@@ -32,11 +33,22 @@ const FALLBACK_GEOMETRY_METADATA: GeometryMetadata = {
   vintage: 'Demo only',
 };
 
+const DEMO_PACKAGE_METADATA: PackageMetadata = {
+  packageVersion: '1.0.0',
+  dataMode: 'demo',
+  asOfDate: '2026-08-20',
+  generatedAt: '2026-08-20T00:00:00Z',
+  validationStatus: 'unvalidated',
+  geographyVintage: '2020 Census',
+  sourceLabel: 'Deterministic synthetic demonstration data',
+};
+
 export function buildOpportunityMarket(
   payload: DemoMarketPayload,
   geometry: RawZipGeometry,
   geometryMetadata: GeometryMetadata = FALLBACK_GEOMETRY_METADATA,
   overlays: unknown = EMPTY_MARKET_OVERLAYS,
+  metadata: PackageMetadata = DEMO_PACKAGE_METADATA,
 ): OpportunityMarket {
   const opportunitiesByZip = new Map<string, ZipOpportunity>();
 
@@ -108,6 +120,7 @@ export function buildOpportunityMarket(
     } as FeatureCollection<Geometry, ZipFeatureProperties>,
     geometryMetadata,
     overlays,
+    metadata,
   };
 }
 

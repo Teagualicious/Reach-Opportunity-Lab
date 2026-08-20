@@ -1,4 +1,12 @@
-export const ALL_TERRITORIES_ID = 'all-ohio';
+export function allTerritoriesId(marketId: string): string {
+  return `all-${marketId}`;
+}
+
+export function isAllTerritoriesId(id: string): boolean {
+  return id.startsWith('all-');
+}
+
+export const ALL_TERRITORIES_ID = allTerritoriesId('ohio');
 
 export type GeographicBounds = [west: number, south: number, east: number, north: number];
 
@@ -16,7 +24,7 @@ export function findTerritory(
   territories: readonly TerritoryDefinition[],
   territoryId: string,
 ): TerritoryDefinition | null {
-  if (territoryId === ALL_TERRITORIES_ID) return null;
+  if (isAllTerritoriesId(territoryId)) return null;
   return territories.find((territory) => territory.id === territoryId) ?? null;
 }
 

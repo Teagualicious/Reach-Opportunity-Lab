@@ -1,18 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { OpportunityMarket } from '../data/OpportunityRepository';
-import { DemoOpportunityRepository } from '../data/DemoOpportunityRepository';
+import { ManifestOpportunityRepository } from '../data/ManifestOpportunityRepository';
+import { assertMarketManifest, type MarketManifest } from '../domain/marketPackage';
+import { publicAssetUrl } from '../data/publicAssetUrl';
 import { ProductShell } from './ProductShell';
 
+async function loadManifestMarket(): Promise<OpportunityMarket> {
+  const manifestUrl = publicAssetUrl('data/market-manifest.json');
+  const manifestResponse = await fetch(manifestUrl);
+  if (!manifestResponse.ok) {
+    throw new Error(
+      `Unable to load market manifest: ${manifestResponse.status} ${manifestResponse.statusText}`,
+    );
+  }
+  const raw: unknown = await manifestResponse.json();
+  assertMarketManifest(raw);
+  const manifest = raw as MarketManifest;
+  const repository = new ManifestOpportunityRepository(manifest);
+  return repository.loadMarket(manifest.defaultMarketId);
+}
+
 export function App() {
-  const repository = useMemo(() => new DemoOpportunityRepository(), []);
   const [market, setMarket] = useState<OpportunityMarket | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    repository
-      .loadMarket('ohio')
+    loadManifestMarket()
       .then((loadedMarket) => {
         if (!cancelled) setMarket(loadedMarket);
       })
@@ -25,7 +40,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [repository]);
+  }, []);
 
   if (error) {
     return (

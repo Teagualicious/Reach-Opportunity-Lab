@@ -77,7 +77,45 @@ Adds objective-specific value labels, secondary-workflow status, decision-maker 
 
 Responsive contact-card and contact-action styling. Compact actions have a 44 px minimum target.
 
-## 3. Offline packaging implementation
+## 3. Market manifest and data-mode infrastructure
+
+### `src/domain/marketPackage.ts`
+
+Typed contracts for multi-market and data-mode support:
+
+- `DataMode` — `'demo'` or `'validated'`, explicit provenance mode.
+- `ValidationStatus` — `'unvalidated'`, `'provisional'`, or `'validated'`.
+- `PackageMetadata` — version, data mode, as-of date, validation status, geography vintage, and source label attached to every loaded market.
+- `MarketManifestEntry` — one market in the manifest: ID, name, data mode, paths, version, geography, bounds, and ZIP/territory counts.
+- `MarketManifest` — the root manifest listing all available markets and the default market ID.
+- `ScoreMetadata` — future model version, confidence basis, and coverage rate for validated score outputs.
+- `assertMarketManifest` / `assertMarketManifestEntry` — runtime validators.
+- `findManifestEntry` / `buildPackageMetadata` — lookup and metadata construction utilities.
+
+### `public/data/market-manifest.json`
+
+Declarative registry of available markets. Currently contains only the Ohio demo entry. Adding a market means adding an entry with its data paths; `ManifestOpportunityRepository` loads it.
+
+### `src/data/ManifestOpportunityRepository.ts`
+
+Implements `OpportunityRepository`. Reads a `MarketManifest`, resolves the requested market entry, loads opportunity, overlay, and geometry data from the entry's paths, and delegates to `buildOpportunityMarket` with the entry's metadata.
+
+### `src/data/OpportunityRepository.ts`
+
+`OpportunityMarket` now carries an optional `PackageMetadata` field. All repositories populate it.
+
+### `src/domain/territory.ts` — multi-market territory support
+
+- `allTerritoriesId(marketId)` — builds `'all-{marketId}'` for any market.
+- `isAllTerritoriesId(id)` — recognizes any all-territories ID.
+- `findTerritory` and `getTerritoryZips` use `isAllTerritoriesId` instead of comparing to the Ohio-only constant.
+- `ALL_TERRITORIES_ID` constant still equals `'all-ohio'` for backward compatibility.
+
+### `src/app/App.tsx`
+
+Loads `market-manifest.json`, validates it, creates `ManifestOpportunityRepository`, and loads the manifest's default market. `DemoOpportunityRepository` is no longer the app entry point but remains available for tests and direct use.
+
+## 4. Offline packaging implementation
 
 ### `scripts/build-offline-review.mjs`
 
@@ -116,13 +154,13 @@ Validates:
 
 CI validation is necessary but not sufficient. Direct-from-disk browser review remains required for offline-impacting changes.
 
-## 4. Current data truth
+## 5. Current data truth
 
 All opportunity, account, prospect, seller, revenue, score, simulation, and contact values are synthetic. Product positioning and demo usability are implemented; validated whitespace, churn, contact-enrichment, and campaign-response models are not.
 
 Never describe demo outputs as empirically validated.
 
-## 5. Contact boundary
+## 6. Contact boundary
 
 ### Public demo
 
@@ -140,18 +178,27 @@ Provider order:
 
 Real contacts are authenticated/internal-only and never enter static assets or public offline packages.
 
-## 6. Source ownership
+## 7. Source ownership
 
 ```text
 src/
   app/                    shared shell and viewport/territory state
   components/             reusable controls and guidance
-  data/                   repository and geometry adapters
+  data/
+    OpportunityRepository.ts       market/opportunity contracts
+    DemoOpportunityRepository.ts   direct Ohio demo adapter
+    ManifestOpportunityRepository.ts  manifest-driven multi-market loader
+    StaticZctaGeometrySource.ts    checked-in geometry adapter
+    CensusZctaGeometrySource.ts    live Census geometry adapter
+    ZipGeometrySource.ts           geometry adapter interface
+    publicAssetUrl.ts              cache-busted asset URL builder
   domain/
+    marketPackage.ts      DataMode, ValidationStatus, manifest/metadata contracts
     businessContact.ts    synthetic contact contract/generator
     marketMode.ts         objective definitions/demo transforms
     sellerOpportunity.ts  seller action assembly
     opportunity.ts        opportunity contract
+    territory.ts          territory definitions and multi-market territory IDs
     client*.ts            client-safe planning
   features/
     market-growth/        Seller Action Center
@@ -161,12 +208,17 @@ src/
   offline-main.tsx        standalone offline MapLibre/data adapter
   styles/
     seller-contact.css    contact UI
+public/data/
+  market-manifest.json    market package registry
+  ohio-opportunities.json
+  market-overlays.json
+  ohio-zcta-2020.geojson
 scripts/
   build-offline-review.mjs
   validate-offline-review.mjs
 ```
 
-## 7. Documentation ownership
+## 8. Documentation ownership
 
 Read:
 
@@ -184,7 +236,7 @@ docs/VALIDATION.md
 
 Historical documents under `docs/archive/pre-fall-pivot/` are not current instructions.
 
-## 8. Validation evidence
+## 9. Validation evidence
 
 Final functional PR #24 commit `5805f43e56735a0e21644d0260a530b623ee3032` passed:
 
@@ -212,7 +264,7 @@ Direct `file://` Chromium review passed at `1440 × 900` and touch `393 × 852` 
 
 See `docs/VALIDATION.md` for the detailed record.
 
-## 9. Regression commands
+## 10. Regression commands
 
 ```bash
 npm install
@@ -224,26 +276,27 @@ npm run offline:all
 
 For changes touching shared UI, maps, assets, offline entry, or packaging, download the workflow artifact and open it directly from disk in expanded and compact browser viewports.
 
-## 10. Immediate next sequence
+## 11. Immediate next sequence
 
-1. Approve the New Business handoff destination/configuration.
-2. Freeze Charlotte market/cohort and growth/churn outcomes.
-3. Inventory CRM/contact/suppression fields.
-4. Finalize validated contact/provider contracts.
-5. Approve one professional enrichment provider.
-6. Manually validate a Charlotte contact sample.
-7. Build observed-outcome Account Whitespace and Retention datasets/methods.
-8. Replace Ohio-only loading with market manifests.
-9. Introduce explicit Demo/Validated UI status and version metadata.
+1. Wire data-mode and metadata surfaces into the product UI.
+2. Add a market selector for multi-market navigation.
+3. Approve the New Business handoff destination/configuration.
+4. Freeze Charlotte market/cohort and growth/churn outcomes.
+5. Inventory CRM/contact/suppression fields.
+6. Finalize validated contact/provider contracts.
+7. Approve one professional enrichment provider.
+8. Manually validate a Charlotte contact sample.
+9. Build observed-outcome Account Whitespace and Retention datasets/methods.
+10. Add Charlotte market package to the manifest.
 
-## 11. Least-certain areas
+## 12. Least-certain areas
 
 - Exact internal New Business handoff destination is not configured.
 - Charlotte contact coverage/provider economics are unknown until a real sample is adjudicated.
 - Current mode scores and dollar ranges are demonstration heuristics.
 - Physical-device review remains useful even though compact Chromium contracts passed.
 
-## 12. Do not reintroduce
+## 13. Do not reintroduce
 
 - New Business as default;
 - one universal score;
@@ -257,4 +310,5 @@ For changes touching shared UI, maps, assets, offline entry, or packaging, downl
 - hidden demo/validated mixing;
 - replacement-string asset inlining;
 - linked generated assets in standalone HTML;
-- URL-backed offline MapLibre context in the final package.
+- URL-backed offline MapLibre context in the final package;
+- hardcoded market IDs in application loading (use the manifest).

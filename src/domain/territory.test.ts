@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_TERRITORIES_ID,
+  allTerritoriesId,
   assertTerritoryDefinitions,
   findTerritory,
   getTerritoryZips,
+  isAllTerritoriesId,
   type TerritoryDefinition,
 } from './territory';
 
@@ -41,6 +43,29 @@ const territories: TerritoryDefinition[] = [
       '44308',
       '45202',
     ]);
+  });
+
+  it('builds market-specific all-territories IDs', () => {
+    expect(allTerritoriesId('ohio')).toBe('all-ohio');
+    expect(allTerritoriesId('charlotte')).toBe('all-charlotte');
+    expect(ALL_TERRITORIES_ID).toBe('all-ohio');
+  });
+
+  it('recognizes any all-territories ID', () => {
+    expect(isAllTerritoriesId('all-ohio')).toBe(true);
+    expect(isAllTerritoriesId('all-charlotte')).toBe(true);
+    expect(isAllTerritoriesId('north')).toBe(false);
+    expect(isAllTerritoriesId('cleveland-akron')).toBe(false);
+  });
+
+  it('returns null for any all-territories ID in findTerritory', () => {
+    expect(findTerritory(territories, 'all-ohio')).toBeNull();
+    expect(findTerritory(territories, 'all-charlotte')).toBeNull();
+  });
+
+  it('returns all ZIPs for any all-territories ID in getTerritoryZips', () => {
+    const allZips = ['44122', '44308', '45202'];
+    expect(getTerritoryZips(territories, 'all-charlotte', allZips)).toEqual(allZips);
   });
 
   it('requires territories to cover every ZIP exactly once', () => {
