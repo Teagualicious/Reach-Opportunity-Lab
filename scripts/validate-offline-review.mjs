@@ -1,4 +1,6 @@
-import { readFile, stat } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +18,46 @@ const htmlStats = await stat(HTML_PATH);
 if (htmlStats.size < 1_000_000) {
   throw new Error(`Offline review HTML is unexpectedly small: ${htmlStats.size} bytes`);
 }
+
+const scriptOpenCount = html.match(/<script\b/gi)?.length ?? 0;
+const scriptCloseCount = html.match(/<\/script>/gi)?.length ?? 0;
+if (scriptOpenCount !== scriptCloseCount) {
+  throw new Error(
+    `Offline review contains unbalanced script tags: ${scriptOpenCount} opening and ${scriptCloseCount} closing`,
+  );
+}
+
+const moduleScripts = [
+  ...html.matchAll(/<script\s+type="module"[^>]*>([\s\S]*?)<\/script>/gi),
+];
+if (moduleScripts.length !== 1) {
+  throw new Error(`Offline review must contain exactly one inline module script; found ${moduleScripts.length}`);
+}
+
+if (/assets\/offline-[^"'<>\s]+\.js/i.test(html)) {
+  throw new Error('Offline review still contains a reference to the generated offline JavaScript asset');
+}
+
+async function validateInlineModule(javascript) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'opportunity-lab-offline-'));
+  const modulePath = path.join(tempDir, 'offline-module.mjs');
+
+  try {
+    await writeFile(modulePath, javascript, 'utf8');
+    execFileSync(process.execPath, ['--check', modulePath], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    const stderr = error?.stderr?.toString().trim();
+    const detail = stderr ? `\n${stderr}` : '';
+    throw new Error(`Offline review inline module is not valid JavaScript.${detail}`);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+await validateInlineModule(moduleScripts[0][1]);
 
 const documentShell = html
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
@@ -71,4 +113,9 @@ if ((kindCounts.county ?? 0) < 1) throw new Error('Offline context has no county
 if ((kindCounts['place-label'] ?? 0) < 10) throw new Error('Offline context has too few place labels');
 
 console.log('Offline review validation passed.');
-console.log({ htmlBytes: htmlStats.size, featureCounts: kindCounts });
+console.log({
+  htmlBytes: htmlStats.size,
+  scriptTags: { opening: scriptOpenCount, closing: scriptCloseCount },
+  inlineModuleBytes: Buffer.byteLength(moduleScripts[0][1]),
+  featureCounts: kindCounts,
+});

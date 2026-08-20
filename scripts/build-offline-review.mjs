@@ -39,6 +39,18 @@ function buildOfflineEntry() {
   );
 }
 
+function replaceLiteral(source, match, replacement) {
+  return source.replace(match, () => replacement);
+}
+
+function escapeInlineStyle(css) {
+  return css.replace(/<\/style/gi, '<\\/style');
+}
+
+function escapeInlineScript(javascript) {
+  return javascript.replace(/<\/script/gi, '<\\/script');
+}
+
 async function inlineStyles(html) {
   const stylePattern = /<link\s+rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g;
   const matches = [...html.matchAll(stylePattern)];
@@ -46,8 +58,8 @@ async function inlineStyles(html) {
 
   for (const match of matches) {
     const assetPath = match[1].replace(/^\//, '');
-    const css = await readFile(path.join(BUILD_DIR, assetPath), 'utf8');
-    result = result.replace(match[0], `<style>${css}</style>`);
+    const css = escapeInlineStyle(await readFile(path.join(BUILD_DIR, assetPath), 'utf8'));
+    result = replaceLiteral(result, match[0], `<style>${css}</style>`);
   }
 
   return result;
@@ -59,12 +71,11 @@ async function inlineApplication(html) {
   if (!match) throw new Error('Offline Vite output does not contain an application module script');
 
   const assetPath = match[1].replace(/^\//, '');
-  const javascript = (await readFile(path.join(BUILD_DIR, assetPath), 'utf8')).replace(
-    /<\/script/gi,
-    '<\\/script',
+  const javascript = escapeInlineScript(
+    await readFile(path.join(BUILD_DIR, assetPath), 'utf8'),
   );
 
-  return html.replace(match[0], `<script type="module">${javascript}</script>`);
+  return replaceLiteral(html, match[0], `<script type="module">${javascript}</script>`);
 }
 
 async function readEmbeddedData() {
@@ -131,7 +142,7 @@ async function packageOfflineReview() {
 
   const embeddedData = await readEmbeddedData();
   const shim = offlineFetchShim(embeddedData);
-  html = html.replace('<div id="root"></div>', `<div id="root"></div>${shim}`);
+  html = replaceLiteral(html, '<div id="root"></div>', `<div id="root"></div>${shim}`);
 
   await rm(OUTPUT_ROOT, { recursive: true, force: true });
   await mkdir(PACKAGE_DIR, { recursive: true });
