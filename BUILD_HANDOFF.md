@@ -1,20 +1,19 @@
 # Reach Opportunity Lab — Current Build Handoff
 
-**Branch:** `feature/growth-retention-decision-makers`  
-**Base:** `main` commit `b769fac1dffcff5957bb8c96ae181c0175e971a1`  
-**Purpose:** allow a developer with no prior context to understand the current product, the code change, the fall roadmap, validation requirements, and the exact next tasks.
+**Canonical branch after PR #24:** `main`  
+**Growth/retention merge:** PR #23 / `ee5a57e524753af3752f3e9971493b9cf03aa354`  
+**Offline hardening:** PR #24 / `fix/offline-inliner-validation`  
+**Purpose:** allow a developer with no prior context to understand the current product, source ownership, validated demo state, fall roadmap, and exact next tasks.
 
 ## 1. Product state
 
-The application still contains three distinct workspaces over shared Ohio ZIP/ZCTA geography:
+Three distinct workspaces share Ohio ZIP/ZCTA geography:
 
 1. Market Opportunity Map
 2. Seller Action Center
 3. Client Campaign Planner
 
-The current branch changes Seller Action Center to lead with existing-account expansion and retention.
-
-### Seller Action Center objectives
+Seller Action Center is growth/retention first:
 
 ```text
 Account Whitespace
@@ -23,17 +22,16 @@ Category Expansion
 New Business Handoff (secondary)
 ```
 
-The default and reset objective is `account-growth`, displayed as Account Whitespace.
+Default/reset objective: `account-growth`, displayed as Account Whitespace.
 
-## 2. Code changes
+## 2. Growth/retention and contact implementation
 
 ### `src/domain/marketMode.ts`
 
-- reorders mode definitions;
-- changes labels/questions/actions;
-- adds `secondary?: boolean`;
-- marks New Business as secondary;
-- leaves current score transforms as synthetic demo logic.
+- orders objectives;
+- supplies labels/questions/actions;
+- marks New Business secondary;
+- retains current score transforms as synthetic demo logic.
 
 ### `src/domain/businessContact.ts`
 
@@ -48,7 +46,7 @@ category
 market mode
 ```
 
-Output:
+Outputs:
 
 ```text
 fictional name
@@ -65,42 +63,66 @@ The module imports no React, storage, network, CRM, or provider library.
 
 ### `src/domain/sellerOpportunity.ts`
 
-Adds:
-
-- `valueLabel`;
-- `secondaryWorkflow`;
-- `decisionMaker`;
-- growth/retention-first copy;
-- revenue-at-risk language for retention;
-- approved-workflow handoff language for New Business.
+Adds objective-specific value labels, secondary-workflow status, decision-maker contact, growth/retention copy, revenue-at-risk language, and New Business handoff language.
 
 ### `src/features/market-growth/MarketGrowthStudio.tsx`
 
-- initializes and resets to `account-growth`;
-- updates workspace guidance;
-- shows objective-specific value labels;
-- renders a synthetic decision-maker card;
-- exposes `mailto:` and `tel:` actions;
-- adds decision-maker information/actions to the outreach modal;
-- expands the synthetic disclosure to include contacts.
+- initializes/resets to Account Whitespace;
+- renders the synthetic decision-maker card;
+- exposes unsent Email and Call actions;
+- includes decision-maker details/actions in the outreach modal;
+- keeps synthetic disclosures visible.
 
 ### `src/styles/seller-contact.css`
 
-Adds responsive contact-card and contact-action styles.
+Responsive contact-card and contact-action styling. Compact actions have a 44 px minimum target.
 
-### Tests
+## 3. Offline packaging implementation
 
-- `businessContact.test.ts` validates deterministic reserved demo values;
-- `marketMode.test.ts` validates objective order and secondary New Business;
-- `sellerOpportunity.test.ts` validates growth/retention language, values, and contacts.
+### `scripts/build-offline-review.mjs`
 
-## 3. Current data truth
+- builds one Vite offline module;
+- embeds CSS and JavaScript through callback-based literal replacement;
+- escapes inline closing script/style sequences;
+- converts generated fonts and product imagery to data URIs;
+- embeds approved JSON/GeoJSON data;
+- exposes embedded data on `window.__OPPORTUNITY_LAB_OFFLINE_DATA__`;
+- writes one standalone HTML plus platform launchers/readme.
 
-All opportunity, account, prospect, seller, revenue, score, simulation, and contact values are synthetic. The branch changes product positioning and demo usability; it does not create a validated whitespace, churn, or contact-enrichment model.
+Never revert to string replacement with a replacement string: minified JavaScript may contain `$&`, `$1`, or related replacement tokens.
 
-Never describe the branch as empirically validated.
+### `src/offline-main.tsx`
 
-## 4. Contact implementation boundary
+- reads the embedded Census context from the dedicated offline global;
+- supplies the full FeatureCollection directly to the MapLibre GeoJSON source;
+- derives place-label markers from the same object;
+- falls back to URL loading only during local development when the global is absent.
+
+MapLibre worker requests do not use the page's `window.fetch` override. Do not move the offline Census source back to a URL in the standalone package.
+
+### `scripts/validate-offline-review.mjs`
+
+Validates:
+
+- minimum package size;
+- real script-block structure;
+- exactly one inline module;
+- valid inline-module JavaScript via `node --check`;
+- no external script/link document dependencies;
+- no residual `/assets/*` references;
+- embedded font and image data;
+- required product/data markers;
+- minimum Census feature counts.
+
+CI validation is necessary but not sufficient. Direct-from-disk browser review remains required for offline-impacting changes.
+
+## 4. Current data truth
+
+All opportunity, account, prospect, seller, revenue, score, simulation, and contact values are synthetic. Product positioning and demo usability are implemented; validated whitespace, churn, contact-enrichment, and campaign-response models are not.
+
+Never describe demo outputs as empirically validated.
+
+## 5. Contact boundary
 
 ### Public demo
 
@@ -108,17 +130,17 @@ Every highlighted business can display a deterministic synthetic decision maker 
 
 ### Charlotte validated mode
 
-Required provider order:
+Provider order:
 
 1. CRM contacts, owner, last touch, renewal owner, suppression;
-2. approved business identity and public business channels;
+2. approved business identity/public channels;
 3. approved server-side professional enrichment;
 4. optional approved legal-entity verification;
-5. human review for ambiguity/staleness.
+5. human review for ambiguity or staleness.
 
-Real contacts must be authenticated/internal-only and must never enter static assets or offline public packages.
+Real contacts are authenticated/internal-only and never enter static assets or public offline packages.
 
-## 5. Source ownership
+## 6. Source ownership
 
 ```text
 src/
@@ -127,7 +149,7 @@ src/
   data/                   repository and geometry adapters
   domain/
     businessContact.ts    synthetic contact contract/generator
-    marketMode.ts         objective definitions and demo transforms
+    marketMode.ts         objective definitions/demo transforms
     sellerOpportunity.ts  seller action assembly
     opportunity.ts        opportunity contract
     client*.ts            client-safe planning
@@ -135,14 +157,18 @@ src/
     market-growth/        Seller Action Center
     zip-explorer/         Market Opportunity Map
     client-growth/        Client Campaign Planner
-  map/                    MapLibre presentation adapter
+  map/                    MapLibre presentation adapters
+  offline-main.tsx        standalone offline MapLibre/data adapter
   styles/
     seller-contact.css    contact UI
+scripts/
+  build-offline-review.mjs
+  validate-offline-review.mjs
 ```
 
-## 6. Documentation ownership
+## 7. Documentation ownership
 
-Start with:
+Read:
 
 ```text
 CURRENT_HANDOFF.md
@@ -153,13 +179,40 @@ PRODUCT_BUILD_SPEC.md
 docs/FALL_PROJECT_HANDOFF.md
 docs/PROJECT_BOARD.csv
 docs/CONTACT_STRATEGY.md
+docs/VALIDATION.md
 ```
 
-Historical documents live under `docs/archive/pre-fall-pivot/` and are not current instructions.
+Historical documents under `docs/archive/pre-fall-pivot/` are not current instructions.
 
-## 7. Validation
+## 8. Validation evidence
 
-Run:
+Final functional PR #24 commit `5805f43e56735a0e21644d0260a530b623ee3032` passed:
+
+```text
+CI run 457
+all-offline run 110
+19 test files / 56 tests
+typecheck
+production build
+Pages build
+offline generation/validation/package/upload/release attachment
+```
+
+Direct `file://` Chromium review passed at `1440 × 900` and touch `393 × 852` with:
+
+- complete map/Census context rendering;
+- embedded logo/fonts;
+- correct objective order and retention label;
+- working synthetic contact card/modal links;
+- keyboard focus on close;
+- no client contact leakage;
+- no horizontal overflow;
+- 44 px compact contact actions;
+- zero page errors, failed requests, bad responses, console errors, or external requests.
+
+See `docs/VALIDATION.md` for the detailed record.
+
+## 9. Regression commands
 
 ```bash
 npm install
@@ -169,47 +222,39 @@ npm run build
 npm run offline:all
 ```
 
-Then review in a real browser:
+For changes touching shared UI, maps, assets, offline entry, or packaging, download the workflow artifact and open it directly from disk in expanded and compact browser viewports.
 
-- Account Whitespace opens first after initial load/reset;
-- mode order is correct in expanded and compact layouts;
-- decision-maker contact card is readable and scroll-safe;
-- Email and Call links receive visible keyboard focus;
-- modal contains account and decision-maker fields;
-- every demo contact uses `.example` and `202-555-01xx`;
-- client workspace contains no contact fields;
-- map selection, camera, panel collapse, and feature-state performance remain correct.
+## 10. Immediate next sequence
 
-## 8. Immediate next sequence
+1. Approve the New Business handoff destination/configuration.
+2. Freeze Charlotte market/cohort and growth/churn outcomes.
+3. Inventory CRM/contact/suppression fields.
+4. Finalize validated contact/provider contracts.
+5. Approve one professional enrichment provider.
+6. Manually validate a Charlotte contact sample.
+7. Build observed-outcome Account Whitespace and Retention datasets/methods.
+8. Replace Ohio-only loading with market manifests.
+9. Introduce explicit Demo/Validated UI status and version metadata.
 
-1. Resolve any branch CI or browser-review findings.
-2. Approve the exact New Business handoff destination.
-3. Add configuration for the handoff without importing the other product's business logic.
-4. Inventory Charlotte CRM/contact/suppression fields.
-5. Finalize validated contact/provider contracts.
-6. Select and approve one professional enrichment provider.
-7. Manually validate a Charlotte sample.
-8. Build Account Whitespace and Retention datasets and observed outcomes.
-9. Replace Ohio-only loading with market manifests.
-10. Introduce explicit Demo/Validated UI status and version metadata.
+## 11. Least-certain areas
 
-## 9. Least-certain areas
+- Exact internal New Business handoff destination is not configured.
+- Charlotte contact coverage/provider economics are unknown until a real sample is adjudicated.
+- Current mode scores and dollar ranges are demonstration heuristics.
+- Physical-device review remains useful even though compact Chromium contracts passed.
 
-- Final visual density of the contact card in compact mode requires real-device/browser judgment.
-- The exact internal New Business handoff destination is not public/configured.
-- Charlotte contact coverage and provider economics are unknown until a real sample is adjudicated.
-- Current mode score transforms and dollar ranges are demonstration heuristics.
+## 12. Do not reintroduce
 
-## 10. Do not reintroduce
-
-- New Business as the default product objective;
-- one universal score for growth, retention, category, and acquisition;
-- real contact data in public/static files;
-- provider keys or enrichment calls in the browser;
+- New Business as default;
+- one universal score;
+- real contact/account data in Git or public/static files;
+- provider keys/enrichment calls in browser;
 - automatic outreach;
 - registered-agent-as-decision-maker assumptions;
 - map-owned business logic;
-- document-level desktop scrolling;
 - duplicate statewide geometry sources;
 - uncontrolled randomness;
-- hidden mixing of demo and validated records.
+- hidden demo/validated mixing;
+- replacement-string asset inlining;
+- linked generated assets in standalone HTML;
+- URL-backed offline MapLibre context in the final package.
